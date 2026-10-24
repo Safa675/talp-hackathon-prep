@@ -2,10 +2,10 @@
   "name": "nodecision_2",
   "type": "nodecision",
   "seed": 2,
-  "model": "gemini-3.5-flash-lite",
+  "model": "gemini-3.7-flash",
   "probe": false,
   "decisions_file": "exp/d2_free.json",
-  "surprises_file": "surprises_team09_week8.json",
+  "surprises_file": "surprises_team09_week9.json",
   "personas_file": "personas_66.jsonl",
   "replicate": 0,
   "session": false,
@@ -15,90 +15,90 @@
   "phase": "done: hand-in files written",
   "weeks": {
     "1": "reused",
-    "2": "reused",
-    "3": "reused",
-    "4": "reused",
-    "5": "reused",
-    "6": "reused",
-    "7": "reused",
-    "8": "reused",
-    "9": "reused",
-    "10": "reused"
+    "2": "computed",
+    "3": "computed",
+    "4": "computed",
+    "5": "computed",
+    "6": "computed",
+    "7": "computed",
+    "8": "computed",
+    "9": "computed",
+    "10": "computed"
   },
   "week_source": {
     "1": {
-      "fp": "53c5158a446892202031",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:00"
+      "fp": "75126bebfa81f4d5ef82",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:01:05"
     },
     "2": {
-      "fp": "7020162d8b82e7684d5a",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:03"
+      "fp": "c58d725698b881f61ccb",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:03:27"
     },
     "3": {
-      "fp": "50955505c3bb515787fc",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:06"
+      "fp": "9fd4b73b2271c4348344",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:04:06"
     },
     "4": {
-      "fp": "228df6ac8bbaf39e5847",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:11"
+      "fp": "533d01da59eb07f22460",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:05:32"
     },
     "5": {
-      "fp": "d33b3aafed86f5ea5c8a",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:15"
+      "fp": "1e15e2ccc5035982e1fa",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:06:36"
     },
     "6": {
-      "fp": "5cf5a07b0581a81bf38d",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:17"
+      "fp": "d2ee5469319937778259",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:07:22"
     },
     "7": {
-      "fp": "2da6adf866cea36f1f00",
-      "origin_run": "doc8_nd_s2",
-      "created": "2026-10-24T16:34:57"
+      "fp": "658bf3aea45679d20582",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:07:55"
     },
     "8": {
-      "fp": "67715f43f17987044194",
-      "origin_run": "doc8_nd_s2",
-      "created": "2026-10-24T16:35:05"
+      "fp": "ccea25a1c971bad3e0fa",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:08:40"
     },
     "9": {
-      "fp": "b589b2e88ba83e45abcd",
-      "origin_run": "doc8_nd_s2",
-      "created": "2026-10-24T16:35:11"
+      "fp": "0ddd667cbe2c7eaa659f",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:09:06"
     },
     "10": {
-      "fp": "76f63e41b89d5fee216f",
-      "origin_run": "doc8_nd_s2",
-      "created": "2026-10-24T16:35:16"
+      "fp": "5decd246a928146a035f",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:09:37"
     }
   },
   "played": 10,
   "target": 10,
-  "calls_done": 0,
-  "calls_total": 0,
+  "calls_done": 594,
+  "calls_total": 594,
   "errors": 0,
   "tokens": {
-    "in": 0,
-    "out": 0,
-    "think": 0
+    "in": 1120590,
+    "out": 103371,
+    "think": 3087
   },
-  "resumed_from": 10,
-  "created": "2026-10-24T16:43:37",
-  "started": "2026-10-24T16:43:37",
-  "finished": "2026-10-24T16:43:38",
+  "resumed_from": 1,
+  "created": "2026-10-24T17:02:19",
+  "started": "2026-10-24T17:02:19",
+  "finished": "2026-10-24T17:09:37",
   "error": null,
   "metrics": {
     "goal_1": 95.14,
-    "goal_2": 99.8,
-    "goal_3": 4852,
+    "goal_2": 99.4,
+    "goal_3": 971,
     "goal_3b": null,
-    "goal_4": 99.74,
-    "revenue_lost_usd": 837840,
+    "goal_4": 99.55,
+    "revenue_lost_usd": 1450920,
     "units": {
       "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
       "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
@@ -107,32 +107,32 @@
       "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
     }
   },
-  "log_id": "dc41490cde624e91bf89d9e57c98b2c5",
+  "log_id": "bdca5a7ea36f4169b6a7d9768631d21e",
   "chain": [
-    "d897c6204d2f7346a58f",
-    "53c5158a446892202031",
-    "7020162d8b82e7684d5a",
-    "50955505c3bb515787fc",
-    "228df6ac8bbaf39e5847",
-    "d33b3aafed86f5ea5c8a",
-    "5cf5a07b0581a81bf38d",
-    "2da6adf866cea36f1f00",
-    "67715f43f17987044194",
-    "b589b2e88ba83e45abcd",
-    "76f63e41b89d5fee216f"
+    "d812de445b3a435ed36c",
+    "75126bebfa81f4d5ef82",
+    "c58d725698b881f61ccb",
+    "9fd4b73b2271c4348344",
+    "533d01da59eb07f22460",
+    "1e15e2ccc5035982e1fa",
+    "d2ee5469319937778259",
+    "658bf3aea45679d20582",
+    "ccea25a1c971bad3e0fa",
+    "0ddd667cbe2c7eaa659f",
+    "5decd246a928146a035f"
   ],
-  "people": "02f5ecc5bb4a88a8ec94",
+  "people": "6e71a9f109a891868d39",
   "fps": [
-    "d897c6204d2f7346a58f",
-    "53c5158a446892202031",
-    "7020162d8b82e7684d5a",
-    "50955505c3bb515787fc",
-    "228df6ac8bbaf39e5847",
-    "d33b3aafed86f5ea5c8a",
-    "5cf5a07b0581a81bf38d",
-    "2da6adf866cea36f1f00",
-    "67715f43f17987044194",
-    "b589b2e88ba83e45abcd",
-    "76f63e41b89d5fee216f"
+    "d812de445b3a435ed36c",
+    "75126bebfa81f4d5ef82",
+    "c58d725698b881f61ccb",
+    "9fd4b73b2271c4348344",
+    "533d01da59eb07f22460",
+    "1e15e2ccc5035982e1fa",
+    "d2ee5469319937778259",
+    "658bf3aea45679d20582",
+    "ccea25a1c971bad3e0fa",
+    "0ddd667cbe2c7eaa659f",
+    "5decd246a928146a035f"
   ]
 }

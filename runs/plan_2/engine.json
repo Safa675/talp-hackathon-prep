@@ -2,10 +2,10 @@
   "name": "plan_2",
   "type": "plan",
   "seed": 2,
-  "model": "gemini-3.5-flash-lite",
+  "model": "gemini-3.7-flash",
   "probe": false,
   "decisions_file": "exp/d2_free.json",
-  "surprises_file": "surprises_team09_week8.json",
+  "surprises_file": "surprises_team09_week9.json",
   "personas_file": "personas_66.jsonl",
   "replicate": 0,
   "session": false,
@@ -14,88 +14,88 @@
   "status": "done",
   "phase": "done: hand-in files written",
   "weeks": {
-    "1": "reused",
+    "1": "computed",
     "2": "reused",
     "3": "reused",
-    "4": "reused",
-    "5": "reused",
-    "6": "reused",
-    "7": "reused",
-    "8": "reused",
-    "9": "reused",
-    "10": "reused"
+    "4": "computed",
+    "5": "computed",
+    "6": "computed",
+    "7": "computed",
+    "8": "computed",
+    "9": "computed",
+    "10": "computed"
   },
   "week_source": {
     "1": {
-      "fp": "53c5158a446892202031",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:00"
+      "fp": "75126bebfa81f4d5ef82",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:01:05"
     },
     "2": {
-      "fp": "7020162d8b82e7684d5a",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:03"
+      "fp": "c58d725698b881f61ccb",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:03:27"
     },
     "3": {
-      "fp": "50955505c3bb515787fc",
-      "origin_run": "fix_nd_s2",
-      "created": "2026-10-24T16:21:06"
+      "fp": "9fd4b73b2271c4348344",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:04:06"
     },
     "4": {
-      "fp": "08582f0749cb7280e718",
-      "origin_run": "fix_points_s2",
-      "created": "2026-10-24T16:21:10"
+      "fp": "b3ceab01b49c8ca9fb2b",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:05:30"
     },
     "5": {
-      "fp": "e4c10461e837cb158f08",
-      "origin_run": "fix_points_s2",
-      "created": "2026-10-24T16:21:12"
+      "fp": "5e02ae6dc7b1ce2bbb28",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:06:46"
     },
     "6": {
-      "fp": "676cf6c49f94a2a3410f",
-      "origin_run": "fix_points_s2",
-      "created": "2026-10-24T16:21:16"
+      "fp": "ed4e8030630a8db5c51a",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:07:25"
     },
     "7": {
-      "fp": "d5a80cbdef05e35a6130",
-      "origin_run": "doc8_plan_s2",
-      "created": "2026-10-24T16:34:57"
+      "fp": "d5420eb4b46a10560840",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:08:14"
     },
     "8": {
-      "fp": "e36b82ca5d58bf86f689",
-      "origin_run": "doc8_plan_s2",
-      "created": "2026-10-24T16:35:22"
+      "fp": "ad512b86465a916989c5",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:08:34"
     },
     "9": {
-      "fp": "53b92347bcdc2c78942c",
-      "origin_run": "doc8_plan_s2",
-      "created": "2026-10-24T16:35:27"
+      "fp": "272b9103cb8cc1de60ab",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:09:06"
     },
     "10": {
-      "fp": "b6a38cef53632016144c",
-      "origin_run": "doc8_plan_s2",
-      "created": "2026-10-24T16:35:36"
+      "fp": "13fd02d3edad14c51b00",
+      "origin_run": "plan_2",
+      "created": "2026-10-24T17:10:09"
     }
   },
   "played": 10,
   "target": 10,
-  "calls_done": 0,
-  "calls_total": 0,
+  "calls_done": 594,
+  "calls_total": 594,
   "errors": 0,
   "tokens": {
-    "in": 0,
-    "out": 0,
-    "think": 0
+    "in": 1009986,
+    "out": 83140,
+    "think": 2041
   },
-  "resumed_from": 10,
-  "created": "2026-10-24T16:43:37",
-  "started": "2026-10-24T16:43:37",
-  "finished": "2026-10-24T16:43:38",
+  "resumed_from": 1,
+  "created": "2026-10-24T17:02:19",
+  "started": "2026-10-24T17:02:19",
+  "finished": "2026-10-24T17:10:09",
   "error": null,
   "metrics": {
     "goal_1": 96.86,
     "goal_2": 100.0,
-    "goal_3": 3414,
+    "goal_3": 903,
     "goal_3b": null,
     "goal_4": 100.0,
     "revenue_lost_usd": 0,
@@ -107,32 +107,32 @@
       "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
     }
   },
-  "log_id": "205765fdb9444363ad227ec7fe231384",
+  "log_id": "0944aa0332304a02b9c34b054750270b",
   "chain": [
-    "d897c6204d2f7346a58f",
-    "53c5158a446892202031",
-    "7020162d8b82e7684d5a",
-    "50955505c3bb515787fc",
-    "08582f0749cb7280e718",
-    "e4c10461e837cb158f08",
-    "676cf6c49f94a2a3410f",
-    "d5a80cbdef05e35a6130",
-    "e36b82ca5d58bf86f689",
-    "53b92347bcdc2c78942c",
-    "b6a38cef53632016144c"
+    "d812de445b3a435ed36c",
+    "75126bebfa81f4d5ef82",
+    "c58d725698b881f61ccb",
+    "9fd4b73b2271c4348344",
+    "b3ceab01b49c8ca9fb2b",
+    "5e02ae6dc7b1ce2bbb28",
+    "ed4e8030630a8db5c51a",
+    "d5420eb4b46a10560840",
+    "ad512b86465a916989c5",
+    "272b9103cb8cc1de60ab",
+    "13fd02d3edad14c51b00"
   ],
-  "people": "02f5ecc5bb4a88a8ec94",
+  "people": "6e71a9f109a891868d39",
   "fps": [
-    "d897c6204d2f7346a58f",
-    "53c5158a446892202031",
-    "7020162d8b82e7684d5a",
-    "50955505c3bb515787fc",
-    "08582f0749cb7280e718",
-    "e4c10461e837cb158f08",
-    "676cf6c49f94a2a3410f",
-    "d5a80cbdef05e35a6130",
-    "e36b82ca5d58bf86f689",
-    "53b92347bcdc2c78942c",
-    "b6a38cef53632016144c"
+    "d812de445b3a435ed36c",
+    "75126bebfa81f4d5ef82",
+    "c58d725698b881f61ccb",
+    "9fd4b73b2271c4348344",
+    "b3ceab01b49c8ca9fb2b",
+    "5e02ae6dc7b1ce2bbb28",
+    "ed4e8030630a8db5c51a",
+    "d5420eb4b46a10560840",
+    "ad512b86465a916989c5",
+    "272b9103cb8cc1de60ab",
+    "13fd02d3edad14c51b00"
   ]
 }

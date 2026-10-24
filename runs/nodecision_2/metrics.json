@@ -1,10 +1,10 @@
 {
   "goal_1": 95.14,
-  "goal_2": 99.8,
-  "goal_3": 4852,
+  "goal_2": 99.4,
+  "goal_3": 971,
   "goal_3b": null,
-  "goal_4": 99.74,
-  "revenue_lost_usd": 837840,
+  "goal_4": 99.55,
+  "revenue_lost_usd": 1450920,
   "units": {
     "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
     "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
