@@ -12,27 +12,27 @@
 
 ## What the simulation says
 
-66 customer personas stand for 2.17 million trips over the ten weeks. Each week they react to what happens to their flights, our messages, the news and their friends' posts. Two seeds per scenario on gemini-3.7-flash, checked again on a second model. These are simulated results, not forecasts.
+66 customer personas stand for 2.17 million trips over the ten weeks. Each week they react to what happens to their flights, our messages, the news and their friends' posts. Two seeds per scenario, all six announcements. These are simulated results, not forecasts.
 
 | Board goal | Target | Our plan | No decision |
 |---|---|---:|---:|
-| 1 Flights operated (strike days left out) | ≥98% | 96.9% (missed) | 95.1% |
-| 2 Disrupted passengers rebooked or refunded within 24h | ≥90% | 100% | 95–99% |
-| 3 Complaints | no worse than last winter* | fewer than no decision (10–13 vs 12–19 per 660 customer-weeks) | — |
-| 3b NPS (+12 today) | no worse than last winter* | +20 | −15 |
-| 4 Revenue, weeks 5–10 | ≥96% of plan | 100% | 99.1–99.6% |
+| 1 Flights operated (strike days left out) | ≥98% | 98.4% (met) | 97.7% (missed) |
+| 2 Disrupted passengers rebooked or refunded within 24h | ≥90% | 100% | 94–100% |
+| 3 Complaints in December | no worse than last winter* | about a third to a half fewer (12–22 vs 24–34 per 660 customer-weeks) | — |
+| 3b NPS (+12 today) | no worse than last winter* | +10.5 | −7.7 |
+| 4 Revenue, weeks 5–10 | ≥96% of plan | 100% | 89.7–98.3% |
 | 5 Budget | ≤$3M | $2.00M | $0 |
 
 \* Last winter's figures are not given; we use today's (2,500 complaints a month, NPS +12). NPS is from the check-in questions, asked in the seed-1 runs.
 
-The plan does better in both seeds. In week 10, trust is 4.1 out of 5 against 3.7–3.8. Customers' willingness to recommend rises 8 points under the plan and falls by 27 points with no decision. On the strike days, cancellations among our customers' 16 flights fall from 3 to 0–1. The second model (gemini-3.5-flash-lite) shows the same direction with bigger gaps: a third to half fewer complaints, and 60–69% would book again against 37–62%.
+The plan does better in both seeds. In week 10, trust is 3.5 out of 5 against 3.2, and 73–74% would book Kestrel again against 52–62%. Customers' willingness to recommend stays about where it started under the plan and falls by 20 points with no decision. On the strike days, cancellations among our customers' 16 flights fall from 3 to 0–1. Without decisions, revenue falls below the board's 96% in one seed.
 
 ## What it cannot tell
 
-- **Goal 1 depends on how many flights the grounding really cancels.** Under our reading the plan operates 96.9%; under milder readings of the grounding it reaches 97–98.4%. We would not promise 98%.
-- **Goal 2 assumes the partner airline has free seats** in a week that is 97% booked.
-- **Sizes.** Simulated customers get the direction right more often than the size, and the two models disagree on how forgiving customers are. Without the surprises the plan pushes NPS to +42 on the second model, which real customers would not do in a strike week.
-- **Complaint counts are not calibrated to Kestrel's data**, so we report the direction only.
+- **Goal 1 depends on how many flights the grounding really cancels.** With our reading (some cancellations for two weeks) the plan reaches 98.4%; with harsher readings it falls to 96.9–97.9%. The 98% is fragile.
+- **Goal 2 counts offers and refunds made within 24h.** Counting only confirmed rebookings, the plan reaches 11%, so the real test is whether stranded passengers actually take the seat. It also assumes the partner airline has free seats in a week that is 97% booked.
+- **Sizes.** Simulated customers get the direction right more often than the size. A second model (gemini-3.7-flash) gave the same direction for the week-8 decision.
+- **Complaint counts are not calibrated to Kestrel's data**, so we report the comparison only.
 - **Not simulated:** controllers calling in sick once the Dec 30 paycheck is missed.
 
 ## What the company should watch next

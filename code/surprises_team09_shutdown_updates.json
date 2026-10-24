@@ -1,0 +1,48 @@
+[
+  {
+    "week": 3,
+    "text": "**The engine inspection.** The FAA and the engine maker have told airlines to inspect a part on one engine type. Some of Kestrel's aircraft use it. A passenger's video of mechanics working on an engine at the gate is going round on TikTok.\n\nKnown: the inspections are a precaution and start this week; no Kestrel aircraft has had a problem with this part.\nNot known: how many aircraft; how long each check takes; whether any part must be replaced.",
+    "effect": "some cancellations",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 3,
+    "reading": "Precautionary engine inspections begin this week; they may cause delays or some cancellations. No Kestrel aircraft has a confirmed problem with the part."
+  },
+  {
+    "week": 4,
+    "text": "The inspections found worn parts on three Kestrel aircraft. They will stay on the ground for about two weeks while new parts arrive. All other aircraft have been cleared to fly. Kestrel will have to cancel or merge some flights in the next two weeks, Thanksgiving week included.",
+    "effect": "many cancellations",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 5,
+    "reading": "Worn parts on three Kestrel aircraft ground them for about two weeks. Cancellations or merged flights affect Thanksgiving week and may continue into week 5."
+  },
+  {
+    "week": 7,
+    "text": "**Government shutdown.** Overnight, Congress missed its funding deadline, and parts of the federal government shut down. Some federal workers have been sent home; others, such as air traffic controllers and TSA officers, must keep working without pay. Nobody knows how long it will last.\n\nKnown: Social Security payments and the Postal Service continue.\nNot known: how long it will last; when federal workers will be paid; which services will slow down.\n\nAir traffic controllers and TSA officers keep working, without pay. Some airports report longer security lines.\n\nPublished 24 Oct, 16:00:00.",
+    "effect": "none",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 8,
+    "reading": "Government shutdown begins in week 7. TSA and air traffic control keep operating; some airports report longer security lines. No Kestrel flight cancellation or 3h+ delay is confirmed by this announcement, so no direct flight disruption is assumed. Duration is unknown."
+  },
+  {
+    "week": 7,
+    "text": "Government shutdown — update (published 24 Oct, 16:30:00). The Senate passed a short-term funding bill; the House plans to vote after Christmas. Federal workers have been told they will get back pay once the government reopens. Their December 30 paycheck may be missed. The FAA says it may slow traffic at busy airports if more controllers call in sick.",
+    "effect": "none",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 8,
+    "reading": "Shutdown continues. A Senate bill awaits a House vote after Christmas; back pay is promised but the December 30 paycheck may be missed. FAA slowing traffic is conditional on more controller sick calls, which have not been reported as a Kestrel flight disruption."
+  },
+  {
+    "week": 8,
+    "text": "The workers of Kestrel's ground handling contractor (baggage, cabin cleaning, wheelchair assistance, fueling) are on a 48-hour strike at Orlando and Philadelphia on Dec 22–23, the busiest week of the year. The contractor will bring in replacement staff where it can; some flights may be late or canceled. The union says the strike may be extended.",
+    "known_crisis": true,
+    "effect": "none",
+    "scope": "bases",
+    "kestrel_caused": false,
+    "until_week": 8,
+    "reading": "Known 48-hour ground handling strike at both bases on December 22–23; replacement staffing may be incomplete and extension is possible."
+  }
+]

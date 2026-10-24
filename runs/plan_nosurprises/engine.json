@@ -2,10 +2,10 @@
   "name": "plan_nosurprises",
   "type": "plan_nosurprises",
   "seed": 1,
-  "model": "gemini-3.7-flash",
+  "model": "gemini-3.5-flash-lite",
   "probe": false,
   "decisions_file": "exp/d2_free.json",
-  "surprises_file": "surprises_team09_week9.json",
+  "surprises_file": "exp_hard/events_all.json",
   "personas_file": "personas_66.jsonl",
   "replicate": 0,
   "session": false,
@@ -27,112 +27,117 @@
   },
   "week_source": {
     "1": {
-      "fp": "02a49cb3f6835cecc22a",
+      "fp": "51375ee9e47b0b398680",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:01:25"
+      "created": "2026-10-24T17:37:59"
     },
     "2": {
-      "fp": "b5c1aac3651aa7ebfe2e",
+      "fp": "0ccf555fa835605b39bc",
       "origin_run": "plan_1",
-      "created": "2026-10-24T17:03:52"
+      "created": "2026-10-24T17:38:01"
     },
     "3": {
-      "fp": "916171d0096f1f678aa6",
+      "fp": "e8048004610ad76dfcdc",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:05:29"
+      "created": "2026-10-24T17:38:06"
     },
     "4": {
-      "fp": "76602cbe1845b7c46f94",
+      "fp": "394c385208d8136ef76e",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:06:31"
+      "created": "2026-10-24T17:38:13"
     },
     "5": {
-      "fp": "101865b226ec80fa6828",
+      "fp": "e5a1b034c0ac54567d63",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:07:16"
+      "created": "2026-10-24T17:38:20"
     },
     "6": {
-      "fp": "d1fe1835002170682522",
+      "fp": "412796d02d768c1feafc",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:07:56"
+      "created": "2026-10-24T17:38:25"
     },
     "7": {
-      "fp": "ddc51a3e820269b53dab",
+      "fp": "2ea5d59b84b36f7e4c3f",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:08:33"
+      "created": "2026-10-24T17:38:27"
     },
     "8": {
-      "fp": "3b8611ad7d9268f69fe6",
+      "fp": "c1166262ad7b524cd1d4",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:09:05"
+      "created": "2026-10-24T17:38:32"
     },
     "9": {
-      "fp": "4c1a2520aaf846775c33",
+      "fp": "4e1399f43be636b4e583",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:09:37"
+      "created": "2026-10-24T17:38:39"
     },
     "10": {
-      "fp": "147158396645323a9526",
+      "fp": "6586faaa65f68e12a411",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:10:09"
+      "created": "2026-10-24T17:38:41"
     }
   },
   "played": 10,
   "target": 10,
-  "calls_done": 594,
-  "calls_total": 594,
+  "calls_done": 660,
+  "calls_total": 660,
   "errors": 0,
   "tokens": {
-    "in": 948198,
-    "out": 88526,
-    "think": 2300
+    "in": 1050184,
+    "out": 112485,
+    "think": 0
   },
-  "resumed_from": 1,
-  "created": "2026-10-24T17:02:19",
-  "started": "2026-10-24T17:02:19",
-  "finished": "2026-10-24T17:10:09",
+  "resumed_from": 0,
+  "created": "2026-10-24T17:37:54",
+  "started": "2026-10-24T17:37:54",
+  "finished": "2026-10-24T17:38:41",
   "error": null,
   "metrics": {
     "goal_1": 98.92,
     "goal_2": 100.0,
-    "goal_3": 40,
+    "goal_3": 2203,
     "goal_3b": null,
+    "goal_2_strict": 18.2,
+    "nps_start": null,
+    "nps_raw_start": null,
+    "nps_raw_end": null,
     "goal_4": 100.0,
     "revenue_lost_usd": 0,
     "units": {
       "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
-      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
-      "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
-      "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)",
+      "goal_2_strict": "% of the same passengers with a confirmed rebooking within 24h only (refund timing not recorded), weighted by represents_trips",
+      "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
+      "goal_3b": "NPS: dossier +12 plus the change in the check-in 3a NPS from start to end (survey runs only); raw values in nps_raw_start/end",
       "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
     }
   },
-  "log_id": "c70a59fe64e34691bf73c072bf60e85d",
+  "log_id": "a26a0e5d040647b9885f328d7a12efd7",
   "chain": [
-    "35927487b68b65b263b7",
-    "02a49cb3f6835cecc22a",
-    "b5c1aac3651aa7ebfe2e",
-    "916171d0096f1f678aa6",
-    "76602cbe1845b7c46f94",
-    "101865b226ec80fa6828",
-    "d1fe1835002170682522",
-    "ddc51a3e820269b53dab",
-    "3b8611ad7d9268f69fe6",
-    "4c1a2520aaf846775c33",
-    "147158396645323a9526"
+    "f30de5371ea01eb6b85d",
+    "51375ee9e47b0b398680",
+    "0ccf555fa835605b39bc",
+    "e8048004610ad76dfcdc",
+    "394c385208d8136ef76e",
+    "e5a1b034c0ac54567d63",
+    "412796d02d768c1feafc",
+    "2ea5d59b84b36f7e4c3f",
+    "c1166262ad7b524cd1d4",
+    "4e1399f43be636b4e583",
+    "6586faaa65f68e12a411"
   ],
-  "people": "485786b8d7d4c2ae6360",
+  "people": "fd2a4bd2bcd45aa12ae2",
   "fps": [
-    "35927487b68b65b263b7",
-    "02a49cb3f6835cecc22a",
-    "b5c1aac3651aa7ebfe2e",
-    "916171d0096f1f678aa6",
-    "76602cbe1845b7c46f94",
-    "101865b226ec80fa6828",
-    "d1fe1835002170682522",
-    "ddc51a3e820269b53dab",
-    "3b8611ad7d9268f69fe6",
-    "4c1a2520aaf846775c33",
-    "147158396645323a9526"
+    "f30de5371ea01eb6b85d",
+    "51375ee9e47b0b398680",
+    "0ccf555fa835605b39bc",
+    "e8048004610ad76dfcdc",
+    "394c385208d8136ef76e",
+    "e5a1b034c0ac54567d63",
+    "412796d02d768c1feafc",
+    "2ea5d59b84b36f7e4c3f",
+    "c1166262ad7b524cd1d4",
+    "4e1399f43be636b4e583",
+    "6586faaa65f68e12a411"
   ]
 }

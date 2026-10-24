@@ -15,6 +15,13 @@ re-runs only the weeks it touches, and runs that share a prefix (plan_1 and node
 decision) share those weeks. Personas in a week run in parallel; weeks run in sequence.
 """
 import argparse
+import contextlib
+try:  # file locks across processes: fcntl on macOS/Linux, msvcrt on Windows (fcntl does not exist there)
+    import fcntl
+    msvcrt = None
+except ImportError:
+    fcntl = None
+    import msvcrt
 import functools
 import hashlib
 import inspect
@@ -41,8 +48,8 @@ CKPT = HERE / "checkpoints"
 LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
-ENGINE_VERSION = 3  # 3: status meanings in the week prompt, keyword action names
-DEFAULT_PERSONAS = "personas_66.jsonl"  # talp-kestrel branch: 66 personas, each standing for real trips
+ENGINE_VERSION = 4  # 4: posting gate + @replies, dates in the prompt, known crisis in the news beforehand
+DEFAULT_PERSONAS = "personas_66.jsonl"  # the panel every validated run used; personas_66_v2.jsonl is selectable per run
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
          6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
@@ -56,10 +63,16 @@ ENGINE_HIDDEN = set(sim.HIDDEN_FIELDS) | {"window", "cluster", "segment", "segme
 SOCIAL_SCHEMA = dict(sim.SCHEMA, properties=dict(sim.SCHEMA["properties"], post={
     "type": "STRING",
     "description": "What you posted publicly on social media this week about your trip or Kestrel, in your own "
-                   "words; an empty string if you did not post. Most people do not post most weeks.",
+                   "words; an empty string if you did not post. Most people do not post most weeks. To answer "
+                   "someone in your feed, start the post with @ and their full name, e.g. '@Jane Doe ...'.",
 }))
 TRENDING_PER_WEEK = 2
 POST_CHARS = 400
+# Who is on social media in a given week (the code gives the chance to post; the model decides whether and what).
+# Without this gate 38% of persona-weeks carried a post and 57 of 66 personas posted; real passengers post rarely.
+# Being hit yourself (canceled or 3h+ late flight) or getting a company message raises the chance.
+POST_ONLINE = {"high": 0.40, "medium": 0.12, "low": 0.03}
+POST_ONLINE_HIT = 0.35
 
 MODELS = {
     "gemini-3.5-flash-lite": {"thinking": False, "note": "experiments, ~1 s/call"},
@@ -135,7 +148,7 @@ class Limiter:
 
 
 LIMIT = Limiter(80)  # flash-lite: all personas of a week in one wave (66 calls in ~4 s)
-THINKING_LIMIT = Limiter(30)  # thinking models slow down past ~30 calls in flight (measured: 66 at once took 128 s, 30 took 48 s)
+THINKING_LIMIT = Limiter(8)  # keep Gemini 3.7 weekly and end-probe calls progressing under provider throttling
 
 
 # ---------------------------------------------------------------- small helpers
@@ -194,7 +207,8 @@ def prompt_code_hash():
                                             sim.effects, sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
                                             sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
     return h(parts, sim.P, sim.EVENT_EFFECTS, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
-             sim.STATUS_MEANING, sim.ACTIONS, sorted(sim.NETWORK),
+             sim.STATUS_MEANING, sim.ACTIONS, sorted(sim.NETWORK), sim.WEEK_DATES, POST_ONLINE, POST_ONLINE_HIT,
+             inspect.getsource(Run.step),
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -413,9 +427,21 @@ def inputs(cfg):
     decisions = [] if cfg["type"] == "nodecision" or not cfg["decisions"] else \
         json.loads(resolve(cfg["decisions"]).read_text(encoding="utf-8"))
     sim.check_actions(decisions)
+    for i, decision in enumerate(decisions, 1):
+        for action in decision.get("actions", []):
+            levels = MENU.get(MENU_BY_KEY.get(sim.action_key(action.get("action"))))
+            if not levels or menu_level(levels, action.get("level")) is None:
+                raise ValueError(f"decision {i}: invalid action level for {action.get('action')!r}: {action.get('level')!r}")
     surprises =json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
+    for i, event in enumerate(surprises, 1):
+        if event.get("effect", "none") not in sim.EVENT_EFFECTS:
+            raise ValueError(f"event {i}: unknown flight effect {event.get('effect')!r}")
+        if type(event.get("week")) is not int or not 1 <= event["week"] <= 10:
+            raise ValueError(f"event {i}: week must be 1-10")
+        if event.get("until_week", event["week"]) < event["week"]:
+            raise ValueError(f"event {i}: until_week is before its announcement")
     if cfg["type"] == "plan_nosurprises":  # every surprise off; the known crisis stays
-        surprises = [e for e in surprises if e.get("known_crisis")]
+        surprises = [e for e in surprises if e.get("known_crisis") or e.get("known_crisis_update")]
     code = prompt_code_hash()
     people = h(personas_text, cfg["model"], cfg["seed"], cfg["replicate"],
                social_graph(personas) if cfg.get("social") else None)
@@ -426,13 +452,44 @@ def inputs(cfg):
             "surprises": surprises, "fps": fps, "code": code, "people": people}
 
 
+def event_known(event, week):
+    """The dossier's known crisis can be read before it disrupts flights."""
+    return event["week"] <= week or bool(event.get("known_crisis") and event.get("known_from", 1) <= week)
+
+
 def week_fp(prev, w, code, decisions, surprises):
-    return h(prev, w, code, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] <= w])
+    return h(prev, w, code, [d for d in decisions if d["week"] <= w],
+             [s for s in surprises if event_known(s, w)])
 
 
 # ---------------------------------------------------------------- checkpoints
 def ckpt_path(fp):
     return CKPT / f"{fp}.json"
+
+
+@contextlib.contextmanager
+def checkpoint_lock(fp):
+    """Serialize a checkpoint across CLI processes as well as server threads."""
+    CKPT.mkdir(exist_ok=True)
+    with _fp_locks[fp], open(CKPT / f"{fp}.lock", "a+") as lock_file:
+        if fcntl:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+        else:
+            lock_file.seek(0)
+            while True:  # LK_LOCK gives up after about 10 s; keep waiting like flock does
+                try:
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    continue
+        try:
+            yield
+        finally:
+            if fcntl:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+            else:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def load_ckpt(fp):
@@ -512,7 +569,7 @@ class Run:
             "checkpoint_origin": ck.get("origin_run"), "created": ck.get("created"),
             "model": self.config["model"], "seed": self.config["seed"],
             "decisions_known": [d for d in self.decisions if d["week"] <= w],
-            "events_known": [s for s in self.surprises if s["week"] <= w],
+            "events_known": [s for s in self.surprises if event_known(s, w)],
             "entries": ck["entries"],
         })
 
@@ -562,20 +619,8 @@ class Run:
         return run
 
     def inputs_now(self):
-        """Current inputs. A live session keeps the weeks it already played as history: a new event or decision
-        for a played week does not replay it; it acts from the next week played on."""
-        b = inputs(self.config)
-        kept = self.info.get("chain") or []
-        if not self.config["session"] or not kept or self.info.get("people", b["people"]) != b["people"]:
-            return b  # new personas, model, seed or social setting: the history starts again
-        fps = [kept[0]]
-        for fp in kept[1:self.info["played"] + 1]:
-            if not ckpt_path(fp).exists():
-                break
-            fps.append(fp)
-        for w in range(len(fps), 11):  # weeks still to play follow today's code and inputs
-            fps.append(week_fp(fps[-1], w, b["code"], b["decisions"], b["surprises"]))
-        return dict(b, fps=fps)
+        """Read the current timeline. An edit in week N invalidates N and later, never earlier weeks."""
+        return inputs(self.config)
 
     def validity(self):
         """Weeks played that still match the current inputs. Editing a decision or a surprise for week N
@@ -584,7 +629,12 @@ class Run:
             b = self.inputs_now()
         except Exception as e:
             return {"valid_through": 0, "error": f"{type(e).__name__}: {e}"}
-        ok = chain_length(b["fps"], self.info["played"])
+        played = self.info["played"]
+        recorded = self.info.get("chain") or []
+        ok = 0
+        while ok < played and ok + 1 < len(recorded) and recorded[ok + 1] == b["fps"][ok + 1] \
+                and ckpt_path(recorded[ok + 1]).exists():
+            ok += 1
         return {"valid_through": ok, "stale_from": ok + 1 if ok < self.info["played"] else None,
                 "decisions": b["decisions"], "surprises": b["surprises"]}
 
@@ -610,8 +660,12 @@ class Run:
         and up to TRENDING_PER_WEEK posts by influencers it is not connected to."""
         if w == 1 or not self.config["social"]:
             return []
-        lines = [f'{self.by_id[c].get("name", c)}, someone you know, posted: "{self.posts[c]}"'
+        me = "@" + str(p.get("name", p["id"])).lower()
+        said = lambda c: "replied to you" if me in self.posts[c].lower() else "posted"
+        lines = [f'{self.by_id[c].get("name", c)}, someone you know, {said(c)}: "{self.posts[c]}"'
                  for c in p["connections"] if self.posts.get(c)]
+        lines += [f'{q.get("name", q["id"])} replied to you: "{self.posts[q["id"]]}"' for q in self.personas
+                  if q["id"] != p["id"] and q["id"] not in p["connections"] and me in self.posts.get(q["id"], "").lower()]
         trending = [q["id"] for q in self.personas if q["influencer"] and q["id"] != p["id"]
                     and q["id"] not in p["connections"] and self.posts.get(q["id"])]
         rng = random.Random(f"{self.info['seed']}-trending-{w}-{p['id']}")
@@ -689,7 +743,7 @@ class Run:
         i, fp = self.info, self.fps[w]
         i["weeks"][str(w)] = "waiting"
         i["phase"] = f"week {w}"
-        with _fp_locks[fp]:  # another run may be computing the same week right now
+        with checkpoint_lock(fp):  # another process may be computing the same week
             ck = load_ckpt(fp)
             if ck:
                 self.mark_reused(w, ck)
@@ -753,7 +807,16 @@ class Run:
         prompt = sim.week_prompt(shown(p), self.memory[p["id"]], w, facts,
                                  sim.option_lines(self.decisions, p, w), sim.company_message(self.decisions, p, w))
         level = "LOW"  # MEDIUM in crisis weeks doubled the wait; LOW keeps a week under ~15 s
-        schema = SOCIAL_SCHEMA if self.config["social"] else sim.SCHEMA
+        online = False
+        if self.config["social"]:
+            # the bump is for news that is new to this persona this week, not for an old message still in force
+            hit = outcome in ("canceled", "delayed") or any(d["week"] == w and sim.targeted(p, d["target"])
+                                                           for d in self.decisions)
+            chance = POST_ONLINE.get(p.get("social_media_activity"), POST_ONLINE["medium"]) + (POST_ONLINE_HIT if hit else 0)
+            online = random.Random(f"{i['seed']}-{p['id']}-{w}-online").random() < chance
+            prompt += ("\nSOCIAL MEDIA: you are on social media this week and may post if you want to (most weeks "
+                       "people do not)." if online else "\nSOCIAL MEDIA: you are not posting on social media this week.")
+        schema = SOCIAL_SCHEMA if online else sim.SCHEMA
         parsed, text, err, use = call(i["model"], prompt, schema, i["seed"], level, sim.valid_week)
         self.count(err, use)
         e = {"persona": p["id"], "week": w, "prompt": sim.SYSTEM + "\n\n" + prompt, "response": text,
@@ -771,7 +834,7 @@ class Run:
     def probe(self, when):
         i, key = self.info, self.probe_key(when)
         i["phase"] = f"check-in ({when})"
-        with _fp_locks[key]:
+        with checkpoint_lock(key):
             ck = load_ckpt(key)
             if ck:
                 i["calls_done"] += len(self.personas)
@@ -801,7 +864,7 @@ class Run:
     def timeline(self):
         """{persona id: [(week, prompt, response)]} for the weeks that match the current inputs."""
         b = self.inputs_now()
-        valid = chain_length(b["fps"], self.info["played"])
+        valid = self.validity()["valid_through"] if self.config["session"] else chain_length(b["fps"], self.info["played"])
         out = defaultdict(list)
         for w in range(1, valid + 1):
             for e in load_ckpt(b["fps"][w])["entries"]:
@@ -811,7 +874,7 @@ class Run:
     def rows(self):
         """weekly.jsonl-shaped rows for the weeks played so far (live view of a session)."""
         b = self.inputs_now()
-        valid = chain_length(b["fps"], self.info["played"])
+        valid = self.validity()["valid_through"] if self.config["session"] else chain_length(b["fps"], self.info["played"])
         rows = []
         for w in range(1, valid + 1):
             ck = load_ckpt(b["fps"][w])
@@ -896,12 +959,24 @@ def nps(rows, when):
     return round(100 * (sum(x == 5 for x in s) - sum(x <= 3 for x in s)) / len(s), 1) if s else None
 
 
+def recovery_24h(row):
+    """A timely seat offer is not a completed recovery. Count an accepted rebooking only;
+    refund timing is unknown unless the simulation records an explicit completion time."""
+    if row.get("flight_outcome") not in ("canceled", "delayed"):
+        return None
+    if row.get("status") == "rebooked":
+        return row.get("within_24h") is True
+    if row.get("status") == "canceled the trip":
+        return None  # a refund is offered, but acceptance and payment time are not recorded
+    return False
+
+
 def observed_week_metrics(rows, probes=()):
     """Only observations recorded for one simulated week; no network or monthly extrapolation."""
     scheduled = [r for r in rows if r.get("had_flight_this_week")]
     affected = [r for r in scheduled if r.get("flight_outcome") in ("canceled", "delayed")]
-    resolved = [r for r in affected if r.get("within_24h") is True]
-    unresolved = [r for r in affected if r.get("within_24h") is False]
+    resolved = [r for r in affected if recovery_24h(r) is True]
+    unresolved = [r for r in affected if recovery_24h(r) is False]
     trust = [r["trust"] for r in rows if isinstance(r.get("trust"), (int, float))]
     return {
         "personas": len(rows),
@@ -926,6 +1001,7 @@ def observed_week_metrics(rows, probes=()):
 
 # Dossier baseline, November 2: 210,000 passengers and ~1,355 flights a week, 2,500 complaints a month, NPS +12
 FLIGHTS_PER_WEEK, PAX_PER_WEEK, COMPLAINTS_PER_MONTH, NPS_BASE = 1355, 210_000, 2500, 12
+METRIC_BASE_WEEKS = (1, 2)  # goal_3's base period
 FARE = {"domestic": 120, "intl": 210}
 SCOPE_SHARE = {"all": 1.0, "bases": 0.6, "intl": 0.25}  # share of Kestrel flights an event touches
 
@@ -956,18 +1032,33 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
             c += flights * sim.P["merge"]
         planned, canceled = planned + flights, canceled + c
 
-    # goal 2: affected passengers rebooked within 24h or refunded
+    # goal 2: a timely offer (rebooking, or a 3h+ delayed flight that still operates) or a refund taken without the
+    # phone queue (booked by app or website). Assumption, stated in the unit: phone and agency bookers wait in the
+    # queue. The stricter view, accepted rebookings only, is kept as goal_2_strict (recovery_24h).
     hit = [r for r in weekly if r["flight_outcome"] in ("canceled", "delayed")]
-    ok = [r for r in hit if r.get("within_24h") or r["status"] == "canceled the trip"]
+    self_service = lambda r: str(by_id[r["persona"]].get("booking_channel", "")).lower() in ("app", "website")
+    ok = [r for r in hit if r.get("within_24h")
+          or (r["status"] in ("canceled the trip", "moved to another airline") and self_service(r))]
+    strict = [r for r in hit if recovery_24h(r) is True]
 
-    # goal 3: complaints a month, the dossier's 2,500 scaled by the complaint rate against this run's quiet weeks
-    rate = lambda rows: sum(w[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(w[r["persona"]] for r in rows), 1)
-    busy = {w for e in surprises for w in range(e["week"], e.get("until_week", e["week"] + 1) + 1)}
-    quiet = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] not in busy]
-    base = max(rate(quiet), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
-    complaints = COMPLAINTS_PER_MONTH * rate(weekly) / base if weekly else None
+    # goal 3: complaints a month in December (weeks 5-9), the dossier's 2,500 scaled by the complaint rate against
+    # the weeks before the first event (the same weeks in every run that shares a seed, so runs compare on one base).
+    # Weights are capped at the 90th percentile (about 81k trips; the largest persona stands for 235k): uncapped, the
+    # top three personas carried over half of all complaint weight. The cap trades some trip-weighting for stability,
+    # so read goal_3 as a comparison between runs, not as a forecast of the real complaint count.
+    cap = sorted(w.values())[int(0.90 * (len(w) - 1))] if w else 1
+    wc = {k: min(v, cap) for k, v in w.items()}
+    rate = lambda rows: sum(wc[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(wc[r["persona"]] for r in rows), 1)
+    # Base: weeks 1-2, before the first announcement could land (week 3). A fixed base, so plan_nosurprises, whose
+    # surprises are filtered out, uses the same weeks as the other four runs.
+    base_rows = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] in METRIC_BASE_WEEKS]
+    base = max(rate(base_rows), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
+    december = [r for r in weekly if 5 <= r["week"] <= 9] or weekly
+    complaints = COMPLAINTS_PER_MONTH * rate(december) / base if weekly else None
 
-    # goal 3b: NPS moved from +12 by the change in check-in 3a
+    # goal 3b: directly observed end-survey NPS; the dossier's +12 is a target, not a simulated baseline
+    # The panel's raw survey NPS starts far below the dossier's +12 (about -26), so goal_3b keeps the dossier
+    # baseline and adds the simulated change; the raw start and end values are reported beside it.
     s, e = nps(probes, "start"), nps(probes, "end")
     nps_now = round(NPS_BASE + e - s, 1) if s is not None and e is not None else None
 
@@ -987,14 +1078,19 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
         "goal_2": round(100 * sum(w[r["persona"]] for r in ok) / sum(w[r["persona"]] for r in hit), 1) if hit else None,
         "goal_3": round(complaints) if complaints is not None else None,
         "goal_3b": nps_now,
+        "goal_2_strict": round(100 * sum(w[r["persona"]] for r in strict) / sum(w[r["persona"]] for r in hit), 1) if hit else None,
+        "nps_start": s,
+        "nps_raw_start": s,
+        "nps_raw_end": e,
         "goal_4": round(100 * (1 - (lost * scale + cap) / (plan * scale)), 2) if plan else None,
         "revenue_lost_usd": round(lost * scale + cap) if plan else None,
         "units": {
             "goal_1": f"% of planned Kestrel flights operated in week(s) {', '.join(map(str, metric_weeks))}, strike days left out (network, ~1,355 flights a week)",
-            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded"
+            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)",
+            "goal_2_strict": "% of the same passengers with a confirmed rebooking within 24h only (refund timing not recorded)"
                       + (", weighted by represents_trips" if weighted else ", unweighted"),
-            "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
-            "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+            "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
+            "goal_3b": "NPS: dossier +12 plus the change in the check-in 3a NPS from start to end (survey runs only); raw values in nps_raw_start/end",
             "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M",
         },
     }
@@ -1099,9 +1195,9 @@ def disk_timeline(name):
 
 # ---------------------------------------------------------------- manager
 class Manager:
-    def __init__(self):
+    def __init__(self, load_sessions=True):
         self.runs = {}
-        for f in sorted(SESSIONS.glob("*.json")) if SESSIONS.exists() else []:
+        for f in (sorted(SESSIONS.glob("*.json")) if load_sessions and SESSIONS.exists() else []):
             try:
                 run = Run.load(f)
                 self.runs[run.name] = run
@@ -1267,7 +1363,7 @@ def main():
     a = ap.parse_args()
     load_env()
     LIMIT.set(a.workers)
-    mgr = Manager()
+    mgr = Manager(load_sessions=False)  # batch CLI must not rewrite an active server session
     if a.name == "official":
         runs = mgr.official(a.decisions, a.surprises, a.model, a.personas, social=not a.no_social)
     else:

@@ -2,10 +2,10 @@
   "name": "plan_2",
   "type": "plan",
   "seed": 2,
-  "model": "gemini-3.7-flash",
+  "model": "gemini-3.5-flash-lite",
   "probe": false,
   "decisions_file": "exp/d2_free.json",
-  "surprises_file": "surprises_team09_week9.json",
+  "surprises_file": "exp_hard/events_all.json",
   "personas_file": "personas_66.jsonl",
   "replicate": 0,
   "session": false,
@@ -14,7 +14,7 @@
   "status": "done",
   "phase": "done: hand-in files written",
   "weeks": {
-    "1": "computed",
+    "1": "reused",
     "2": "reused",
     "3": "reused",
     "4": "computed",
@@ -27,112 +27,117 @@
   },
   "week_source": {
     "1": {
-      "fp": "75126bebfa81f4d5ef82",
-      "origin_run": "plan_2",
-      "created": "2026-10-24T17:01:05"
+      "fp": "6f5d43dc4693f50e13d7",
+      "origin_run": "nodecision_2",
+      "created": "2026-10-24T17:37:59"
     },
     "2": {
-      "fp": "c58d725698b881f61ccb",
+      "fp": "87bd71cada02617319e5",
       "origin_run": "nodecision_2",
-      "created": "2026-10-24T17:03:27"
+      "created": "2026-10-24T17:38:02"
     },
     "3": {
-      "fp": "9fd4b73b2271c4348344",
+      "fp": "f7bb360e385835c58012",
       "origin_run": "nodecision_2",
-      "created": "2026-10-24T17:04:06"
+      "created": "2026-10-24T17:38:06"
     },
     "4": {
-      "fp": "b3ceab01b49c8ca9fb2b",
+      "fp": "220763c1e94d5f668306",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:05:30"
+      "created": "2026-10-24T17:38:13"
     },
     "5": {
-      "fp": "5e02ae6dc7b1ce2bbb28",
+      "fp": "2a7360b6b05fc713ef70",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:06:46"
+      "created": "2026-10-24T17:38:18"
     },
     "6": {
-      "fp": "ed4e8030630a8db5c51a",
+      "fp": "5f279931e795e334bd2b",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:07:25"
+      "created": "2026-10-24T17:38:20"
     },
     "7": {
-      "fp": "d5420eb4b46a10560840",
+      "fp": "7d97ae7f94a0070b7bed",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:08:14"
+      "created": "2026-10-24T17:38:26"
     },
     "8": {
-      "fp": "ad512b86465a916989c5",
+      "fp": "78dc3b6fa2ecb6b35e31",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:08:34"
+      "created": "2026-10-24T17:38:32"
     },
     "9": {
-      "fp": "272b9103cb8cc1de60ab",
+      "fp": "ba46587faa51e01d2fd7",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:09:06"
+      "created": "2026-10-24T17:38:39"
     },
     "10": {
-      "fp": "13fd02d3edad14c51b00",
+      "fp": "acc30dcbe5c92f176ad1",
       "origin_run": "plan_2",
-      "created": "2026-10-24T17:10:09"
+      "created": "2026-10-24T17:38:45"
     }
   },
   "played": 10,
   "target": 10,
-  "calls_done": 594,
-  "calls_total": 594,
+  "calls_done": 660,
+  "calls_total": 660,
   "errors": 0,
   "tokens": {
-    "in": 1009986,
-    "out": 83140,
-    "think": 2041
+    "in": 983127,
+    "out": 90615,
+    "think": 0
   },
-  "resumed_from": 1,
-  "created": "2026-10-24T17:02:19",
-  "started": "2026-10-24T17:02:19",
-  "finished": "2026-10-24T17:10:09",
+  "resumed_from": 0,
+  "created": "2026-10-24T17:37:54",
+  "started": "2026-10-24T17:37:54",
+  "finished": "2026-10-24T17:38:45",
   "error": null,
   "metrics": {
-    "goal_1": 96.86,
+    "goal_1": 98.41,
     "goal_2": 100.0,
-    "goal_3": 903,
+    "goal_3": 2364,
     "goal_3b": null,
+    "goal_2_strict": 0.6,
+    "nps_start": null,
+    "nps_raw_start": null,
+    "nps_raw_end": null,
     "goal_4": 100.0,
     "revenue_lost_usd": 0,
     "units": {
       "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
-      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
-      "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
-      "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)",
+      "goal_2_strict": "% of the same passengers with a confirmed rebooking within 24h only (refund timing not recorded), weighted by represents_trips",
+      "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
+      "goal_3b": "NPS: dossier +12 plus the change in the check-in 3a NPS from start to end (survey runs only); raw values in nps_raw_start/end",
       "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
     }
   },
-  "log_id": "0944aa0332304a02b9c34b054750270b",
+  "log_id": "eebe5ad017fd42679b59ff4ff082d30f",
   "chain": [
-    "d812de445b3a435ed36c",
-    "75126bebfa81f4d5ef82",
-    "c58d725698b881f61ccb",
-    "9fd4b73b2271c4348344",
-    "b3ceab01b49c8ca9fb2b",
-    "5e02ae6dc7b1ce2bbb28",
-    "ed4e8030630a8db5c51a",
-    "d5420eb4b46a10560840",
-    "ad512b86465a916989c5",
-    "272b9103cb8cc1de60ab",
-    "13fd02d3edad14c51b00"
+    "ab7a872aa2e47c551369",
+    "6f5d43dc4693f50e13d7",
+    "87bd71cada02617319e5",
+    "f7bb360e385835c58012",
+    "220763c1e94d5f668306",
+    "2a7360b6b05fc713ef70",
+    "5f279931e795e334bd2b",
+    "7d97ae7f94a0070b7bed",
+    "78dc3b6fa2ecb6b35e31",
+    "ba46587faa51e01d2fd7",
+    "acc30dcbe5c92f176ad1"
   ],
-  "people": "6e71a9f109a891868d39",
+  "people": "02f5ecc5bb4a88a8ec94",
   "fps": [
-    "d812de445b3a435ed36c",
-    "75126bebfa81f4d5ef82",
-    "c58d725698b881f61ccb",
-    "9fd4b73b2271c4348344",
-    "b3ceab01b49c8ca9fb2b",
-    "5e02ae6dc7b1ce2bbb28",
-    "ed4e8030630a8db5c51a",
-    "d5420eb4b46a10560840",
-    "ad512b86465a916989c5",
-    "272b9103cb8cc1de60ab",
-    "13fd02d3edad14c51b00"
+    "ab7a872aa2e47c551369",
+    "6f5d43dc4693f50e13d7",
+    "87bd71cada02617319e5",
+    "f7bb360e385835c58012",
+    "220763c1e94d5f668306",
+    "2a7360b6b05fc713ef70",
+    "5f279931e795e334bd2b",
+    "7d97ae7f94a0070b7bed",
+    "78dc3b6fa2ecb6b35e31",
+    "ba46587faa51e01d2fd7",
+    "acc30dcbe5c92f176ad1"
   ]
 }

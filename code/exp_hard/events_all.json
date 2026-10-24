@@ -1,0 +1,58 @@
+[
+ {
+  "week": 3,
+  "text": "The engine inspection. The FAA and the engine maker have told airlines to inspect a part on one engine type. Some of Kestrel's aircraft use it. A passenger's video of mechanics working on an engine at the gate is going round on TikTok. Known: the inspections are a precaution and start this week; no Kestrel aircraft has had a problem with this part. Not known: how many aircraft; how long each check takes; whether any part must be replaced.",
+  "effect": "delays",
+  "scope": "all",
+  "kestrel_caused": true,
+  "until_week": 3,
+  "reading": "Precautionary FAA-ordered inspections start; a TikTok video makes it a visible safety worry. No Kestrel aircraft has had a problem; scale unknown."
+ },
+ {
+  "week": 4,
+  "text": "The inspections found worn parts on three Kestrel aircraft. They will stay on the ground for about two weeks while new parts arrive. All other aircraft have been cleared to fly. Kestrel will have to cancel or merge some flights in the next two weeks, Thanksgiving week included.",
+  "effect": "some cancellations",
+  "scope": "all",
+  "kestrel_caused": true,
+  "until_week": 5,
+  "reading": "Three of 36 aircraft (8%) grounded for about two weeks over Thanksgiving: some cancellations and merged flights, Kestrel's own responsibility; the rest of the fleet is cleared."
+ },
+ {
+  "week": 7,
+  "text": "Government shutdown. Overnight, Congress missed its funding deadline, and parts of the federal government shut down. Some federal workers have been sent home; others, such as air traffic controllers and TSA officers, must keep working without pay. Nobody knows how long it will last. Known: Social Security payments and the Postal Service continue. Not known: how long it will last; when federal workers will be paid; which services will slow down. Air traffic controllers and TSA officers keep working, without pay. Some airports report longer security lines.",
+  "effect": "delays",
+  "scope": "all",
+  "kestrel_caused": false,
+  "until_week": 10,
+  "reading": "Federal shutdown: unpaid air traffic controllers and TSA officers, longer security lines and some air-traffic delays across the US, not Kestrel's fault; federal workers face missed paychecks. Duration unknown."
+ },
+ {
+  "week": 8,
+  "text": "Government shutdown update. The Senate passed a short-term funding bill; the House plans to vote after Christmas. Federal workers have been told they will get back pay once the government reopens. Their December 30 paycheck may be missed. The FAA says it may slow traffic at busy airports if more controllers call in sick.",
+  "effect": "none",
+  "scope": "all",
+  "kestrel_caused": false,
+  "until_week": 9,
+  "reading": "The shutdown runs past Christmas; the FAA may slow traffic at busy airports. Delays are already modelled by the week 7 event; this update adds news, not extra cancellations."
+ },
+ {
+  "week": 8,
+  "known_crisis": true,
+  "text": "Week 8, Tuesday, December 22 and Wednesday, December 23: a 48-hour strike by the ground handling contractor's workers in Orlando and Philadelphia. Baggage handlers, cabin cleaners, wheelchair agents and fuelers employed by the contractor plan to walk out for 48 hours. The contractor says it will bring in replacement staff where it can. Turnarounds will be slower; some flights may be late or canceled. The union says the strike may be extended. Talks continue. It is the busiest holiday week of the year.",
+  "effect": "none",
+  "scope": "bases",
+  "kestrel_caused": false,
+  "until_week": 8,
+  "reading": "The known 48-hour ground handling strike at both bases on Dec 22-23, the busiest week of the year."
+ },
+ {
+  "week": 9,
+  "known_crisis_update": true,
+  "text": "Known crisis outcome: the ground handling strike lasted 48 hours and was not extended. The contractor covered about half of its shifts with replacement staff.",
+  "effect": "none",
+  "scope": "bases",
+  "kestrel_caused": false,
+  "until_week": 9,
+  "reading": "The strike is over and was not extended; about half of the contractor's shifts were covered during it. No new disruption; it shapes what passengers remember and say."
+ }
+]

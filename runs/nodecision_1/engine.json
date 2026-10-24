@@ -2,10 +2,10 @@
   "name": "nodecision_1",
   "type": "nodecision",
   "seed": 1,
-  "model": "gemini-3.7-flash",
+  "model": "gemini-3.5-flash-lite",
   "probe": true,
   "decisions_file": "exp/d2_free.json",
-  "surprises_file": "surprises_team09_week9.json",
+  "surprises_file": "exp_hard/events_all.json",
   "personas_file": "personas_66.jsonl",
   "replicate": 0,
   "session": false,
@@ -27,112 +27,117 @@
   },
   "week_source": {
     "1": {
-      "fp": "02a49cb3f6835cecc22a",
+      "fp": "51375ee9e47b0b398680",
       "origin_run": "plan_nosurprises",
-      "created": "2026-10-24T17:01:25"
+      "created": "2026-10-24T17:37:59"
     },
     "2": {
-      "fp": "b5c1aac3651aa7ebfe2e",
+      "fp": "0ccf555fa835605b39bc",
       "origin_run": "plan_1",
-      "created": "2026-10-24T17:03:52"
+      "created": "2026-10-24T17:38:01"
     },
     "3": {
-      "fp": "06e049d915bc8191fe31",
+      "fp": "bd7bde6018d2df0056d6",
       "origin_run": "plan_1",
-      "created": "2026-10-24T17:05:24"
+      "created": "2026-10-24T17:38:06"
     },
     "4": {
-      "fp": "75f37742a194efa86619",
+      "fp": "8df3447020d359c500e7",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:06:17"
+      "created": "2026-10-24T17:38:14"
     },
     "5": {
-      "fp": "cf6f1977507ef381520a",
+      "fp": "cb5b7df7b432b63298b3",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:06:37"
+      "created": "2026-10-24T17:38:19"
     },
     "6": {
-      "fp": "a3f973c0066d65fe01cd",
+      "fp": "0fda45b03c4fed1541b9",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:07:17"
+      "created": "2026-10-24T17:38:26"
     },
     "7": {
-      "fp": "6b22df81877e3aac5d40",
+      "fp": "6136476ce7591f4118f5",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:08:05"
+      "created": "2026-10-24T17:38:34"
     },
     "8": {
-      "fp": "55b0071f479f95cdd00f",
+      "fp": "a86f459747eeeda0e0c5",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:08:33"
+      "created": "2026-10-24T17:38:39"
     },
     "9": {
-      "fp": "26bc875d1e4d29cd934f",
+      "fp": "e3d26eace10ea8bca2c8",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:09:06"
+      "created": "2026-10-24T17:38:45"
     },
     "10": {
-      "fp": "cfee5a950879c60eccb0",
+      "fp": "267b28c119963d6c3d03",
       "origin_run": "nodecision_1",
-      "created": "2026-10-24T17:09:37"
+      "created": "2026-10-24T17:38:47"
     }
   },
   "played": 10,
   "target": 10,
-  "calls_done": 726,
-  "calls_total": 726,
+  "calls_done": 792,
+  "calls_total": 792,
   "errors": 0,
   "tokens": {
-    "in": 1022184,
-    "out": 88004,
-    "think": 2966
+    "in": 1019251,
+    "out": 94296,
+    "think": 0
   },
-  "resumed_from": 1,
-  "created": "2026-10-24T17:02:19",
-  "started": "2026-10-24T17:02:19",
-  "finished": "2026-10-24T17:09:59",
+  "resumed_from": 0,
+  "created": "2026-10-24T17:37:54",
+  "started": "2026-10-24T17:37:54",
+  "finished": "2026-10-24T17:38:53",
   "error": null,
   "metrics": {
-    "goal_1": 95.14,
-    "goal_2": 94.6,
-    "goal_3": 1390,
-    "goal_3b": -15.3,
-    "goal_4": 99.12,
-    "revenue_lost_usd": 2802090,
+    "goal_1": 97.72,
+    "goal_2": 94.0,
+    "goal_3": 6191,
+    "goal_3b": -7.7,
+    "goal_2_strict": 5.0,
+    "nps_start": -25.8,
+    "nps_raw_start": -25.8,
+    "nps_raw_end": -45.5,
+    "goal_4": 89.73,
+    "revenue_lost_usd": 32830500,
     "units": {
       "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
-      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
-      "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
-      "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)",
+      "goal_2_strict": "% of the same passengers with a confirmed rebooking within 24h only (refund timing not recorded), weighted by represents_trips",
+      "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
+      "goal_3b": "NPS: dossier +12 plus the change in the check-in 3a NPS from start to end (survey runs only); raw values in nps_raw_start/end",
       "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
     }
   },
-  "log_id": "a571073447ed48a0a26368b3150b497d",
+  "log_id": "7fe9e2b58f624cd2803d568d4faa205e",
   "chain": [
-    "35927487b68b65b263b7",
-    "02a49cb3f6835cecc22a",
-    "b5c1aac3651aa7ebfe2e",
-    "06e049d915bc8191fe31",
-    "75f37742a194efa86619",
-    "cf6f1977507ef381520a",
-    "a3f973c0066d65fe01cd",
-    "6b22df81877e3aac5d40",
-    "55b0071f479f95cdd00f",
-    "26bc875d1e4d29cd934f",
-    "cfee5a950879c60eccb0"
+    "f30de5371ea01eb6b85d",
+    "51375ee9e47b0b398680",
+    "0ccf555fa835605b39bc",
+    "bd7bde6018d2df0056d6",
+    "8df3447020d359c500e7",
+    "cb5b7df7b432b63298b3",
+    "0fda45b03c4fed1541b9",
+    "6136476ce7591f4118f5",
+    "a86f459747eeeda0e0c5",
+    "e3d26eace10ea8bca2c8",
+    "267b28c119963d6c3d03"
   ],
-  "people": "485786b8d7d4c2ae6360",
+  "people": "fd2a4bd2bcd45aa12ae2",
   "fps": [
-    "35927487b68b65b263b7",
-    "02a49cb3f6835cecc22a",
-    "b5c1aac3651aa7ebfe2e",
-    "06e049d915bc8191fe31",
-    "75f37742a194efa86619",
-    "cf6f1977507ef381520a",
-    "a3f973c0066d65fe01cd",
-    "6b22df81877e3aac5d40",
-    "55b0071f479f95cdd00f",
-    "26bc875d1e4d29cd934f",
-    "cfee5a950879c60eccb0"
+    "f30de5371ea01eb6b85d",
+    "51375ee9e47b0b398680",
+    "0ccf555fa835605b39bc",
+    "bd7bde6018d2df0056d6",
+    "8df3447020d359c500e7",
+    "cb5b7df7b432b63298b3",
+    "0fda45b03c4fed1541b9",
+    "6136476ce7591f4118f5",
+    "a86f459747eeeda0e0c5",
+    "e3d26eace10ea8bca2c8",
+    "267b28c119963d6c3d03"
   ]
 }

@@ -1,15 +1,20 @@
 {
-  "goal_1": 96.86,
+  "goal_1": 98.41,
   "goal_2": 100.0,
-  "goal_3": 742,
-  "goal_3b": 19.6,
+  "goal_3": 3927,
+  "goal_3b": 10.5,
+  "goal_2_strict": 11.0,
+  "nps_start": -25.8,
+  "nps_raw_start": -25.8,
+  "nps_raw_end": -27.3,
   "goal_4": 100.0,
   "revenue_lost_usd": 0,
   "units": {
     "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
-    "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
-    "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
-    "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+    "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)",
+    "goal_2_strict": "% of the same passengers with a confirmed rebooking within 24h only (refund timing not recorded), weighted by represents_trips",
+    "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
+    "goal_3b": "NPS: dossier +12 plus the change in the check-in 3a NPS from start to end (survey runs only); raw values in nps_raw_start/end",
     "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
   }
 }

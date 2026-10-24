@@ -1,13 +1,15 @@
 # Team 09 · Kestrel Air: how we built the simulation
 
-66 LLM personas live through the ten weeks, one model call per persona per week. Code builds the world each persona sees: what happened to its flights, the recovery options that exist for it, the company's message, the news and its friends' posts. The model decides what the person says, does and reports. The hand-in runs use gemini-3.7-flash, a thinking model; we checked every result again with gemini-3.5-flash-lite. Code:
+66 LLM personas live through the ten weeks, one model call per persona per week. Code builds the world each persona sees: what happened to its flights, the recovery options that exist for it, the company's message, the news and its friends' posts. The model decides what the person says, does and reports. The hand-in runs use gemini-3.5-flash-lite. Earlier in the day we checked the week-8 decision with gemini-3.7-flash, a thinking model (E2). Code:
 - `code/sim.py`: world and prompts.
 - `code/engine.py`: runs, checkpoints, metrics, interviews.
 - `code/server.py` and `code/ui/simple.html`: a one-page control room.
-- `code/personas_build/`: how the 66 personas were made (segments, raking, LLM fill-in, frozen output).
-- `code/experiments/`: the decision experiments behind section 6.
+- `code/test_engine_consistency.py`: regression tests for the world rules and metrics.
+- `code/build_personas_66_v2.py`: an alternative compact panel, not used in the hand-in runs.
 
-Inputs: `code/personas_66.jsonl`, `code/decisions_team09_fresh.json` and `code/exp/d2_free.json` (the locked decisions), and `code/surprises_team09_week9.json` (the events). The five hand-in runs are in `runs/`.
+The scripts that built the 66 personas (segments, raking, LLM fill-in, frozen output) are on the repository's `talp-kestrel` branch. The experiment notes behind section 6 (`team09-*.md`) are on its `main` branch.
+
+Inputs: `code/personas_66.jsonl`, `code/exp/d2_free.json` (the two locked decisions) and `code/exp_hard/events_all.json` (all six announcements). The five hand-in runs are in `runs/`.
 
 ## 1. Personas: who and why
 
@@ -58,7 +60,8 @@ The persona never sees its simulation labels (segment, window, weight, strike ex
 - What happened to each of its flights.
 - The news: every announcement from its week on, with our one-sentence report of it.
 - The recovery options that really exist for it.
-- The company's message, word for word, if the persona is in the decision's target.
+- The company's message, word for word, if the persona is in the decision's target. A message is shown for the two weeks its services last, so an expired offer is not re-sent.
+- The dossier's known crisis (the strike) as planned news from week 1, because the CEO letter made it public long before.
 - Last week's posts by its three connections, plus up to two trending posts by very active social-media personas.
 
 **What code decides (the world rules in `sim.py`).**
@@ -85,16 +88,16 @@ A check-in with the eight questions runs before week 1 and after week 10, and th
 
 ## 3. How we read each crisis
 
-The engine's reader (gemini-3.5-flash-lite) turns each announcement into an effect on flights (none / delays / some cancellations / many cancellations), which flights it touches, for how many weeks, whether Kestrel caused it, and a neutral one-sentence report. The reading is saved in the events file (`code/surprises_team09_week9.json`), where we can see it and change it. Personas read the original text and the report from the event's week on.
+The engine's reader (gemini-3.5-flash-lite) turns each announcement into an effect on flights (none / delays / some cancellations / many cancellations), which flights it touches, for how many weeks, whether Kestrel caused it, and a neutral one-sentence report. The reading is saved in the events file (`code/exp_hard/events_all.json`), where we can see it and change it. Personas read the original text and the report from the event's week on.
 
 | Week | Announcement | Our reading | Doubts |
 |---|---|---|---|
-| 3 | FAA and the engine maker order inspections of one engine part; TikTok video of mechanics at a gate | some cancellations, all flights, not Kestrel's doing, week 3 | The checks take aircraft out of service, but nobody knows for how long. |
-| 4 | Worn parts on three aircraft; grounded about two weeks; some flights canceled or merged, Thanksgiving included | many cancellations, all flights, not Kestrel's doing, weeks 4–5 | Three of 36 aircraft is 8.3% of capacity. With our leased aircraft, two remain out (5.6%). In the engine, "many" with the lease means +7.5 points of cancellation, and "some" means +2.5; capacity arithmetic lies between. Goal 1 hangs on this reading (section 6). We treated the grounding as not Kestrel's own because the FAA ordered the checks. A DOT-style reading would count maintenance as the airline's own, which brings meals and hotels under business as usual. |
-| 7 | Government shutdown; air traffic controllers and TSA officers work unpaid; longer security lines at some airports | delays, the two bases, not Kestrel's doing, week 7 (the reader gave this answer 3 times out of 3) | Probably too strong at the start. In the 2025 shutdown (from Oct 1), the FAA ordered flight cuts at 40 airports only on Nov 7, five weeks in (4%, rising to 10%). |
-| 8 | Shutdown update: the Senate passed a short-term bill; the House votes after Christmas; the Dec 30 paycheck may be missed; the FAA may slow traffic at busy airports if more controllers call in sick | delays, the two bases, not Kestrel's doing, weeks 8–9 (2 of 2 readings agree) | We treat the update as the same shutdown going on, so its delays replace the week-7 ones instead of adding to them; otherwise strike week would count the shutdown twice. In past shutdowns sick calls rose once paychecks were missed, so week 9 (Dec 30) is the risk. |
-| 8 | Known crisis: 48-hour ground handling strike at both bases, Dec 22–23; "may be extended" (the dashboard's text, in every run including `plan_nosurprises`) | the strike rules in section 2, on Dec 22–23 at the bases | We did not simulate an extension. |
-| 9 | Known crisis outcome: the strike lasted 48 hours and was not extended; the contractor covered about half its shifts with replacement staff | no flight effect; news from week 9 on; part of the known crisis, so it is in `plan_nosurprises` too | The reader said "some cancellations" in week 9; we overrode it, because the strike was in week 8 and is over. "Half the shifts covered" fits our no-backup strike rules (30% canceled, 45% late). |
+| 3 | FAA and the engine maker order inspections of one engine part; TikTok video of mechanics at a gate | delays, all flights, Kestrel's own, week 3 | Precaution, scale unknown; we did not cancel flights for checks nobody has sized yet. |
+| 4 | Worn parts on three aircraft; grounded about two weeks; some flights canceled or merged, Thanksgiving included | some cancellations, all flights, Kestrel's own, weeks 4–5 | Three of 36 aircraft is 8.3% of capacity; with our leased aircraft two remain out (5.6%). In the engine "some" with the lease means +2.5 points of cancellation, so this reading is on the mild side; Goal 1 hangs on it (E3). Maintenance on our own aircraft counts as Kestrel's doing (DOT practice), so business-as-usual meals and hotels apply. |
+| 7 | Government shutdown; air traffic controllers and TSA officers work unpaid; longer security lines at some airports | delays, all flights, not Kestrel's doing, weeks 7–10 | Nobody knows how long it lasts, so we let it run to the end. Probably strong at the start: in the 2025 shutdown (from Oct 1) the FAA ordered flight cuts at 40 airports only on Nov 7, five weeks in (4%, rising to 10%). |
+| 8 | Shutdown update: the Senate passed a short-term bill; the House votes after Christmas; the Dec 30 paycheck may be missed; the FAA may slow traffic if more controllers call in sick | news only, weeks 8–9 | The week-7 event already carries the delays; the update adds what people read, not a second dose of delays in strike week. |
+| 8 | Known crisis: 48-hour ground handling strike at both bases, Dec 22–23; "may be extended" (the dashboard's text) | the strike rules in section 2, Dec 22–23 at the bases; planned news from week 1 | We did not simulate an extension; the outcome below says there was none. |
+| 9 | Known crisis outcome: 48 hours, not extended; about half the contractor's shifts covered | news only, from week 9; kept in `plan_nosurprises` as part of the known crisis | Marked as an update of the known crisis, so it is not shown as planned news before week 9. "Half the shifts covered" fits our no-backup strike rules (30% canceled, 45% late). |
 
 ## 4. Our two decisions (as locked)
 
@@ -113,9 +116,9 @@ Each persona row counts with its `represents_trips` weight. "No worse than last 
 | Goal | How we compute it | Who decides it |
 |---|---|---|
 | 1 Flights operated ≥98% | Network formula: about 1,355 flights a week × the world's cancellation rates; strike days left out | Code (our assumptions), not the personas |
-| 2 Rebooked or refunded within 24h ≥90% | Share of weighted persona flights canceled or 3h+ late that were rebooked within 24h, or whose trip was canceled (refund) | Mostly code: the recovery rules decide when the next seat is |
-| 3 Complaints | 2,500 × (this run's complaint rate ÷ its complaint rate in weeks without events) | The personas' complaint flags; only a direction (section 7) |
-| 3b NPS | +12 plus the change in check-in question 3a (5 = promoter, 1–3 = detractor) | The personas' check-in answers |
+| 2 Rebooked or refunded within 24h ≥90% | Share of weighted persona flights canceled or 3h+ late that were rebooked within 24h, or refunded through the app or website (phone and agency bookers wait in the queue). `goal_2_strict` counts confirmed rebookings only | Mostly code: the recovery rules decide when the next seat is |
+| 3 Complaints | Complaints a month in December (weeks 5–9): 2,500 × (complaint rate ÷ the rate in weeks 1–2, which every run shares); weights capped at the 90th percentile so one big persona cannot dominate | The personas' complaint flags; a comparison between runs, not a forecast |
+| 3b NPS | +12 plus the change in check-in question 3a (5 = promoter, 1–3 = detractor); the raw values are `nps_raw_start` and `nps_raw_end` | The personas' check-in answers |
 | 4 Revenue weeks 5–10 ≥96% | Weighted trips lost (moved to another airline or canceled the trip) × fare ($120 domestic, $210 international) | The personas' statuses |
 
 ## 6. Experiments
@@ -139,64 +142,51 @@ Backup ground handling plus the partner deal does the work. No third action was 
 | 3.7-flash | none / free changes / points | 93.0% / 100% / 100% | −6.2 / +19.5 / +16.5 | 5 / 2 / 1 |
 | 3.5-flash-lite | none / free changes / points | 91.8% / 100% / 100% | +9.0 / +18.1 / +22.6 | 9 / 3 / 3 |
 
-The two models rank the third action in opposite orders, so we read it as noise. Absolute levels move with the model and comparisons do not, so we never mix models in one table for the board. All five hand-in runs on 3.7-flash took 8 minutes. Flash-lite takes about one minute, so it is our fallback if a late announcement leaves too little time.
+The two models rank the third action in opposite orders, so we read it as noise. Absolute levels move with the model and comparisons do not, so we never mix models in one table for the board. Near the deadline, with every team calling the API, 3.7-flash slowed to about 5 minutes a week. All five hand-in runs on flash-lite took 80 seconds, so we handed in flash-lite.
 
 **E3. How much Goal 1 depends on our crisis reading** (from the engine's formula, any seed):
 
 | Week 3 / week 4 reading | No decision | Our plan |
 |---|---:|---:|
-| some / many cancellations (our reading) | 95.14% | 96.86% |
+| some / many cancellations (our first reading) | 95.14% | 96.86% |
 | some / some | 97.20% | 97.89% |
-| delays / some | 97.72% | 98.41% |
+| delays / some (the reading in the hand-in runs) | 97.72% | 98.41% |
 | Capacity arithmetic: 2 of 36 aircraft out in weeks 4–5 with the lease | n/a | about 97.1–97.7% |
 
-The 98% goal is met only under the mildest reading. The plan lands between 96.9% (our reading) and 98.4% (the mildest). Delays do not count against Goal 1, so the shutdown reading does not change these figures.
+The hand-in runs use the mild reading, so the plan meets 98% (98.41%) and no decision misses it (97.72%). Under harsher readings the plan falls to 96.9–97.9%, and capacity arithmetic gives about 97.1–97.7%, so the 98% is fragile. Delays do not count against Goal 1, so the shutdown reading does not change these figures.
 
-**E4. The hand-in runs: the plan against no decision, with every announcement** (gemini-3.7-flash, events through the week-9 strike outcome, engine version 3; `runs/`):
+**E4. The hand-in runs: the plan against no decision, with all six announcements** (gemini-3.5-flash-lite, `code/exp_hard/events_all.json`, main's engine; `runs/`):
 
 | | Plan, seed 1 | Plan, seed 2 | No decision, seed 1 | No decision, seed 2 | Plan, surprises off |
 |---|---:|---:|---:|---:|---:|
-| Goal 1: flights operated (target ≥98%) | 96.86% | 96.86% | 95.14% | 95.14% | 98.92% |
-| Goal 2: resolved within 24h (≥90%) | 100% | 100% | 94.6% | 99.4% | 100% |
-| Goal 3: complaints a month (direction only) | 742 | 903 | 1,390 | 971 | 40 |
-| Complaint flags (of 660 persona-weeks) | 10 | 13 | 12 | 19 | 1 |
-| Goal 3b: NPS (+12 basis; check-ins in seed 1 only) | +19.6 | — | −15.3 | — | — |
-| Raw check-in NPS, start → end | +1.5 → +9.1 | — | +1.5 → −25.8 | — | — |
-| Goal 4: revenue weeks 5–10 (≥96%) | 100% | 100% | 99.12% | 99.55% | 100% |
-| Trust in week 10 (1–5, all 66 answered) | 4.12 | 4.12 | 3.77 | 3.70 | 4.50 |
-| "Would book again: yes", week 10 (weighted) | 87% | 91% | 83% | 85% | 100% |
+| Goal 1: flights operated (target ≥98%) | 98.41% | 98.41% | 97.72% | 97.72% | 98.92% |
+| Goal 2: rebooked within 24h or refunded (≥90%) | 100% | 100% | 94.0% | 99.8% | 100% |
+| Goal 2, confirmed rebookings only | 11.0% | 0.6% | 5.0% | 1.1% | 18.2% |
+| Goal 3: complaints a month in December (comparison only) | 3,927 | 2,364 | 6,191 | 4,608 | 2,203 |
+| Complaint flags (of 660 persona-weeks) | 12 | 22 | 24 | 34 | 5 |
+| Goal 3b: NPS (+12 basis; check-ins in seed 1) | +10.5 | — | −7.7 | — | — |
+| Raw check-in NPS, start → end | −25.8 → −27.3 | — | −25.8 → −45.5 | — | — |
+| Goal 4: revenue weeks 5–10 (≥96%) | 100% | 100% | 89.73% | 98.33% | 100% |
+| Trust in week 10 (1–5) | 3.52 | 3.45 | 3.22 | 3.22 | 3.94 |
+| "Would book again: yes", week 10 (weighted) | 74% | 73% | 52% | 62% | 87% |
 | Strike-day flights (16): canceled / 3h+ late | 0 / 3 | 1 / 1 | 3 / 8 | 3 / 8 | 0 / 3 |
 
-Both messages reached all 66 personas word for word from their weeks (0 before). In both seeds the plan does better on trust, on resolving disruptions within 24h, on strike-day cancellations and on revenue. In seed 1 the check-in NPS rises 7.6 points under the plan and falls 27.3 without decisions. On 3.7-flash the gap in complaints and "would book again" is small: the personas are more forgiving across the board (they start at NPS +1.5, against −26 on flash-lite). The "moved to another airline" rows in the runs are real switches; for example, a corporate agency whose group flight was canceled in week 3 took the refund and booked another airline.
-
-**E4b. The same inputs on the second model** (gemini-3.5-flash-lite, check-ins switched on in every run):
-
-| | Plan, seed 1 | Plan, seed 2 | No decision, seed 1 | No decision, seed 2 | Plan, surprises off |
-|---|---:|---:|---:|---:|---:|
-| Goal 2: resolved within 24h | 100% | 100% | 95.0% | 99.8% | 100% |
-| Complaint flags (of 660) | 21 | 21 | 31 | 42 | 8 |
-| Goal 3b: NPS (+12 basis) | +13.6 | +10.5 | −13.7 | −6.2 | +42.3 |
-| Raw check-in NPS, start → end | −25.8 → −24.2 | −27.3 → −28.8 | −25.8 → −51.5 | −27.3 → −45.5 | −25.8 → +4.5 |
-| Goal 4: revenue weeks 5–10 | 98.03% | 100% | 93.95% | 99.74% | 100% |
-| Trust in week 10 (1–5) | 3.48 | 3.59 | 3.14 | 3.09 | 4.14 |
-| "Would book again: yes", week 10 | 60% | 69% | 37% | 62% | 99% |
-
-Goals 1 and the strike-day flights are the same as in E4, because code decides them. Flash-lite shows the same direction with bigger gaps: a third to half fewer complaints, and an NPS that holds instead of falling 18–26 points. The plan's revenue loss in seed 1 is one real switch: a persona offered a same-day partner seat "booked a last-minute ticket on a rival airline" instead. No-decision revenue swings between seeds (93.95% against 99.74%), so one seed proves little. With the surprises off, the plan lifts NPS to +42. Real customers would hardly reward a strike week that much, so we treat NPS gains as an upper bound.
+Both messages reached all 66 personas word for word from their weeks (0 before). In both seeds the plan beats no decision on every goal: Goal 1 is met with the plan and missed without it; complaint flags fall by a third to a half; revenue holds at 100% (no decision drops to 89.7% in seed 1, below the 96% target); trust and "would book again" are higher; and the check-in NPS stays near where it started (−1.5 points) instead of falling 19.7. Goal 2's 100% counts offers and refunds made within 24h. Counting only confirmed rebookings, no run comes close to 90%, because most disrupted passengers were offered a seat or a refund and took neither within the day. No-decision results swing between seeds (revenue 89.7% against 98.3%), so one seed proves little.
 
 **E5. Placebo (an earlier version of the world, before the inspection events).** Two friendly holiday greetings with no actions did not raise the NPS goal against no decision (−42.4 vs −36.4 with seed 1, −37.9 vs −42.4 with seed 2). A plan with real actions did (−22.7 in both seeds). The personas react to what happens to them, not to any message.
 
 ## 7. Problems we hit and how we solved them
 
-- **Runs too slow to repeat.** Every week ends in a checkpoint named by a hash of everything that can change it: prompt code, personas, model, seed, the decisions in force and the events announced so far. A late announcement re-runs only the weeks it touches, and runs that share a beginning share those weeks. All 66 personas of a week run in one wave with low thinking; medium thinking doubled the wait. A full flash-lite run takes about two minutes from scratch, and all five hand-in runs on 3.7-flash took 8 minutes.
+- **Runs too slow to repeat.** Every week ends in a checkpoint named by a hash of everything that can change it: prompt code, personas, model, seed, the decisions in force and the events announced so far. A late announcement re-runs only the weeks it touches, and runs that share a beginning share those weeks. All 66 personas of a week run in one wave with low thinking; medium thinking doubled the wait. All five flash-lite hand-in runs took 80 seconds from scratch; under deadline load 3.7-flash took about 5 minutes per week.
 - **Events added after weeks were played.** A live session keeps played weeks as history, so a late event acts from the next week. The page says so. We make the hand-in runs in batch, from the start, after the last announcement.
 - **A partner-airline rebooking was reported as "moved to another airline"**, which Goal 4 counted as lost revenue. In one run, a persona that said "Kestrel successfully rebooked us onto a partner airline the same day" was booked as a lost customer. We now define each status in the prompt. The same persona now reports "rebooked", and that run's Goal 4 went from 98.03% to 100%.
 - **The dashboard names the actions differently** ("Lease aircraft with crew", level "Enable"). The engine now matches actions by keyword and stops before any call if an action matches nothing, so no action can silently do nothing.
 - **Survey answers bunch at 4.** At the start, 45 of 66 personas answer 4 to "would you recommend", and only 2 answer 5. Raw NPS is therefore −26 with flash-lite, but +1.5 with 3.7-flash for the same personas. We report the change from the start, never the level. One persona is worth 1.5 NPS points.
-- **Complaints are rare, which makes Goal 3 fragile.** In weeks without events the personas almost never complain. That rate sits below the 1% floor in the formula, so Goal 3 rests on a handful of complaint flags: 10–19 per 660 persona-weeks on 3.7-flash, 21–42 on flash-lite. The same no-decision run gives 1,390 complaints a month on 3.7-flash and 5,888 on flash-lite. We read it as a direction only.
+- **Complaints are rare, which makes Goal 3 fragile.** The personas almost never complain in quiet weeks, so Goal 3 rests on 12–34 complaint flags per 660 persona-weeks. The same plan gives 3,927 complaints a month with seed 1 and 2,364 with seed 2. We fixed the base period at weeks 1–2, which every run shares, and capped weights at the 90th percentile so one big persona cannot dominate. We read it as a comparison between runs only.
 
 ## 8. What the simulation cannot tell yet, and what we would do with more time
 
-- **Sizes.** LLM personas get the direction of an effect right more often than its size, and their answers are less spread than real people's. Without surprises the plan pushes NPS to +42 on flash-lite, which no real airline would see in a strike week. We report directions and ranges.
+- **Sizes.** LLM personas get the direction of an effect right more often than its size, and their answers are less spread than real people's. We report directions and ranges.
 - **Goals 1 and 2 are our assumptions.** The strike, backup, lease and partner probabilities are our estimates, not data. The partner airline always has a seat in the engine, in a week that is 97% booked. One leased aircraft and two have the same effect.
 - **Real complaint rates.** In December 2022 about 0.4% of stranded passengers filed a DOT complaint (Southwest's meltdown: 8,729 DOT complaints for about 2 million stranded). With Kestrel's complaint data we would calibrate the complaint flag instead of using the floor.
 - **A strike extension, or controllers calling in sick after the missed Dec 30 paycheck,** are not in the runs. We would run them as scenarios.
