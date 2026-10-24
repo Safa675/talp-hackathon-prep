@@ -153,13 +153,14 @@ def run_detail(name):
         val = run.validity()
         return {"info": run.info, "config": run.config, "personas": b["personas"], "weekly": rows, "probe": [],
                 "metrics": None, "validity": {k: v for k, v in val.items() if k in ("valid_through", "stale_from", "error")},
-                "decisions": b["decisions"], "surprises": b["surprises"], "history": run_history(name)}
+                "decisions": b["decisions"], "surprises": b["surprises"], "history": run_history(name),
+                "social": engine.social_graph(b["personas"]) if run.config["social"] else None}
     if not d.is_dir():
         return {"info": run.info, "config": run.config, "history": run_history(name)} if run else None
     info = run.info if run else (load("engine.json") or {"name": name})
     return {"info": info, "config": run.config if run else None, "run": load("run.json"), "metrics": load("metrics.json"),
             "personas": engine.read_jsonl(d / "personas.jsonl"), "weekly": engine.read_jsonl(d / "weekly.jsonl"),
-            "probe": engine.read_jsonl(d / "probe.jsonl"), "history": run_history(name)}
+            "probe": engine.read_jsonl(d / "probe.jsonl"), "history": run_history(name), "social": load("social.json")}
 
 
 def run_history(name):
@@ -212,7 +213,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/state":
                 return self.send(state())
             if u.path == "/api/meta":
-                _, personas = engine.load_personas(HERE / q.get("personas", "personas.jsonl"))
+                _, personas = engine.load_personas(HERE / q.get("personas", engine.DEFAULT_PERSONAS))
                 return self.send({"menu": engine.MENU, "budget": engine.BUDGET, "channels": engine.CHANNELS,
                                   "dates": engine.DATES, "groups": sorted({p["group"] for p in personas}),
                                   "personas": [{"id": p["id"], "group": p["group"], "name": p.get("name")} for p in personas]})
@@ -260,7 +261,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
             cfg = lambda: {k: body[k] for k in ("name", "type", "seed", "decisions", "surprises", "probe", "model",
-                                                 "personas", "replicate", "auto") if k in body}
+                                                 "personas", "replicate", "auto", "social") if k in body}
             if u.path == "/api/run":
                 c = cfg()
                 c.pop("auto", None)
@@ -285,7 +286,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({"started": started, "skipped": skipped, "until": until})
             if u.path == "/api/official":
                 runs = MGR.official(body["decisions"], body.get("surprises"), body.get("model", engine.DEFAULT_MODEL),
-                                    body.get("personas"), tuple(body.get("seeds", (1, 2))), live=bool(body.get("live")))
+                                    body.get("personas"), tuple(body.get("seeds", (1, 2))), live=bool(body.get("live")),
+                                    social=body.get("social", True))
                 return self.send([r.info for r in runs])
             if u.path == "/api/cancel":
                 MGR.runs[body["name"]].cancel()

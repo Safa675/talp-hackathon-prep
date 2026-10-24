@@ -78,6 +78,9 @@ tr.click{cursor:pointer}tr.click:hover td,tr.sel td{background:var(--panel2)}
 .cell{width:30px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;cursor:pointer;position:relative}
 .cell.sel{outline:2px solid var(--ink)}
 .cell .c{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:#fff}
+.cell .pp{position:absolute;top:2px;left:2px;width:6px;height:6px;background:#fff;border-radius:1px}
+.net circle{cursor:pointer}.net line{stroke:var(--line)}.net line.hi{stroke:var(--acc);stroke-width:2}
+.post{border-left:3px solid var(--acc);padding:4px 10px;margin:8px 0}
 .cell .wb{position:absolute;left:3px;right:3px;bottom:2px;height:2px;border-radius:1px}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute)}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
@@ -175,6 +178,7 @@ svg text{fill:var(--mute);font-size:10px}
           <label class="f">Kriz dosyası<select id="ofSur" data-kind="surprises"></select></label>
           <label class="f">Persona<select id="ofPer" data-kind="personas"></select></label>
           <label class="f">Model<select id="ofModel"></select></label>
+          <label class="c"><input type="checkbox" id="ofSocial" checked> persona etkileşimi</label>
         </div>
         <div id="ofPrev"></div>
         <ul class="small" id="ofWarn"></ul>
@@ -473,10 +477,10 @@ const filesOf = k => S.files.filter(f => f.kind === k).map(f => f.name);
 function fillSelects(){
   const models = Object.keys(S.models);
   keepSel($("#ofDec"), filesOf("decisions"), "decisions.json"); keepSel($("#ofSur"), filesOf("surprises"), "surprises.json");
-  keepSel($("#ofPer"), filesOf("personas"), "personas.jsonl"); keepSel($("#ofModel"), models, S.default_model);
+  keepSel($("#ofPer"), filesOf("personas"), "personas_skeleton.jsonl"); keepSel($("#ofModel"), models, S.default_model);
   keepSel($("#decFile"), filesOf("decisions"), "decisions.json"); keepSel($("#surFile"), filesOf("surprises"), "surprises.json");
   for (const p of ["sf","rf"]) { keepSel($(`#${p}Dec`), ["(yok)",...filesOf("decisions")], "decisions.json"); keepSel($(`#${p}Sur`), filesOf("surprises"), "surprises.json");
-    keepSel($(`#${p}Per`), filesOf("personas"), "personas.jsonl"); keepSel($(`#${p}Model`), models, p==="rf"?"gemini-3.5-flash-lite":S.default_model); }
+    keepSel($(`#${p}Per`), filesOf("personas"), "personas_skeleton.jsonl"); keepSel($(`#${p}Model`), models, p==="rf"?"gemini-3.5-flash-lite":S.default_model); }
   keepSel($("#askModel"), ["(kaynağın modeli)",...models], "gemini-3.5-flash-lite");
   const names = S.runs.map(r => r.name), askable = S.runs.filter(r => r.played > 0 || r.status === "done").map(r => r.name);
   keepSel($("#cmpA"), names, "plan_1"); keepSel($("#cmpB"), names, "nodecision_1"); keepSel($("#askSrc"), askable, store.get("askSrc", askable[0]));
@@ -494,6 +498,7 @@ function runFormHTML(p, live){
     <label class="f">Persona<select id="${p}Per" data-kind="personas"></select></label>
     ${live?"":`<label class="f">Replika<input id="${p}Rep" type="number" value="0" min="0" style="width:70px" title="Farklı sayı = checkpoint'leri yok sayan yeni örneklem"></label>`}
     <label class="c"><input type="checkbox" id="${p}Probe" ${live?"checked":""}> check-in (H0/H11)</label>
+    <label class="c" title="Personalar her hafta paylaşım yapabilir; ertesi hafta bağlantıları ve influencer takipçileri görür"><input type="checkbox" id="${p}Social" checked> persona etkileşimi</label>
     ${live?`<label class="c"><input type="checkbox" id="${p}Auto" checked> takvimle otomatik oynat</label>`:""}
     <button class="b p" id="${p}Go">${live?"Oturumu aç":"Başlat"}</button></div><div id="${p}Prev"></div><p class="small" id="${p}Msg"></p>`;
 }
@@ -504,7 +509,7 @@ for (const p of ["sf","rf"]) {
   $(`#${p}Go`).onclick = async () => {
     const dec = $(`#${p}Dec`).value;
     const body = {name:$(`#${p}Name`).value.trim(), type:$(`#${p}Type`).value, seed:+$(`#${p}Seed`).value, model:$(`#${p}Model`).value,
-      decisions: dec==="(yok)"?null:dec, surprises:$(`#${p}Sur`).value, personas:$(`#${p}Per`).value, probe:$(`#${p}Probe`).checked};
+      decisions: dec==="(yok)"?null:dec, surprises:$(`#${p}Sur`).value, personas:$(`#${p}Per`).value, probe:$(`#${p}Probe`).checked, social:$(`#${p}Social`).checked};
     if (p === "sf") body.auto = $("#sfAuto").checked; else body.replicate = +$("#rfRep").value;
     try { await api(p==="sf"?"/api/session":"/api/run", body); $(`#${p}Msg`).innerHTML = `<span class="ok">${p==="sf"?"Oturum açıldı.":"Başladı."}</span>`;
       if (p==="rf") $("#rfName").value = "exp_"+Date.now().toString(36).slice(-4); await refresh(); if (p==="sf") openSession(body.name);
@@ -528,7 +533,7 @@ async function officialWarn(){
 ["#ofDec","#ofSur","#ofPer","#ofModel"].forEach(id => $(id).addEventListener("change", officialWarn));
 async function startOfficial(live){
   if (!confirm(live ? `5 resmi koşu canlı oturum olarak açılsın mı (${$("#ofModel").value}, otomatik)?` : `5 resmi koşu ${$("#ofModel").value} ile şimdi başlasın mı? Mevcut klasörler arşive taşınır.`)) return;
-  try { await api("/api/official", {decisions:$("#ofDec").value, surprises:$("#ofSur").value, personas:$("#ofPer").value, model:$("#ofModel").value, live}); refresh(); }
+  try { await api("/api/official", {decisions:$("#ofDec").value, surprises:$("#ofSur").value, personas:$("#ofPer").value, model:$("#ofModel").value, social:$("#ofSocial").checked, live}); refresh(); }
   catch(e){ alert(e.message); } }
 $("#ofLive").onclick = () => startOfficial(true); $("#ofBatch").onclick = () => startOfficial(false);
 $("#buildSub").onclick = async () => { $("#subOut").classList.remove("hidden"); $("#subOut").textContent = "Oluşturuluyor…";
@@ -556,6 +561,7 @@ async function openSession(name, silent){
       <span class="small mute">${esc(i.type)} · seed ${i.seed} · ${esc(i.model)} · persona: ${esc(i.personas_file)}${i.probe?" · check-in":""}</span>
       <span class="spacer"></span>
       <label class="c"><input type="checkbox" ${c.auto?"checked":""} onchange="sessUpdate('${esc(name)}',{auto:this.checked})"> takvimle otomatik</label>
+      <label class="c" title="Açıp kapatmak bütün haftaları eskitir; tekrar oynatınca baştan koşar"><input type="checkbox" ${c.social?"checked":""} onchange="if(confirm('Persona etkileşimini değiştirmek oynanmış bütün haftaları eskitir (yeniden koşar). Devam?'))sessUpdate('${esc(name)}',{social:this.checked});else this.checked=!this.checked"> persona etkileşimi</label>
       <button class="b" onclick="askFrom('${esc(name)}')">Personalara sor →</button>
       <button class="b d" onclick="sessDelete('${esc(name)}')">Oturumu sil</button></div>
     <div class="card" style="margin-bottom:14px">
@@ -580,7 +586,7 @@ async function openSession(name, silent){
         <div class="row" style="margin-top:6px"><input id="qsNote" placeholder="Krizi nasıl okuduk? (geçmişe)" style="flex:1"><button class="b p" onclick="quickSurprise('${esc(name)}','${esc(c.surprises)}')">Ekle${c.auto?"":" ve oynat"}</button></div>
         <p class="small" id="qsMsg"></p></div>
     </div>
-    ${d.weekly?.length?`<div class="grid g2" style="margin-bottom:14px"><div class="card"><h2>Haftalık durum dağılımı</h2>${stackChart(d.weekly)}${legendStatus()}</div><div class="card"><h2>Gruplara göre son oynanan hafta</h2>${groupTable(d)}</div></div>
+    ${d.weekly?.length?`<div class="grid g2" style="margin-bottom:14px"><div class="card"><h2>Haftalık durum dağılımı</h2>${stackChart(d.weekly)}${legendStatus()}</div><div class="card"><h2>Gruplara göre son oynanan hafta</h2>${groupTable(d)}</div></div>${socialCard(d, name)}
       <div class="split"><div class="card scroll"><h2>Persona × hafta</h2>${matrix(d, name)}</div><div class="card" id="callBox"><h2>Çağrı</h2><p class="mute small">Bir hücreye tıkla: personanın o hafta gördüğü + modelin cevabı. Personaya soru sormak için Mülakat.</p></div></div>`
       : `<div class="card mute">Henüz oynanmış hafta yok.</div>`}
     <div class="card" style="margin-top:14px"><h2>Bu oturumun geçmişi</h2>${(d.history||[]).slice().reverse().map(evRow).join("")||`<p class="mute">yok</p>`}</div>`;
@@ -627,7 +633,7 @@ async function openRun(name, silent){
     <div class="card" style="margin-bottom:14px"><h2>Checkpoint zinciri</h2>${i.weeks?weekStrip(i)+legendWeeks():`<p class="mute small">Bu koşu sim.py ile yapılmış; checkpoint bilgisi yok.</p>`}
       ${i.week_source&&Object.keys(i.week_source).length?`<table class="small" style="margin-top:8px"><tr><th>Hafta</th><th>Kaynak</th><th>Fingerprint</th><th>Oluşturma</th></tr>${Object.entries(i.week_source).sort((a,b)=>a[0]-b[0]).map(([w,s])=>`<tr><td>H${w}</td><td>${s.origin_run===name?"bu koşu":`← ${esc(s.origin_run)}`}</td><td class="mono">${esc(s.fp)}</td><td class="mono">${esc(s.created)}</td></tr>`).join("")}</table>`:""}</div>
     ${d.weekly?.length ? `<div class="grid g2" style="margin-bottom:14px"><div class="card"><h2>Haftalık durum dağılımı</h2>${stackChart(d.weekly)}${legendStatus()}</div>
-      <div class="card"><h2>Check-in (ortalama, başlangıç → bitiş)</h2>${probeTable(d.probe)}<h3>Gruplara göre 10. hafta</h3>${groupTable(d)}</div></div>
+      <div class="card"><h2>Check-in (ortalama, başlangıç → bitiş)</h2>${probeTable(d.probe)}<h3>Gruplara göre 10. hafta</h3>${groupTable(d)}</div></div>${socialCard(d, name)}
       <div class="split"><div class="card scroll"><h2>Persona × hafta</h2>${matrix(d, name)}</div>
       <div class="card" id="callBox"><h2>Çağrı</h2><p class="mute small">Bir hücreye tıkla: prompt + modelin cevabı.</p></div></div>` : ""}
     <div class="card" style="margin-top:14px"><h2>Bu koşunun geçmişi</h2>${(d.history||[]).slice().reverse().map(evRow).join("")||`<p class="mute">yok</p>`}</div>`;
@@ -646,6 +652,53 @@ function stackChart(weekly, compact){
     svg += `<text x="${x+bw/2}" y="${H+13}" text-anchor="middle">H${w}</text>${rows.length?`<text x="${x+bw/2}" y="${Math.max(9,y-3)}" text-anchor="middle">${Math.round(100*yes/n)}%</text>`:""}`; }
   return svg + `</svg><div class="small mute">Çubuk üstü: “tekrar Kestrel’le uçarım = evet” oranı.</div>`;
 }
+/* ---------- persona interaction ---------- */
+const SOC = {};
+function socialCard(d, name){
+  if (!d.social || !d.weekly?.length) return "";
+  const key = name, st = SOC[key] = SOC[key] || {sel:null, week:null};
+  const weeks = [...new Set(d.weekly.map(r=>r.week))].sort((a,b)=>a-b), last = weeks[weeks.length-1];
+  const perWeek = weeks.map(w => d.weekly.filter(r=>r.week===w && r.post).length);
+  if (st.week == null) { const i = perWeek.lastIndexOf(Math.max(...perWeek)); st.week = weeks[Math.max(0,i)]; }
+  st._d = d;
+  return `<div class="card" style="margin-top:14px" id="soc-${esc(key)}">${socialInner(d, name)}</div>`;
+}
+function socialInner(d, name){
+  const st = SOC[name], conn = d.social.connections, infl = new Set(d.social.influencers);
+  const weeks = [...new Set(d.weekly.map(r=>r.week))].sort((a,b)=>a-b), last = weeks[weeks.length-1];
+  const latest = Object.fromEntries(d.weekly.filter(r=>r.week===last).map(r=>[r.persona,r]));
+  const ps = d.personas.slice().sort((a,b)=>a.group.localeCompare(b.group)), n = ps.length;
+  const W = 460, R = 175, cx = W/2, cy = 205, pos = {};
+  ps.forEach((p,i) => { const a = 2*Math.PI*i/n - Math.PI/2; pos[p.id] = [cx + R*Math.cos(a), cy + R*Math.sin(a), a]; });
+  const sel = st.sel, hearsFrom = sel ? new Set(conn[sel]||[]) : null, heardBy = sel ? new Set(Object.keys(conn).filter(k => (conn[k]||[]).includes(sel))) : null;
+  let svg = `<svg class="net" viewBox="0 0 ${W} ${cy*2}" width="100%" style="max-width:520px">`;
+  for (const [a, cs] of Object.entries(conn)) for (const b of cs) { if (!pos[a]||!pos[b]) continue;
+    const hi = sel && (a===sel || b===sel); svg += `<line class="${hi?"hi":""}" x1="${pos[b][0]}" y1="${pos[b][1]}" x2="${pos[a][0]}" y2="${pos[a][1]}"/>`; }
+  for (const p of ps) { const [x,y,a] = pos[p.id], r = latest[p.id], big = infl.has(p.id);
+    const dim = sel && p.id!==sel && !hearsFrom.has(p.id) && !heardBy.has(p.id);
+    svg += `<g onclick="socSel('${esc(name)}','${esc(p.id)}')" opacity="${dim?0.3:1}"><circle cx="${x}" cy="${y}" r="${big?10:7}" fill="${r?SCOL[r.status]:"var(--s-none)"}" stroke="${big?"var(--ink)":"none"}" stroke-width="2"><title>${esc(p.id)} ${esc(p.name||"")} · ${esc(p.group)}${big?" · influencer":""}</title></circle>
+      <text x="${x+Math.cos(a)*18}" y="${y+Math.sin(a)*18+3}" text-anchor="middle">${esc(p.id)}</text></g>`; }
+  svg += `</svg>`;
+  const posts = d.weekly.filter(r => r.week===st.week && r.post);
+  const name_ = id => d.personas.find(p=>p.id===id)?.name || id;
+  const readers = (author) => d.weekly.filter(r => r.week===st.week+1 && (r.feed||[]).some(f => f.startsWith(name_(author)+",") || f.includes(`, ${name_(author)} posted`))).map(r=>r.persona);
+  const selInfo = sel ? (() => { const p = d.personas.find(x=>x.id===sel); const mine = d.weekly.filter(r=>r.persona===sel && r.post);
+    return `<div class="prev"><b>${esc(sel)} · ${esc(p?.name||"")}</b> ${infl.has(sel)?`<span class="pill">influencer</span>`:""}<br>
+      <span class="mute">Duyduğu kişiler:</span> ${(conn[sel]||[]).map(i=>`${esc(i)} ${esc(name_(i).split(" ")[0])}`).join(", ")}<br>
+      <span class="mute">Onu duyanlar:</span> ${[...heardBy].map(i=>`${esc(i)} ${esc(name_(i).split(" ")[0])}`).join(", ")||"–"}${infl.has(sel)?" + trending ile diğerleri":""}<br>
+      <span class="mute">Paylaşımları:</span> ${mine.length?mine.map(r=>`H${r.week}: “${esc(r.post)}”`).join("<br>"):"yok"}
+      <div style="margin-top:6px"><button class="b s" onclick="askFrom('${esc(name)}','${esc(sel)}')">Bu personaya sor →</button> <button class="b s" onclick="socSel('${esc(name)}',null)">seçimi kaldır</button></div></div>`; })() : `<p class="small mute">Bir düğüme tıkla: kimi duyuyor, kim onu duyuyor, ne paylaştı.</p>`;
+  return `<div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Persona etkileşimi</h2>
+      <span class="small mute">Her persona 3 kişiyi duyar (2 aynı şehir/grup + 1 rastgele); kalın çerçeveli = influencer, postları bağlı olmayanlara da “trending” olarak düşer. Renk: H${last} durumu.</span></div>
+    <div class="split" style="margin-top:8px"><div>${svg}${selInfo}</div>
+    <div><div class="row" style="align-items:center"><span class="small mute">Haftaya göre paylaşımlar:</span>${weeks.map(w=>{const c = d.weekly.filter(r=>r.week===w && r.post).length; return `<button class="b s" style="${w===st.week?"background:var(--acc);color:var(--acc-ink)":""}" onclick="socWeek('${esc(name)}',${w})">H${w} · ${c}</button>`}).join("")}</div>
+      ${posts.length ? posts.map(r => { const rd = readers(r.persona); return `<div class="post"><b>${esc(r.persona)} ${esc(name_(r.persona))}</b> ${infl.has(r.persona)?`<span class="pill">influencer</span>`:""} <span class="chip" style="background:${SCOL[r.status]}">${esc(r.status)}</span><br>“${esc(r.post)}”
+        <div class="small mute">${st.week<last?`H${st.week+1}’de gören ${rd.length} persona: ${rd.map(esc).join(", ")||"–"}`:"Gelecek hafta bağlantıları görecek."}</div></div>`; }).join("") : `<p class="mute small">H${st.week}’de paylaşım yok.</p>`}</div></div>`;
+}
+function socRedraw(name){ const el = document.getElementById("soc-"+name); if (el && SOC[name]._d) el.innerHTML = socialInner(SOC[name]._d, name); }
+function socSel(name, id){ SOC[name].sel = SOC[name].sel === id ? null : id; socRedraw(name); }
+function socWeek(name, w){ SOC[name].week = w; socRedraw(name); }
+
 function groupTable(d){
   const last = Math.max(0, ...d.weekly.map(r=>r.week)); const g = {};
   d.personas.forEach(p => g[p.group] = {n:0, lost:0, yes:0, no:0, compl:0});
@@ -670,9 +723,9 @@ function matrix(d, runName){
       for (let w=1; w<=10; w++){ const r = by[p.id+"|"+w]; if (!r){ html += `<td><div class="cell" style="background:var(--s-none);cursor:default"></div></td>`; continue; }
         const sym = {canceled:"✕",delayed:"◐","on time":"✈",none:""}[r.flight_outcome] ?? "";
         const wb = {yes:"#fff",maybe:"rgba(255,255,255,.45)",no:"#111"}[r.would_book_again];
-        html += `<td><div class="cell ${selCell&&selCell[0]===r.call?"sel":""}" style="background:${SCOL[r.status]||"var(--s-none)"}" onclick="showCall('${esc(r.call)}','${esc(runName)}',this)" title="${esc(p.id)} H${w}: ${esc(r.status)} · tekrar: ${esc(r.would_book_again)} · uçuş: ${esc(r.flight_outcome)}${r.complaint?" · ŞİKAYET":""}${r.reused?" · başka koşudan hazır":""}">${sym}${r.complaint?`<span class="c"></span>`:""}<span class="wb" style="background:${wb}"></span></div></td>`; }
+        html += `<td><div class="cell ${selCell&&selCell[0]===r.call?"sel":""}" style="background:${SCOL[r.status]||"var(--s-none)"}" onclick="showCall('${esc(r.call)}','${esc(runName)}',this)" title="${esc(p.id)} H${w}: ${esc(r.status)} · tekrar: ${esc(r.would_book_again)} · uçuş: ${esc(r.flight_outcome)}${r.complaint?" · ŞİKAYET":""}${r.reused?" · başka koşudan hazır":""}${r.post?` · PAYLAŞTI: ${esc(r.post)}`:""}">${sym}${r.complaint?`<span class="c"></span>`:""}${r.post?`<span class="pp"></span>`:""}<span class="wb" style="background:${wb}"></span></div></td>`; }
       html += `</tr>`; } }
-  return html + `</table>${legendStatus()}<div class="legend" style="margin-top:4px"><span>✈ uçuş zamanında</span><span>◐ rötar</span><span>✕ iptal</span><span>● şikayet</span><span>alt çizgi: tekrar uçar (beyaz=evet, soluk=belki, siyah=hayır)</span><span>persona adına tıkla: soru sor</span></div>`;
+  return html + `</table>${legendStatus()}<div class="legend" style="margin-top:4px"><span>✈ uçuş zamanında</span><span>◐ rötar</span><span>✕ iptal</span><span>● şikayet</span><span>▘ paylaşım yaptı</span><span>alt çizgi: tekrar uçar (beyaz=evet, soluk=belki, siyah=hayır)</span><span>persona adına tıkla: soru sor</span></div>`;
 }
 async function showCall(id, run, el){
   selCell = [id, run]; document.querySelectorAll(".cell.sel").forEach(c=>c.classList.remove("sel")); if (el) el.classList.add("sel");
@@ -682,7 +735,7 @@ async function showCall(id, run, el){
     const p = c.prompt, cut = p.indexOf("CURRENT_STATE"), focus = cut > 0 ? p.slice(cut) : p;
     box.innerHTML = `<h2>${esc(c.id)}</h2>${c.error?`<p class="bad small">${esc(c.error)}</p>`:""}
       ${parsed && parsed.status ? `<p><span class="chip" style="background:${SCOL[parsed.status]}">${esc(parsed.status)}</span> tekrar uçar: <b>${esc(parsed.would_book_again)}</b>${parsed.complaint?` · <span class="bad">şikayet</span>`:""}</p>
-        <p><b>Dedi:</b> “${esc(parsed.said)}”</p><p><b>Yaptı:</b> ${esc(parsed.action)}</p><p class="small"><b>Neden:</b> ${esc(parsed.reason)}</p><p class="small mute"><b>Hafıza:</b> ${esc(parsed.memory_update)}</p>` : `<pre>${esc(c.response)}</pre>`}
+        <p><b>Dedi:</b> “${esc(parsed.said)}”</p><p><b>Yaptı:</b> ${esc(parsed.action)}</p><p class="small"><b>Neden:</b> ${esc(parsed.reason)}</p><p class="small mute"><b>Hafıza:</b> ${esc(parsed.memory_update)}</p>${parsed.post?`<p><b>Paylaştı:</b> “${esc(parsed.post)}”</p>`:""}` : `<pre>${esc(c.response)}</pre>`}
       <button class="b s" onclick="askFrom('${esc(run)}','${esc(c.persona)}',${c.week})">Bu personaya H${c.week} sonunda sor →</button>
       <h3>Bu hafta personanın gördüğü</h3><pre>${esc(focus)}</pre>
       <details><summary class="small mute">Tam prompt (${p.length} karakter)</summary><pre>${esc(p)}</pre></details>

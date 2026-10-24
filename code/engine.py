@@ -40,14 +40,25 @@ CKPT = HERE / "checkpoints"
 LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
-ENGINE_VERSION = 1
+ENGINE_VERSION = 2
+DEFAULT_PERSONAS = "personas_skeleton.jsonl"  # talp-kestrel branch, 30 compact personas
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
          6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
 BASE_AIRPORTS = {"MCO", "PHL"}
 # Simulation labels some persona files carry; the customer must not see them.
 ENGINE_HIDDEN = set(sim.HIDDEN_FIELDS) | {"window", "cluster", "segment", "segment_description",
-                                         "represents_trips", "share_pct"}
+                                         "represents_trips", "share_pct", "connections", "influencer"}
+
+# Persona-to-persona interaction (ported from the simulation-engine branch): each persona may post publicly
+# every week; next week its connections read the post, and posts by influencers trend to others.
+SOCIAL_SCHEMA = dict(sim.SCHEMA, properties=dict(sim.SCHEMA["properties"], post={
+    "type": "STRING",
+    "description": "What you posted publicly on social media this week about your trip or Kestrel, in your own "
+                   "words; an empty string if you did not post. Most people do not post most weeks.",
+}))
+TRENDING_PER_WEEK = 2
+POST_CHARS = 400
 
 MODELS = {
     "gemini-3.5-flash-lite": {"thinking": False, "note": "experiments, ~1 s/call"},
@@ -169,8 +180,8 @@ def prompt_code_hash():
     """Anything in sim.py that shapes a prompt or the world; editing it invalidates checkpoints."""
     parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message,
                                             sim.trips_in_week, sim.week_facts, sim.visible,
-                                            sim.week_prompt, sim.probe_prompt)]
-    return h(parts, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
+                                            sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
+    return h(parts, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -207,9 +218,10 @@ def mock_answer(prompt, schema, seed):
     else:
         status = "flies as planned"
     wba = {"flies as planned": "yes", "rebooked": "maybe"}.get(status, "no")
+    post = f"(mock post) My Kestrel trip: {status}." if status != "flies as planned" or rng.random() < 0.1 else ""
     return json.dumps({"status": status, "would_book_again": wba, "action": "mock", "said": "(mock answer)",
                        "reason": "mock", "support_contact": "none", "complaint": status != "flies as planned",
-                       "memory_update": f"Status so far: {status}."})
+                       "memory_update": f"Status so far: {status}.", **({"post": post} if schema is SOCIAL_SCHEMA else {})})
 
 
 def usage(r):
@@ -262,6 +274,30 @@ def shown(persona):
     return {k: v for k, v in persona.items() if k not in ENGINE_HIDDEN}
 
 
+def add_social_graph(personas, k=3, seed=2026):
+    """Who hears whom, same rule as the simulation-engine branch: a persona file may set `connections` by hand;
+    otherwise two links to people with the same home or group and one random link, fixed for every run.
+    Influencers (high social-media activity) also reach people they are not connected to, as trending posts."""
+    rng = random.Random(seed)
+    ids = [p["id"] for p in personas]
+    for p in personas:
+        p["influencer"] = bool(p.get("influencer")) or p.get("social_media_activity") == "high"
+        if p.get("connections"):
+            continue
+        home = p.get("home") or p.get("home_area")
+        near = [q["id"] for q in personas if q["id"] != p["id"]
+                and ((q.get("home") or q.get("home_area")) == home or q["group"] == p["group"])]
+        picks = rng.sample(near, min(k - 1, len(near)))
+        rest = [i for i in ids if i != p["id"] and i not in picks]
+        p["connections"] = picks + rng.sample(rest, 1)
+    return personas
+
+
+def social_graph(personas):
+    return {"connections": {p["id"]: p["connections"] for p in personas},
+            "influencers": [p["id"] for p in personas if p["influencer"]]}
+
+
 def validate_decisions(decs):
     """Board rules from the challenge and dossier. Returns (issues, budget in $M)."""
     issues, cost = [], 0.0
@@ -301,13 +337,15 @@ def validate_decisions(decs):
 
 def inputs(cfg):
     """Everything a run reads, re-read from disk each time so edits between weeks take effect."""
-    personas_text, personas = load_personas(resolve(cfg["personas"] or "personas.jsonl"))
+    personas_text, personas = load_personas(resolve(cfg["personas"] or DEFAULT_PERSONAS))
+    add_social_graph(personas)
     decisions = [] if cfg["type"] == "nodecision" or not cfg["decisions"] else \
         json.loads(resolve(cfg["decisions"]).read_text(encoding="utf-8"))
     surprises = json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
     if cfg["type"] == "plan_nosurprises":
         surprises = []
-    fps = [h(prompt_code_hash(), personas_text, cfg["model"], cfg["seed"], cfg["replicate"])]
+    fps = [h(prompt_code_hash(), personas_text, cfg["model"], cfg["seed"], cfg["replicate"],
+             social_graph(personas) if cfg.get("social") else None)]
     for w in WEEKS:
         fps.append(h(fps[-1], w, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] == w]))
     return {"personas_text": personas_text, "personas": personas, "decisions": decisions,
@@ -351,7 +389,7 @@ class Run:
     plays them as the calendar advances and is saved in sessions/ between plays."""
 
     def __init__(self, name, type, seed, decisions=None, surprises=None, probe=False, model=DEFAULT_MODEL,
-                 personas=None, replicate=0, session=False, auto=False):
+                 personas=None, replicate=0, session=False, auto=False, social=True):
         if model not in MODELS:
             raise ValueError(f"unknown model {model}")
         if type not in ("plan", "nodecision", "plan_nosurprises"):
@@ -361,13 +399,13 @@ class Run:
         self.cancel_flag = threading.Event()
         self.config = {"name": name, "type": type, "seed": int(seed), "decisions": decisions,
                        "surprises": surprises or "surprises.json", "probe": bool(probe), "model": model,
-                       "personas": personas or "personas.jsonl", "replicate": int(replicate or 0),
-                       "session": bool(session), "auto": bool(auto)}
+                       "personas": personas or DEFAULT_PERSONAS, "replicate": int(replicate or 0),
+                       "session": bool(session), "auto": bool(auto), "social": bool(social)}
         c = self.config
         self.info = {
             "name": name, "type": type, "seed": c["seed"], "model": model, "probe": c["probe"],
             "decisions_file": decisions, "surprises_file": c["surprises"], "personas_file": c["personas"],
-            "replicate": c["replicate"], "session": c["session"], "auto": c["auto"],
+            "replicate": c["replicate"], "session": c["session"], "auto": c["auto"], "social": c["social"],
             "status": "idle" if session else "queued", "phase": "not started" if session else "queued",
             "weeks": {str(w): "pending" for w in WEEKS}, "week_source": {}, "played": 0, "target": 0,
             "calls_done": 0, "calls_total": 0, "errors": 0, "tokens": {"in": 0, "out": 0, "think": 0},
@@ -398,7 +436,7 @@ class Run:
     @classmethod
     def load(cls, path):
         d = json.loads(Path(path).read_text(encoding="utf-8"))
-        run = cls(**d["config"])
+        run = cls(**dict({"social": False}, **d["config"]))  # sessions saved before the social layer had none
         run.info.update(d["info"])
         if run.info["status"] in ("running", "queued"):
             run.info.update(status="paused", phase="server restarted mid-week; play again to resume")
@@ -420,7 +458,28 @@ class Run:
         b = inputs(self.config)
         self.personas_text, self.personas = b["personas_text"], b["personas"]
         self.decisions, self.surprises, self.fps = b["decisions"], b["surprises"], b["fps"]
+        self.by_id = {p["id"]: p for p in self.personas}
         self.memory = {p["id"]: "Has the trips listed in the persona booked. No problems so far." for p in self.personas}
+        self.posts = {}  # persona id -> what it posted last week
+
+    def carry(self, entries):
+        """State the next week reads: each persona's rolling memory and last week's posts."""
+        self.memory = {e["persona"]: e["memory_after"] for e in entries}
+        self.posts = {e["persona"]: e.get("post") or "" for e in entries}
+
+    def feed(self, p, w):
+        """What this persona saw from other personas this week: posts from its connections last week,
+        and up to TRENDING_PER_WEEK posts by influencers it is not connected to."""
+        if w == 1 or not self.config["social"]:
+            return []
+        lines = [f'{self.by_id[c].get("name", c)}, someone you know, posted: "{self.posts[c]}"'
+                 for c in p["connections"] if self.posts.get(c)]
+        trending = [q["id"] for q in self.personas if q["influencer"] and q["id"] != p["id"]
+                    and q["id"] not in p["connections"] and self.posts.get(q["id"])]
+        rng = random.Random(f"{self.info['seed']}-trending-{w}-{p['id']}")
+        for i in rng.sample(trending, min(TRENDING_PER_WEEK, len(trending))):
+            lines.append(f'Trending on social media, {self.by_id[i].get("name", i)} posted: "{self.posts[i]}"')
+        return lines
 
     def probe_key(self, when):
         return h(self.fps[0] if when == "start" else self.fps[10], "probe", when)
@@ -435,7 +494,7 @@ class Run:
             self.prepare()
             start = chain_length(self.fps, until)
             if start:
-                self.memory = {e["persona"]: e["memory_after"] for e in load_ckpt(self.fps[start])["entries"]}
+                self.carry(load_ckpt(self.fps[start])["entries"])
                 for w in range(1, start + 1):
                     self.mark_reused(w, load_ckpt(self.fps[w]))
             n = len(self.personas)
@@ -506,8 +565,9 @@ class Run:
                 i["week_source"][str(w)] = {"fp": fp, "origin_run": self.name, "created": ck["created"]}
                 log("week_done", run=self.name, week=w, fp=fp, seconds=ck["seconds"],
                     statuses=dict(Counter(e["status"] for e in entries)),
-                    complaints=sum(bool(e.get("complaint")) for e in entries))
-        self.memory = {e["persona"]: e["memory_after"] for e in ck["entries"]}
+                    complaints=sum(bool(e.get("complaint")) for e in entries),
+                    posts=sum(bool(e.get("post")) for e in entries))
+        self.carry(ck["entries"])
         i["played"] = w
         self.save()
 
@@ -540,17 +600,22 @@ class Run:
         i = self.info
         rng = random.Random(f"{i['seed']}-{p['id']}-{w}")
         has_flight, outcome, facts = sim.week_facts(p, w, rng, self.surprises, True)
+        feed = self.feed(p, w)
+        if feed:
+            facts = facts + ["Social media and people you know, last week: " + " | ".join(feed)]
         prompt = sim.week_prompt(shown(p), self.memory[p["id"]], w, facts,
                                  sim.option_lines(self.decisions, p, w), sim.company_message(self.decisions, p, w))
         level = "MEDIUM" if w in sim.CRISIS_WEEKS else "LOW"
-        parsed, text, err, use = call(i["model"], prompt, sim.SCHEMA, i["seed"], level, sim.valid_week)
+        schema = SOCIAL_SCHEMA if self.config["social"] else sim.SCHEMA
+        parsed, text, err, use = call(i["model"], prompt, schema, i["seed"], level, sim.valid_week)
         self.count(err, use)
         e = {"persona": p["id"], "week": w, "prompt": sim.SYSTEM + "\n\n" + prompt, "response": text,
-             "error": err, "had_flight_this_week": has_flight, "flight_outcome": outcome, "usage": use}
+             "error": err, "had_flight_this_week": has_flight, "flight_outcome": outcome, "usage": use, "feed": feed}
         if parsed:
             e.update(status=parsed["status"], would_book_again=parsed["would_book_again"],
                      complaint=bool(parsed.get("complaint")), support_contact=parsed.get("support_contact", ""),
                      said=parsed.get("said", ""), action=parsed.get("action", ""),
+                     post=str(parsed.get("post") or "").strip()[:POST_CHARS],
                      memory_after=f"Week {w}: {parsed['memory_update']}")  # rolling memory, as in sim.py
         return e
 
@@ -606,6 +671,7 @@ class Run:
                              "status": e["status"], "had_flight_this_week": e["had_flight_this_week"],
                              "flight_outcome": e["flight_outcome"], "would_book_again": e["would_book_again"],
                              "complaint": e["complaint"], "support_contact": e["support_contact"],
+                             "post": e.get("post", ""), "feed": e.get("feed", []),
                              "reused": ck.get("origin_run") != self.name})
         return b, rows
 
@@ -648,7 +714,8 @@ def assemble(run, out):
             weekly.append({"persona": e["persona"], "week": w, "call": cid, "status": e["status"],
                            "had_flight_this_week": e["had_flight_this_week"], "flight_outcome": e["flight_outcome"],
                            "would_book_again": e["would_book_again"], "complaint": e["complaint"],
-                           "support_contact": e["support_contact"], "reused": i["weeks"][str(w)] == "reused"})
+                           "support_contact": e["support_contact"], "post": e.get("post", ""),
+                           "feed": e.get("feed", []), "reused": i["weeks"][str(w)] == "reused"})
     if i["probe"]:
         for when, wk in (("start", 0), ("end", 11)):
             for e in load_ckpt(run.probe_key(when))["entries"]:
@@ -662,6 +729,8 @@ def assemble(run, out):
         if rows:
             (out / fname).write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
     (out / "personas.jsonl").write_text(run.personas_text, encoding="utf-8")
+    if run.config["social"]:
+        (out / "social.json").write_text(json.dumps(social_graph(run.personas), indent=1), encoding="utf-8")
     (out / "run.json").write_text(json.dumps({
         "company": "kestrel", "type": i["type"], "seed": i["seed"], "model": i["model"], "decisions": run.decisions,
     }, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -717,6 +786,8 @@ def experience(entries, upto):
         if r:
             line += (f" What you did: {r.get('action', '')}. You said: \"{r.get('said', '')}\"."
                      f" Your booking: {r.get('status')}. Would book Kestrel again: {r.get('would_book_again')}.")
+            if r.get("post"):
+                line += f' You posted publicly: "{r["post"]}"'
             memory = r.get("memory_update") or memory
         lines.append(line)
     return lines, memory
@@ -761,6 +832,7 @@ def disk_timeline(name):
     """Timeline of a finished run from its hand-in files (works for sim.py runs too)."""
     d = RUNS / name
     _, personas = load_personas(d / "personas.jsonl")
+    add_social_graph(personas)
     calls = {c["id"]: c for c in read_jsonl(d / "calls.jsonl")}
     entries = defaultdict(list)
     weeks = 0
@@ -821,7 +893,7 @@ class Manager:
 
     def update_session(self, name, **changes):
         run = self._free(name)
-        for k in ("decisions", "surprises", "auto"):
+        for k in ("decisions", "surprises", "auto", "social"):
             if k in changes:
                 run.config[k] = changes[k]
                 run.info[{"decisions": "decisions_file", "surprises": "surprises_file"}.get(k, k)] = changes[k]
@@ -837,12 +909,13 @@ class Manager:
         del self.runs[name]
         log("session_deleted", run=name, note="checkpoints are kept")
 
-    def official(self, decisions, surprises=None, model=DEFAULT_MODEL, personas=None, seeds=(1, 2), live=False):
+    def official(self, decisions, surprises=None, model=DEFAULT_MODEL, personas=None, seeds=(1, 2), live=False,
+                 social=True):
         """The five hand-in runs: now (batch), or as live sessions played with the calendar."""
         runs = []
         for name, kind, seed, probe in OFFICIAL:
             cfg = dict(name=name, type=kind, seed=seeds[0] if seed == 1 else seeds[1], decisions=decisions,
-                       surprises=surprises, probe=probe, model=model, personas=personas)
+                       surprises=surprises, probe=probe, model=model, personas=personas, social=social)
             if live:
                 cur = self.runs.get(name)
                 runs.append(cur if cur and cur.config["session"] else self.create_session(auto=True, **cfg))
@@ -873,6 +946,8 @@ def list_runs(manager=None):
                         finished=datetime.fromtimestamp((d / "run.json").stat().st_mtime).isoformat(timespec="seconds"))
         if (d / "metrics.json").exists():
             info["metrics"] = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
+        if info.get("status") in ("running", "queued") and not (manager and d.name in manager.runs):
+            info.update(status="interrupted", phase="the server stopped mid-run; start it again to resume")
         rows[d.name] = info
     for name, run in (manager.runs.items() if manager else []):
         rows[name] = dict(rows.get(name, {}), **run.info)
@@ -922,7 +997,8 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--decisions")
     ap.add_argument("--surprises", default="surprises.json")
-    ap.add_argument("--personas", default="personas.jsonl")
+    ap.add_argument("--personas", default=DEFAULT_PERSONAS)
+    ap.add_argument("--no-social", action="store_true", help="personas do not see each other's posts")
     ap.add_argument("--model", default=DEFAULT_MODEL, choices=list(MODELS))
     ap.add_argument("--probe", action="store_true")
     ap.add_argument("--until", type=int, default=10, help="play weeks 1..until only")
@@ -933,10 +1009,10 @@ def main():
     LIMIT.set(a.workers)
     mgr = Manager()
     if a.name == "official":
-        runs = mgr.official(a.decisions, a.surprises, a.model, a.personas)
+        runs = mgr.official(a.decisions, a.surprises, a.model, a.personas, social=not a.no_social)
     else:
         cfg = dict(name=a.name, type=a.type, seed=a.seed, decisions=a.decisions, surprises=a.surprises,
-                   probe=a.probe, model=a.model, personas=a.personas, replicate=a.replicate)
+                   probe=a.probe, model=a.model, personas=a.personas, replicate=a.replicate, social=not a.no_social)
         run = Run(**cfg)
         mgr.runs[run.name] = run
         threading.Thread(target=run.execute, args=(a.until,), daemon=True).start()

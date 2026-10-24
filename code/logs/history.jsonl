@@ -150,3 +150,54 @@
 {"ts": "2026-10-24T12:58:20", "event": "interview", "run": "plan_1", "week": 8, "personas": 1, "question": "How did Kestrel treat you around the strike, and would you fly with them again?", "model": "gemini-3.5-flash-lite", "errors": 0}
 {"ts": "2026-10-24T12:58:45", "event": "session_deleted", "run": "ui_live", "note": "checkpoints are kept"}
 {"ts": "2026-10-24T12:58:45", "event": "session_deleted", "run": "t_live", "note": "checkpoints are kept"}
+{"ts": "2026-10-24T13:00:21", "event": "session_created", "run": "canli_plan", "type": "plan", "seed": 1, "decisions": null, "surprises": "surprises.json", "probe": true, "model": "gemini-3.7-flash", "personas": "personas.jsonl", "replicate": 0, "session": true, "auto": true}
+{"ts": "2026-10-24T13:00:22", "event": "run_started", "run": "canli_plan", "session": true, "type": "plan", "seed": 1, "model": "gemini-3.7-flash", "resumed_from_week": 1, "until": 1, "decisions": 0, "surprises": 0}
+{"ts": "2026-10-24T13:01:28", "event": "interview", "run": "canli_plan", "week": 1, "personas": 30, "question": "Would you book Kestrel Air again? Why or why not?", "model": "gemini-3.5-flash-lite", "errors": 0}
+{"ts": "2026-10-24T13:01:33", "event": "probe_done", "run": "canli_plan", "when": "start"}
+{"ts": "2026-10-24T13:01:33", "event": "weeks_played", "run": "canli_plan", "through": 1, "resumed_from_week": 1, "seconds": 71, "tokens": {"in": 27289, "out": 2187, "think": 2101}}
+{"ts": "2026-10-24T13:01:53", "event": "input_saved", "file": "surprises.json", "version": "surprises.20261024-130153.json", "note": "", "items": 1, "issues": [], "weeks": [2]}
+{"ts": "2026-10-24T13:01:55", "event": "run_started", "run": "canli_plan", "session": true, "type": "plan", "seed": 1, "model": "gemini-3.7-flash", "resumed_from_week": 1, "until": 2, "decisions": 0, "surprises": 1}
+{"ts": "2026-10-24T13:02:51", "event": "run_started", "run": "t_social", "session": false, "type": "plan", "seed": 1, "model": "mock", "resumed_from_week": 0, "until": 10, "decisions": 2, "surprises": 2}
+{"ts": "2026-10-24T13:02:51", "event": "probe_done", "run": "t_social", "when": "start"}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 1, "fp": "4361204f6368d3b997d5", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 1}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 2, "fp": "bf82fb48186769d8baf8", "seconds": 0.0, "statuses": {"flies as planned": 29, "rebooked": 1}, "complaints": 1, "posts": 4}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 3, "fp": "a6a823c2989663708de9", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 2}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 4, "fp": "2794df5789ea70de324a", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 2}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 5, "fp": "6b4a907b6272191d51d7", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 5}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 6, "fp": "034be11ae4612e889b70", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 2}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 7, "fp": "027ff76d876a9fa0bd7a", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 2}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 8, "fp": "e578e98723a380dc9f1f", "seconds": 0.0, "statuses": {"flies as planned": 28, "rebooked": 1, "canceled the trip": 1}, "complaints": 2, "posts": 8}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 9, "fp": "96e161221292b489ff55", "seconds": 0.0, "statuses": {"flies as planned": 27, "rebooked": 2, "canceled the trip": 1}, "complaints": 3, "posts": 6}
+{"ts": "2026-10-24T13:02:51", "event": "week_done", "run": "t_social", "week": 10, "fp": "b8ef01a07727a1d6d0e0", "seconds": 0.0, "statuses": {"flies as planned": 28, "canceled the trip": 1, "rebooked": 1}, "complaints": 2, "posts": 5}
+{"ts": "2026-10-24T13:02:51", "event": "probe_done", "run": "t_social", "when": "end"}
+{"ts": "2026-10-24T13:02:51", "event": "run_finished", "run": "t_social", "metrics": {"goal_1": 96.5, "goal_2": 91.7, "goal_3": 8, "goal_3b": -13.3, "goal_4": 96.5, "units": {"goal_1": "% of persona flights not canceled (proxy for planned flights operated)", "goal_2": "% of disrupted persona flights ending rebooked/flying (proxy for 24h resolution)", "goal_3": "number of persona-weeks with a complaint", "goal_4": "% of persona flights kept on Kestrel (revenue proxy)", "goal_3b": "NPS proxy at the end from check-in 3a (5 = promoter, 1-3 = detractor); start in nps_start"}, "nps_start": -40.0}, "resumed_from_week": 0, "seconds": 0, "tokens": {"in": 0, "out": 0, "think": 0}}
+{"ts": "2026-10-24T13:02:51", "event": "interview", "run": "canli_plan", "week": 1, "personas": 30, "question": "Would you book Kestrel Air again? Why or why not?", "model": "gemini-3.5-flash-lite", "errors": 0}
+{"ts": "2026-10-24T13:03:30", "event": "interview", "run": "canli_plan", "week": 1, "personas": 30, "question": "Would you book Kestrel Air again? Why or why not?", "model": "gemini-3.5-flash-lite", "errors": 0}
+{"ts": "2026-10-24T13:03:30", "event": "week_done", "run": "canli_plan", "week": 2, "fp": "4aa6cff5b7efafaec491", "seconds": 94.5, "statuses": {"flies as planned": 30}, "complaints": 1}
+{"ts": "2026-10-24T13:03:30", "event": "weeks_played", "run": "canli_plan", "through": 2, "resumed_from_week": 1, "seconds": 95, "tokens": {"in": 54812, "out": 7292, "think": 2426}}
+{"ts": "2026-10-24T13:04:17", "event": "server_started", "port": 8766}
+{"ts": "2026-10-24T13:04:17", "event": "autoplay", "run": "canli_plan", "until": 1, "stale": true}
+{"ts": "2026-10-24T13:04:17", "event": "run_started", "run": "canli_plan", "session": true, "type": "plan", "seed": 1, "model": "gemini-3.7-flash", "resumed_from_week": 0, "until": 1, "decisions": 0, "surprises": 1}
+{"ts": "2026-10-24T13:04:26", "event": "session_created", "run": "soc_test", "type": "plan", "seed": 1, "decisions": null, "surprises": "surprises.json", "probe": true, "model": "mock", "personas": "personas_skeleton.jsonl", "replicate": 0, "session": true, "auto": false, "social": true}
+{"ts": "2026-10-24T13:04:28", "event": "run_started", "run": "soc_test", "session": true, "type": "plan", "seed": 1, "model": "mock", "resumed_from_week": 1, "until": 9, "decisions": 0, "surprises": 1}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 2, "fp": "41e90a00c41fef65c8dd", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 3}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 3, "fp": "86757e6d6306799035ab", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 3}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 4, "fp": "90737dfd07a91a3be3f6", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 6}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 5, "fp": "9fbd512ee3228c4749eb", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 2}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 6, "fp": "cac6459e755d0fa38699", "seconds": 0.0, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 4}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 7, "fp": "2ac8f43124364d1823f8", "seconds": 0.0, "statuses": {"flies as planned": 29, "rebooked": 1}, "complaints": 1, "posts": 2}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 8, "fp": "26bc59b053c141577b51", "seconds": 0.0, "statuses": {"flies as planned": 26, "rebooked": 3, "moved to another airline": 1}, "complaints": 4, "posts": 7}
+{"ts": "2026-10-24T13:04:28", "event": "week_done", "run": "soc_test", "week": 9, "fp": "dbc7637da2c590cf3156", "seconds": 0.0, "statuses": {"flies as planned": 28, "rebooked": 1, "moved to another airline": 1}, "complaints": 2, "posts": 8}
+{"ts": "2026-10-24T13:04:28", "event": "weeks_played", "run": "soc_test", "through": 9, "resumed_from_week": 1, "seconds": 0, "tokens": {"in": 0, "out": 0, "think": 0}}
+{"ts": "2026-10-24T13:04:44", "event": "probe_done", "run": "canli_plan", "when": "start"}
+{"ts": "2026-10-24T13:04:47", "event": "run_started", "run": "t_social_real", "session": true, "type": "nodecision", "seed": 7, "model": "gemini-3.5-flash-lite", "resumed_from_week": 0, "until": 3, "decisions": 0, "surprises": 1}
+{"ts": "2026-10-24T13:04:48", "event": "week_done", "run": "canli_plan", "week": 1, "fp": "5c47ce5c2ef3cf5b0bbc", "seconds": 4.4, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 0}
+{"ts": "2026-10-24T13:04:48", "event": "weeks_played", "run": "canli_plan", "through": 1, "resumed_from_week": 0, "seconds": 32, "tokens": {"in": 108671, "out": 13302, "think": 6186}}
+{"ts": "2026-10-24T13:04:51", "event": "week_done", "run": "t_social_real", "week": 1, "fp": "c3c5724df5d811549c11", "seconds": 4.3, "statuses": {"flies as planned": 29, "rebooked": 1}, "complaints": 1, "posts": 6}
+{"ts": "2026-10-24T13:04:57", "event": "week_done", "run": "t_social_real", "week": 2, "fp": "797c3fa7bdf9dd8e6a1d", "seconds": 5.4, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 13}
+{"ts": "2026-10-24T13:05:00", "event": "week_done", "run": "t_social_real", "week": 3, "fp": "8f787c2fa4ea010c5cbe", "seconds": 3.8, "statuses": {"flies as planned": 30}, "complaints": 0, "posts": 18}
+{"ts": "2026-10-24T13:05:00", "event": "weeks_played", "run": "t_social_real", "through": 3, "resumed_from_week": 0, "seconds": 13, "tokens": {"in": 93803, "out": 15392, "think": 0}}
+{"ts": "2026-10-24T13:05:04", "event": "interview", "run": "soc_test", "week": 9, "personas": 30, "question": "Would you book Kestrel Air again? Why or why not?", "model": "gemini-3.5-flash-lite", "errors": 0}
+{"ts": "2026-10-24T13:05:09", "event": "session_deleted", "run": "soc_test", "note": "checkpoints are kept"}
+{"ts": "2026-10-24T13:05:45", "event": "server_started", "port": 8766}
+{"ts": "2026-10-24T13:05:52", "event": "interview", "run": "canli_plan", "week": 1, "personas": 30, "question": "Did you complain or contact support? Through which channel, and how did it go?", "model": "gemini-3.5-flash-lite", "errors": 0}
