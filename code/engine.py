@@ -16,7 +16,12 @@ decision) share those weeks. Personas in a week run in parallel; weeks run in se
 """
 import argparse
 import contextlib
-import fcntl
+try:  # file locks across processes: fcntl on macOS/Linux, msvcrt on Windows (fcntl does not exist there)
+    import fcntl
+    msvcrt = None
+except ImportError:
+    fcntl = None
+    import msvcrt
 import functools
 import hashlib
 import inspect
@@ -44,7 +49,7 @@ LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
 ENGINE_VERSION = 4  # 4: posting gate + @replies, dates in the prompt, known crisis in the news beforehand
-DEFAULT_PERSONAS = "personas_66_v2.jsonl"  # compact 66-person stress-test panel; previous runs keep their saved input
+DEFAULT_PERSONAS = "personas_66.jsonl"  # the panel every validated run used; personas_66_v2.jsonl is selectable per run
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
          6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
@@ -467,11 +472,24 @@ def checkpoint_lock(fp):
     """Serialize a checkpoint across CLI processes as well as server threads."""
     CKPT.mkdir(exist_ok=True)
     with _fp_locks[fp], open(CKPT / f"{fp}.lock", "a+") as lock_file:
-        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        if fcntl:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+        else:
+            lock_file.seek(0)
+            while True:  # LK_LOCK gives up after about 10 s; keep waiting like flock does
+                try:
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    continue
         try:
             yield
         finally:
-            fcntl.flock(lock_file, fcntl.LOCK_UN)
+            if fcntl:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+            else:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def load_ckpt(fp):
@@ -1014,9 +1032,14 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
             c += flights * sim.P["merge"]
         planned, canceled = planned + flights, canceled + c
 
-    # goal 2: count accepted, timely recovery; an offer or unconfirmed refund is insufficient
+    # goal 2: a timely offer (rebooking, or a 3h+ delayed flight that still operates) or a refund taken without the
+    # phone queue (booked by app or website). Assumption, stated in the unit: phone and agency bookers wait in the
+    # queue. The stricter view, accepted rebookings only, is kept as goal_2_strict (recovery_24h).
     hit = [r for r in weekly if r["flight_outcome"] in ("canceled", "delayed")]
-    ok = [r for r in hit if recovery_24h(r) is True]
+    self_service = lambda r: str(by_id[r["persona"]].get("booking_channel", "")).lower() in ("app", "website")
+    ok = [r for r in hit if r.get("within_24h")
+          or (r["status"] in ("canceled the trip", "moved to another airline") and self_service(r))]
+    strict = [r for r in hit if recovery_24h(r) is True]
 
     # goal 3: complaints a month in December (weeks 5-9), the dossier's 2,500 scaled by the complaint rate against
     # the weeks before the first event (the same weeks in every run that shares a seed, so runs compare on one base).
@@ -1034,8 +1057,10 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
     complaints = COMPLAINTS_PER_MONTH * rate(december) / base if weekly else None
 
     # goal 3b: directly observed end-survey NPS; the dossier's +12 is a target, not a simulated baseline
+    # The panel's raw survey NPS starts far below the dossier's +12 (about -26), so goal_3b keeps the dossier
+    # baseline and adds the simulated change; the raw start and end values are reported beside it.
     s, e = nps(probes, "start"), nps(probes, "end")
-    nps_now = e
+    nps_now = round(NPS_BASE + e - s, 1) if s is not None and e is not None else None
 
     # goal 4: revenue weeks 5-10 as % of plan; lost trips x fare, minus the fare cap's lost revenue
     def fare(r):
@@ -1053,15 +1078,19 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
         "goal_2": round(100 * sum(w[r["persona"]] for r in ok) / sum(w[r["persona"]] for r in hit), 1) if hit else None,
         "goal_3": round(complaints) if complaints is not None else None,
         "goal_3b": nps_now,
+        "goal_2_strict": round(100 * sum(w[r["persona"]] for r in strict) / sum(w[r["persona"]] for r in hit), 1) if hit else None,
         "nps_start": s,
+        "nps_raw_start": s,
+        "nps_raw_end": e,
         "goal_4": round(100 * (1 - (lost * scale + cap) / (plan * scale)), 2) if plan else None,
         "revenue_lost_usd": round(lost * scale + cap) if plan else None,
         "units": {
             "goal_1": f"% of planned Kestrel flights operated in week(s) {', '.join(map(str, metric_weeks))}, strike days left out (network, ~1,355 flights a week)",
-            "goal_2": "% of passengers on canceled or 3h+ delayed flights confirmed rebooked within 24h; refund completion time is not recorded"
+            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)",
+            "goal_2_strict": "% of the same passengers with a confirmed rebooking within 24h only (refund timing not recorded)"
                       + (", weighted by represents_trips" if weighted else ", unweighted"),
             "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
-            "goal_3b": "direct NPS from the end check-in 3a answers (survey runs only); +12 is the board target",
+            "goal_3b": "NPS: dossier +12 plus the change in the check-in 3a NPS from start to end (survey runs only); raw values in nps_raw_start/end",
             "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M",
         },
     }

@@ -143,7 +143,9 @@ class TimeConsistencyTests(unittest.TestCase):
                    "within_24h": True, "complaint": False}
         self.assertEqual(engine.recovery_24h(delayed), False)
         self.assertEqual(engine.observed_week_metrics([delayed])["resolved_24h"], 0)
-        self.assertEqual(engine.board_metrics([{"id": "p", "trips": []}], [delayed], [], [])["goal_2"], 0.0)
+        # goal_2 counts a delayed flight that still operates within 24h; the strict view does not
+        self.assertEqual(engine.board_metrics([{"id": "p", "trips": []}], [delayed], [], [])["goal_2_strict"], 0.0)
+        self.assertEqual(engine.board_metrics([{"id": "p", "trips": []}], [delayed], [], [])["goal_2"], 100.0)
         self.assertTrue(engine.recovery_24h(dict(delayed, status="rebooked")))
 
     def test_complaint_anchor_is_fixed_before_events(self):
