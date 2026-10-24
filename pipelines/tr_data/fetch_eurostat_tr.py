@@ -1,11 +1,11 @@
 """Pull Turkey (TR) tables from the Eurostat dissemination API into tidy CSVs.
 Eurostat republishes TÜİK survey data (ICT usage, LFS, SILC, HBS) for Türkiye; reuse is free with attribution.
-Run:  python3 fetch_eurostat_tr.py            (writes data/eurostat/<code>.csv)
+Run:  python3 pipelines/tr_data/fetch_eurostat_tr.py   (writes data/tr/eurostat/<code>.csv)
 """
 import csv, json, os, sys, urllib.request
 
 BASE = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "eurostat")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "tr", "eurostat")
 DATASETS = [
     "isoc_ec_ib20",      # online purchases 2020+: age, sex, education, activity, ... x product category
     "isoc_ci_ifp_iu",    # internet use by individuals

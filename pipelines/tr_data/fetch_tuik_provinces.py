@@ -1,10 +1,10 @@
 """Province-level (81 il) indicators from TÜİK's public geo portal (cip.tuik.gov.tr).
 Unofficial/undocumented JSON endpoints (same ones the portal's own map uses); no login. Keep the CSV copies in case they change.
-Run: python3 fetch_tuik_provinces.py   -> data/tuik_cip/provinces_long.csv, provinces_latest.csv
+Run: python3 pipelines/tr_data/fetch_tuik_provinces.py -> data/tr/tuik_cip/provinces_long.csv, provinces_latest.csv
 """
 import csv, json, os, urllib.request
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "tuik_cip")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "tr", "tuik_cip")
 UA = {"User-Agent": "Mozilla/5.0"}
 PLATES = ("Adana Adıyaman Afyonkarahisar Ağrı Amasya Ankara Antalya Artvin Aydın Balıkesir Bilecik Bingöl Bitlis Bolu Burdur Bursa "
  "Çanakkale Çankırı Çorum Denizli Diyarbakır Edirne Elazığ Erzincan Erzurum Eskişehir Gaziantep Giresun Gümüşhane Hakkâri Hatay Isparta "
