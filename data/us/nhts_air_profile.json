@@ -1,0 +1,91 @@
+{
+ "source": "NHTS 2022 long-distance trips (FHWA), MAINMODE=14 air, weighted by WTPERFIN",
+ "n_air_trips": 1713,
+ "tables": {
+  "trip purpose (FARREAS)": {
+   "Personal vacation": 44.5,
+   "Visit family or friends": 37.9,
+   "Business trip": 11.9,
+   "Other, specify": 5.7
+  },
+  "household income (HHFAMINC)": {
+   "Less than $10,000": 0.6,
+   "$10,000 to $14,999": 1.2,
+   "$15,000 to $24,999": 4.8,
+   "$25,000 to $34,999": 3.4,
+   "$35,000 to $49,999": 4.5,
+   "$50,000 to $74,999": 13.4,
+   "$75,000 to $99,999": 12.6,
+   "$100,000 to $124,999": 10.1,
+   "$125,000 to $149,999": 9.3,
+   "$150,000 to $199,999": 13.2,
+   "$200,000 or more": 26.9
+  },
+  "household life cycle (LIF_CYC)": {
+   "one adult, no children": 10.9,
+   "2+ adults, no children": 22.2,
+   "one adult, youngest child 0-5": 0.1,
+   "2+ adults, youngest child 0-5": 16.6,
+   "one adult, youngest child 6-15": 1.9,
+   "2+ adults, youngest child 6-15": 21.1,
+   "one adult, youngest child 16-21": 1.2,
+   "2+ adults, youngest child 16-21": 5.3,
+   "one adult, retired, no children": 3.7,
+   "2+ adults, retired, no children": 17.0
+  },
+  "age of traveller": {
+   "0-17": 14.2,
+   "18-24": 10.1,
+   "25-34": 16.1,
+   "35-44": 16.1,
+   "45-54": 12.7,
+   "55-64": 14.5,
+   "65+": 16.3
+  },
+  "people on the trip incl. respondent (LD_NUMONTRP)": {
+   "alone": 30.6,
+   "2": 29.7,
+   "3-4": 24.8,
+   "5+": 14.9
+  },
+  "nights away (NTSAWAY)": {
+   "0": 9.3,
+   "1-3": 27.1,
+   "4-7": 40.9,
+   "8+": 22.7
+  },
+  "destination inside/outside US (INT_FLAG)": {
+   "Inside the US": 77.1,
+   "Outside the US": 22.9
+  },
+  "home census division (CENSUS_D)": {
+   "Pacific": 23.1,
+   "Middle Atlantic": 16.6,
+   "South Atlantic": 16.6,
+   "East North Central": 11.6,
+   "West South Central": 11.1,
+   "Mountain": 8.1,
+   "West North Central": 5.4,
+   "New England": 5.1,
+   "East South Central": 2.5
+  },
+  "children in household by purpose": {
+   "Business trip": {
+    "no children": 77.3,
+    "with children": 22.7
+   },
+   "Personal vacation": {
+    "no children": 54.3,
+    "with children": 45.7
+   },
+   "Visit family or friends": {
+    "no children": 61.8,
+    "with children": 38.2
+   },
+   "Other, specify": {
+    "no children": 60.7,
+    "with children": 39.3
+   }
+  }
+ }
+}
