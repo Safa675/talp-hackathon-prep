@@ -1,0 +1,50 @@
+indicator,group,year,value_pct,base_and_definition
+online_order_last_3_months,total,2025,42.3,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_3_to_12_months,total,2025,8.5,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_older_than_1_year,total,2025,5.0,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_ever (TÜİK headline),total,2025,55.7,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_last_12_months (derived: last3m + 3-12m),total,2025,50.8,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_last_3_months,total,2026,48.3,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_3_to_12_months,total,2026,7.8,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_older_than_1_year,total,2026,3.9,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_ever (TÜİK headline),total,2026,60.0,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_last_12_months (derived: last3m + 3-12m),total,2026,56.1,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_ever (TÜİK headline),men,2026,63.4,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+online_order_ever (TÜİK headline),women,2026,56.6,"% of individuals 16-74; ordered goods/services online for private use (TÜİK e-commerce definition: order placed via web/app; payment/delivery need not be online; e-mail/SMS orders excluded; hotel booking, fund/share trading counted)"
+internet_use_last_3_months,total,2025,90.9,% individuals 16-74
+internet_use_last_3_months,total,2026,92.3,% individuals 16-74
+internet_use_last_3_months,men,2026,94.8,% individuals 16-74
+internet_use_last_3_months,women,2026,89.9,% individuals 16-74
+e_devlet_use_last_12_months,total all 16-74,2026,76.0,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,total 16-24,2026,82.6,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,total 25-34,2026,93.0,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,total 35-44,2026,89.7,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,total 45-54,2026,77.2,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,total 55-64,2026,54.6,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,total 65-74,2026,31.3,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men all 16-74,2026,82.7,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men 16-24,2026,83.8,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men 25-34,2026,94.3,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men 35-44,2026,94.1,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men 45-54,2026,87.0,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men 55-64,2026,68.0,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,men 65-74,2026,44.1,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women all 16-74,2026,69.4,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women 16-24,2026,81.2,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women 25-34,2026,91.7,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women 35-44,2026,85.2,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women 45-54,2026,67.4,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women 55-64,2026,41.3,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+e_devlet_use_last_12_months,women 65-74,2026,19.7,% of individuals 16-74 who used government websites/apps for private purposes in the last 12 months
+uses_WhatsApp,total,2026,90.0,"% of individuals 16-74, last 3 months"
+uses_WhatsApp,men,2026,92.5,"% of individuals 16-74, last 3 months"
+uses_WhatsApp,women,2026,87.6,"% of individuals 16-74, last 3 months"
+uses_YouTube,total,2026,77.6,"% of individuals 16-74, last 3 months"
+uses_YouTube,men,2026,80.1,"% of individuals 16-74, last 3 months"
+uses_YouTube,women,2026,75.0,"% of individuals 16-74, last 3 months"
+uses_Instagram,total,2026,71.1,"% of individuals 16-74, last 3 months"
+uses_Instagram,men,2026,71.9,"% of individuals 16-74, last 3 months"
+uses_Instagram,women,2026,70.2,"% of individuals 16-74, last 3 months"
+online_learning_last_3_months,total,2026,22.9,% individuals 16-74
+internet_connected_TV,internet users,2026,62.0,% of internet users
+price_important_when_buying_phone_or_computer,internet users who bought in last 3 months,2026,89.3,% of those buyers
