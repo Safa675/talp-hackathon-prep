@@ -4,153 +4,369 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kestrel Simulation</title>
+<script>try{const t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f7f9;--panel:#fff;--panel2:#f0f2f5;--ink:#15181d;--mute:#5d6672;--line:#dfe3e8;--acc:#2f5bd3;--acc-ink:#fff;--bad:#c2372f;--warn:#b7791f;--ok:#1f8a4c;
-  --fly:#3d9a62;--reb:#3f73d0;--moved:#e08a2c;--cancel:#c94a42;--none:#c9ced6}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--panel:#191d23;--panel2:#20252c;--ink:#e7eaee;--mute:#9aa3ae;--line:#2c323a;--acc:#6d8ff0;--acc-ink:#0d1117;--none:#3a414a}}
-:root[data-theme="dark"]{--bg:#111418;--panel:#191d23;--panel2:#20252c;--ink:#e7eaee;--mute:#9aa3ae;--line:#2c323a;--acc:#6d8ff0;--acc-ink:#0d1117;--none:#3a414a}
+:root{--bg:#f6f6f3;--panel:#fff;--sunk:#f2f2ef;--hover:#ededea;--ink:#111215;--ink2:#2d2f34;--mute:#6b6e75;--faint:#9fa2a9;--line:#e8e8e4;--line2:#d9d9d4;
+  --acc:#3b5bdb;--acc-soft:#edf1fd;--acc-ink:#fff;--btn:#111215;--btn-ink:#fff;--bad:#c9373d;--warn:#b0620c;--ok:#1f8256;
+  --fly:#30a46c;--reb:#3e63dd;--moved:#e8862a;--cancel:#e5484d;--none:#d3d4d7;
+  --sh:0 1px 2px rgb(17 18 21/.04),0 1px 3px rgb(17 18 21/.03);--sh2:0 2px 4px rgb(17 18 21/.04),0 8px 24px rgb(17 18 21/.07);
+  --pop:0 12px 32px rgb(17 18 21/.12),0 2px 6px rgb(17 18 21/.06);--glass:rgb(246 246 243/.8);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0d0f;--panel:#141518;--sunk:#1a1b1f;--hover:#212227;--ink:#ededef;--ink2:#cfd0d4;--mute:#9a9da5;--faint:#666971;--line:#222328;--line2:#2f3138;
+  --acc:#7b93f6;--acc-soft:#1a2142;--acc-ink:#0c0d0f;--btn:#ededef;--btn-ink:#0c0d0f;--bad:#ff7378;--warn:#f0a55a;--ok:#4cc38a;
+  --fly:#3dd68c;--reb:#849dff;--moved:#ffa057;--cancel:#ff6369;--none:#34363d;
+  --sh:none;--sh2:0 8px 28px rgb(0 0 0/.45);--pop:0 14px 36px rgb(0 0 0/.55);--glass:rgb(12 13 15/.78);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c0d0f;--panel:#141518;--sunk:#1a1b1f;--hover:#212227;--ink:#ededef;--ink2:#cfd0d4;--mute:#9a9da5;--faint:#666971;--line:#222328;--line2:#2f3138;
+  --acc:#7b93f6;--acc-soft:#1a2142;--acc-ink:#0c0d0f;--btn:#ededef;--btn-ink:#0c0d0f;--bad:#ff7378;--warn:#f0a55a;--ok:#4cc38a;
+  --fly:#3dd68c;--reb:#849dff;--moved:#ffa057;--cancel:#ff6369;--none:#34363d;
+  --sh:none;--sh2:0 8px 28px rgb(0 0 0/.45);--pop:0 14px 36px rgb(0 0 0/.55);--glass:rgb(12 13 15/.78);color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
-a{color:var(--acc)}
-header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px}
-.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;max-width:1280px;margin:0 auto}
-h1{font-size:16px;margin:0}
-.spacer{flex:1}
-.mute{color:var(--mute)}.small{font-size:12.5px}.bad{color:var(--bad)}.warn{color:var(--warn)}.ok{color:var(--ok)}
-button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:6px 12px}
-button.p{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
-button:disabled{opacity:.5;cursor:default}
-input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
-textarea{width:100%;resize:vertical}
-.weeks{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;max-width:1280px;margin:10px auto 0}
-.weeks button{padding:5px 2px;font-size:12px;line-height:1.2;border-radius:6px;text-align:center}
-.weeks button b{display:block;font-size:13px}
-.weeks .played{background:color-mix(in srgb,var(--fly) 22%,var(--panel));border-color:var(--fly)}
-.weeks .stale{background:color-mix(in srgb,var(--moved) 22%,var(--panel));border-color:var(--moved)}
-.weeks .running{animation:pulse 1s infinite alternate;border-color:var(--warn)}
-.weeks .sel{outline:2px solid var(--acc);outline-offset:1px}
-.weeks .now::after{content:"now";display:block;font-size:10px;color:var(--acc);font-weight:700}
-@keyframes pulse{to{opacity:.5}}
-main{max-width:1280px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px}
-main>*{min-width:0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
-.card h2{font-size:14px;margin:0 0 8px}
-.item{padding:7px 0;border-bottom:1px dashed var(--line)}.item:last-child{border:0}
-details.item>summary{cursor:pointer}
-.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;color:#fff;white-space:nowrap}
-.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--panel2);color:var(--mute)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
-.pc{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--none);border-radius:9px;padding:10px 12px;cursor:pointer}
-.pc:hover{border-color:var(--mute)}
-.pc .said{margin-top:6px}
-.pc .post{margin-top:6px;font-size:12.5px;border-left:2px solid var(--acc);padding-left:8px;color:var(--mute)}
-.sum{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-.flt{margin-bottom:12px}.flt button{padding:2px 10px;font-size:12px;border-radius:99px}
-.flt button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
-.ans{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
-.bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--mute);margin-bottom:6px}
-.banner{border:1px solid var(--moved);border-radius:8px;padding:8px 10px;margin-bottom:12px;background:color-mix(in srgb,var(--moved) 10%,var(--panel))}
-.ro{border:1px solid var(--acc);border-radius:8px;padding:8px 10px;margin-bottom:12px;background:color-mix(in srgb,var(--acc) 10%,var(--panel))}
-.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
-.tbl th,.tbl td{text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}.tbl th{color:var(--mute);font-weight:600}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-feature-settings:"cv11","ss01";letter-spacing:-.003em;-webkit-font-smoothing:antialiased}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+h1,h2,h3{margin:0;font-weight:600}
+::selection{background:color-mix(in srgb,var(--acc) 22%,transparent)}
+.mute{color:var(--mute)}.faint{color:var(--faint)}.small{font-size:12.5px}.bad{color:var(--bad)}.warn{color:var(--warn)}.ok{color:var(--ok)}
 .hidden{display:none!important}
-@media (max-width:900px){main{grid-template-columns:1fr}.weeks{grid-template-columns:repeat(5,1fr)}header{position:static}}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+
+/* controls */
+button{font:inherit;font-weight:500;cursor:pointer;border-radius:9px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);padding:7px 14px;line-height:1.3;box-shadow:var(--sh);
+  transition:background-color .15s,border-color .15s,box-shadow .15s,opacity .15s}
+button:hover{background:var(--hover)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.p{background:var(--btn);border-color:var(--btn);color:var(--btn-ink)}
+button.p:hover{background:var(--btn);opacity:.86}
+button:disabled{opacity:.45;cursor:default}
+button.link{border:0;background:none;box-shadow:none;padding:0;color:var(--mute);font-size:12.5px;font-weight:500}
+button.link:hover{color:var(--ink)}
+button.link.danger:hover{color:var(--bad)}
+input,select,textarea{font:inherit;color:var(--ink);background-color:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:8px 11px;max-width:100%;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)}
+select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:30px;background-repeat:no-repeat;background-position:right 10px center;background-size:12px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238b8e95' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")}
+textarea{width:100%;resize:vertical;line-height:1.5}
+input[type=checkbox]{accent-color:var(--btn);width:15px;height:15px;margin:0}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:500;color:var(--mute);margin-bottom:14px}
+label.f > :is(input,select,textarea){color:var(--ink);font-size:14px;font-weight:400}
+label.c{display:flex;gap:10px;align-items:center;font-size:13px;margin-bottom:10px;cursor:pointer}
+summary{cursor:pointer;user-select:none;list-style:none}
+summary::-webkit-details-marker{display:none}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:var(--glass);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px);border-bottom:1px solid var(--line)}
+.bar{max-width:1360px;margin:0 auto;padding:12px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-.02em;white-space:nowrap}
+.brand small{font-size:13px;font-weight:500;color:var(--faint);letter-spacing:-.005em}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--btn);color:var(--btn-ink);display:grid;place-items:center;flex:0 0 auto}
+.logo svg{width:16px;height:16px}
+.sep{width:1px;height:20px;background:var(--line2);margin:0 4px}
+#sess{font-weight:600;max-width:300px;border-color:transparent;background-color:transparent;padding:6px 30px 6px 10px}
+#sess:hover{background-color:var(--hover)}
+#runInfo{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mute)}
+#runInfo select{padding:4px 26px 4px 10px;font-size:12.5px;border-radius:99px;background-position:right 9px center;background-size:11px;font-weight:500}
+.cal{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mute);padding:5px 12px;border-radius:99px;background:var(--panel);border:1px solid var(--line);white-space:nowrap}
+.cal b{color:var(--ink);font-weight:600}
+.live{width:7px;height:7px;border-radius:50%;background:var(--fly);box-shadow:0 0 0 3px color-mix(in srgb,var(--fly) 22%,transparent);flex:0 0 auto}
+.live.idle{background:var(--faint);box-shadow:none}
+.menu{position:relative;z-index:10}
+.menu summary{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line2);border-radius:9px;color:var(--mute);background:var(--panel);box-shadow:var(--sh)}
+.menu summary:hover,.menu[open] summary{background:var(--hover);color:var(--ink)}
+.menu .pop{position:absolute;right:0;top:calc(100% + 8px);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;min-width:200px;box-shadow:var(--pop);display:flex;flex-direction:column}
+.menu .pop > *{display:block;text-align:left;padding:8px 10px;border-radius:8px;border:0;background:none;box-shadow:none;font-size:13px;font-weight:500;color:var(--ink)}
+.menu .pop > *:hover{background:var(--sunk);text-decoration:none}
+.menu .pop hr{border:0;border-top:1px solid var(--line);margin:4px 2px;padding:0}
+.menu .pop .danger{color:var(--bad)}
+.prog{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--mute);min-width:190px}
+.track{height:6px;background:var(--sunk);border-radius:99px;overflow:hidden}.track i{display:block;height:100%;background:var(--acc);border-radius:inherit;transition:width .4s}
+
+/* week strip */
+.weeks-wrap{max-width:1360px;margin:0 auto;padding:0 24px 14px}
+.weeks{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;padding:4px;background:var(--sunk);border:1px solid var(--line);border-radius:14px}
+.weeks button{position:relative;text-align:left;padding:8px 10px 16px;border-radius:10px;border:1px solid transparent;background:transparent;box-shadow:none;display:flex;flex-direction:column;overflow:hidden;font-weight:400}
+.weeks button:hover{background:var(--hover)}
+.weeks button::after{content:"";position:absolute;left:10px;right:10px;bottom:7px;height:3px;border-radius:2px;background:var(--line2)}
+.weeks .wn{font-weight:600;font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:6px;letter-spacing:-.01em}
+.weeks .wd{font-size:11.5px;color:var(--mute);white-space:nowrap}
+.weeks .wt{font-size:11px;font-weight:500;color:var(--warn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.weeks .played::after{background:var(--fly)}
+.weeks .stale::after{background:var(--moved)}
+.weeks .running::after{background:var(--acc);animation:pulse .9s infinite alternate}
+.weeks .sel,.weeks .sel:hover{background:var(--panel);border-color:var(--line);box-shadow:var(--sh2)}
+.weeks .now .wn::after{content:"Now";font-size:10px;font-weight:600;letter-spacing:.01em;color:var(--acc);background:var(--acc-soft);border-radius:99px;padding:0 6px;line-height:16px}
+@keyframes pulse{to{opacity:.3}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;font-size:11.5px;color:var(--faint)}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+/* layout */
+main{max-width:1360px;margin:0 auto;padding:24px;display:grid;grid-template-columns:360px minmax(0,1fr);gap:24px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:var(--sh)}
+.card > h2{font-size:14px;letter-spacing:-.01em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card > h2 .count{font-weight:500;font-size:11.5px;color:var(--mute);background:var(--sunk);border-radius:99px;padding:1px 9px}
+.card > h2 .count:empty{display:none}
+.item{padding:14px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0;padding-top:0}
+.item .meta{font-size:12px;color:var(--mute);margin-top:6px;line-height:1.5}
+.empty{color:var(--faint);font-size:13px}
+details.sub{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+details.sub > summary{font-size:13px;font-weight:500;color:var(--mute);display:flex;align-items:center;gap:6px}
+details.sub > summary::before{content:"";width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(-45deg);transition:transform .15s;margin:0 4px 0 1px}
+details.sub[open] > summary::before{transform:rotate(45deg)}
+details.sub > summary:hover{color:var(--ink)}
+details.sub[open] > summary{margin-bottom:12px}
+details.add{border-top:0;margin-top:16px;padding-top:0}
+details.add > summary{display:flex;justify-content:center;align-items:center;gap:6px;padding:9px 12px;border:1px dashed var(--line2);border-radius:10px;color:var(--mute);font-size:13px;transition:background-color .15s,color .15s,border-color .15s}
+details.add > summary::before{content:"+";font-size:16px;line-height:1;font-weight:400;border:0;width:auto;height:auto;transform:none;margin:0}
+details.add > summary:hover{color:var(--ink);border-color:var(--faint);background:var(--sunk)}
+details.add[open] > summary{border-style:solid;color:var(--ink);background:var(--sunk);margin-bottom:16px}
+details.add[open] > summary::before{content:"–";transform:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:500;padding:1px 8px;border-radius:99px;background:var(--sunk);color:var(--mute);border:1px solid var(--line)}
+.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.clamp.open{display:block}
+.more{font-size:12px;margin-top:4px}
+.acts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.acts li{position:relative;padding-left:14px;font-size:13px;line-height:1.45}
+.acts li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.acts li .faint{display:block;font-size:12px;margin-top:1px}
+.quote{margin:12px 0 0;padding:10px 12px;background:var(--sunk);border-radius:10px;color:var(--ink2);font-size:12.5px;line-height:1.5}
+#handin > summary{display:flex;align-items:center;gap:8px;font-size:14px}
+#handin > summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:1.6px solid var(--mute);border-bottom:1.6px solid var(--mute);transform:rotate(45deg);transition:transform .15s}
+#handin[open] > summary::after{transform:rotate(-135deg)}
+#handin[open] > summary{margin-bottom:12px}
+#handin p{line-height:1.55}
+
+/* results */
+.wkhead{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:2px 0 22px}
+.wkhead h1{font-size:32px;font-weight:650;letter-spacing:-.035em;line-height:1.05}
+.wksub{display:flex;align-items:center;gap:10px;margin-top:8px;color:var(--mute);font-size:14px}
+.chip{font-size:12px;font-weight:500;padding:2px 10px;border-radius:99px;background:color-mix(in srgb,var(--warn) 11%,transparent);color:var(--warn)}
+.badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;padding:4px 11px;border-radius:99px;background:var(--panel);color:var(--mute);border:1px solid var(--line)}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.played{color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,var(--panel));border-color:color-mix(in srgb,var(--ok) 22%,transparent)}
+.badge.stale{color:var(--warn);background:color-mix(in srgb,var(--warn) 9%,var(--panel));border-color:color-mix(in srgb,var(--warn) 22%,transparent)}
+.badge.running{color:var(--acc);background:color-mix(in srgb,var(--acc) 9%,var(--panel));border-color:color-mix(in srgb,var(--acc) 22%,transparent)}
+.badge.running::before{animation:pulse .9s infinite alternate}
+.banner{display:flex;gap:10px;align-items:flex-start;border:1px solid color-mix(in srgb,var(--moved) 35%,transparent);border-radius:12px;padding:12px 14px;margin-bottom:20px;background:color-mix(in srgb,var(--moved) 8%,var(--panel));font-size:13.5px}
+.banner::before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--moved);margin-top:6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stat{padding:16px 18px 18px;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
+.stat .l{font-size:12.5px;font-weight:500;color:var(--mute)}
+.stat .v{font-size:27px;font-weight:600;letter-spacing:-.03em;margin:6px 0 2px;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat .v.na{font-size:15px;font-weight:500;letter-spacing:-.01em;color:var(--faint);margin:12px 0 8px}
+.stat .d{font-size:12px;color:var(--faint);line-height:1.45}
+.meter{height:4px;border-radius:99px;background:var(--sunk);overflow:hidden;margin:8px 0 10px}
+.meter i{display:block;height:100%;border-radius:inherit;background:var(--acc)}
+.hist{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;font-variant-numeric:tabular-nums;margin-top:20px}
+.hist th,.hist td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.hist tbody tr:last-child td{border-bottom:0}
+.hist th:first-child,.hist td:first-child{text-align:left;color:var(--mute);font-weight:500}
+.hist thead th{color:var(--faint);font-weight:500;font-size:11.5px;letter-spacing:.02em}
+.hist .cur{background:var(--acc-soft);color:var(--acc);font-weight:600}
+.hist thead .cur{border-radius:8px 8px 0 0}
+.hist tbody tr:last-child .cur{border-radius:0 0 8px 8px}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--faint);margin-top:14px;line-height:1.55}
+
+/* ask */
+.composer{border:1px solid var(--line2);border-radius:14px;background:var(--panel);transition:border-color .15s,box-shadow .15s}
+.composer:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 15%,transparent)}
+.composer textarea{border:0;background:transparent;padding:14px 16px 4px;min-height:58px;resize:none;font-size:14.5px}
+.composer textarea:focus{box-shadow:none}
+.composer-bar{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;flex-wrap:wrap}
+.composer .opts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--mute);flex:1;min-width:0}
+.composer .opts select{background-color:var(--sunk);border-color:transparent;border-radius:99px;padding:4px 26px 4px 10px;font-size:12.5px;font-weight:500;max-width:260px;background-position:right 9px center;background-size:11px}
+.kbd{font-size:11px;color:var(--faint);margin-right:4px}
+.answers-head{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ans{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.answers-head + .ans{border-top:0}
+.ans .atext{margin-top:3px;color:var(--ink2);line-height:1.55}
+
+/* personas */
+.av{flex:0 0 34px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;letter-spacing:.01em;
+  background:color-mix(in srgb,var(--c,var(--acc)) 14%,var(--panel));color:color-mix(in srgb,var(--c,var(--acc)) 78%,var(--ink))}
+.dist{display:flex;gap:3px;height:10px;margin:2px 0 14px}
+.dist i{display:block;height:100%;border-radius:3px;min-width:4px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.filters button{font-size:12.5px;padding:5px 12px;border-radius:99px;border-color:var(--line);box-shadow:none;background:var(--panel);color:var(--mute)}
+.filters button:hover{color:var(--ink)}
+.filters button.on{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:0}
+.kpis{display:flex;gap:8px 24px;flex-wrap:wrap;align-items:baseline;font-size:12.5px;color:var(--mute);margin:16px 0 18px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.kpis b{color:var(--ink);font-weight:600;font-size:14px;margin-left:3px;font-variant-numeric:tabular-nums}
+.kpis .faint{margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.pc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color .15s,box-shadow .2s,transform .2s}
+.pc:hover{border-color:var(--line2);box-shadow:var(--sh2);transform:translateY(-1px)}
+.pc .who{display:flex;gap:10px;align-items:center}
+.pc .nm{min-width:0;flex:1}
+.pc .nm b{display:block;font-weight:600;font-size:13.5px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .nm span{display:block;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;padding:2px 9px;border-radius:99px;white-space:nowrap;
+  background:color-mix(in srgb,var(--c) 12%,transparent);color:color-mix(in srgb,var(--c) 78%,var(--ink))}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.pc .facts{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--mute);margin-top:12px}
+.pc .facts b{color:var(--ink);font-weight:600}
+.pc .flight{font-size:12px;color:var(--mute);margin-top:8px}
+.pc .said{margin-top:10px;font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.pc .post{margin-top:10px;font-size:12.5px;color:var(--mute);background:var(--sunk);border-radius:10px;padding:8px 10px;line-height:1.5}
+.pc .post b{color:var(--ink);font-weight:600;margin-right:4px}
+.pc details{font-size:12.5px;color:var(--mute);margin-top:8px;line-height:1.5}
+.pc details summary{font-weight:500}
+.pc details summary:hover{color:var(--ink)}
+.pc details[open] summary{margin-bottom:4px}
+
+/* read-only runs, hand-in table, decision form */
+.ro{display:flex;gap:12px;align-items:flex-start;border:1px solid color-mix(in srgb,var(--acc) 28%,transparent);border-radius:12px;padding:12px 14px;margin-bottom:20px;background:color-mix(in srgb,var(--acc) 7%,var(--panel));font-size:13px;line-height:1.55}
+.ro::before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--acc);margin-top:6px}
+.ro .mute{font-size:12.5px}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{text-align:left;padding:7px 8px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl th{color:var(--faint);font-weight:500;font-size:11.5px}
+.act .x{flex:0 0 auto;width:30px;padding:0;height:36px;color:var(--mute);box-shadow:none}
+.act .x:hover{color:var(--bad)}
+#decWarn .warn{font-size:12.5px;line-height:1.5;margin-bottom:8px;padding:8px 10px;border-radius:9px;background:color-mix(in srgb,var(--warn) 9%,var(--panel))}
+.fsep{width:1px;height:18px;background:var(--line2);margin:0 4px}
+.decwk{font-weight:600}
+
+/* new simulation */
+#empty .card{padding:28px}
+#empty h2{font-size:20px;letter-spacing:-.025em;margin:16px 0 6px}
+
+@media (max-width:1080px){main{grid-template-columns:320px minmax(0,1fr)}}
+@media (max-width:960px){main{grid-template-columns:minmax(0,1fr);padding:16px}header{position:static}
+  .weeks{display:flex;overflow-x:auto;scrollbar-width:none}.weeks button{flex:0 0 100px}.bar,.weeks-wrap{padding-left:16px;padding-right:16px}}
+@media (max-width:600px){.bar{gap:8px}.brand small,.sep{display:none}#calNow{order:9}.legend{justify-content:flex-start}.wkhead h1{font-size:26px}.kpis .faint{margin-left:0}}
 </style>
 </head>
 <body>
 <header>
-  <div class="top">
-    <h1>Kestrel simulation</h1>
+  <div class="bar">
+    <span class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 14.2c4.3-.6 7.6-3 9.6-8.2 1.2 3.9 4 6.6 9.4 7.6-4.6.9-8.2 1.9-10.3 5-1.7-2.6-4.7-4-8.7-4.4z"/></svg></span>Kestrel<small>Simulation room</small></span>
+    <span class="sep"></span>
     <select id="sess" title="Simulation, or a finished run to read and interview"></select>
-    <a id="logs" target="_blank" rel="noopener" class="small">logs</a>
-    <button id="del" title="Delete this simulation" style="padding:3px 8px" class="small">delete</button>
-    <span class="small mute" id="calNow"></span>
+    <span id="runInfo"></span>
     <span class="spacer"></span>
-    <span class="small" id="runInfo"></span>
-    <button class="p" id="play">Play</button>
+    <span class="cal" id="calNow"></span>
     <button id="stop" class="hidden">Stop</button>
+    <button class="p" id="play">Play</button>
+    <details class="menu" id="menu"><summary title="More" aria-label="More"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg></summary>
+      <div class="pop">
+        <a id="logs" target="_blank" rel="noopener">Open logs</a>
+        <button id="theme">Switch theme</button>
+        <hr>
+        <button id="del" class="danger">Delete simulation</button>
+      </div>
+    </details>
   </div>
-  <div class="weeks" id="weeks"></div>
+  <div class="weeks-wrap" id="weeksWrap">
+    <div class="weeks" id="weeks"></div>
+    <div class="legend"><span><i style="background:var(--fly)"></i>played</span><span><i style="background:var(--moved)"></i>changed since played</span><span><i style="background:var(--acc)"></i>playing</span><span><i style="background:var(--line2)"></i>not played</span></div>
+  </div>
 </header>
 
-<div id="empty" class="hidden" style="max-width:520px;margin:40px auto;padding:0 16px">
+<div id="empty" class="hidden" style="max-width:500px;margin:64px auto;padding:0 16px">
   <div class="card">
-    <h2>Start a simulation</h2>
-    <p class="small mute">Personas live through the ten weeks with you, one week at a time. Each week you add the events from the dashboard and your decisions, play the week, read what every persona did, and ask them anything. Finished runs (experiments and hand-in runs) are in the list at the top, to read and interview.</p>
+    <span class="logo" style="width:36px;height:36px;border-radius:10px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:20px;height:20px"><path d="M2.5 14.2c4.3-.6 7.6-3 9.6-8.2 1.2 3.9 4 6.6 9.4 7.6-4.6.9-8.2 1.9-10.3 5-1.7-2.6-4.7-4-8.7-4.4z"/></svg></span>
+    <h2>New simulation</h2>
+    <p class="small mute" style="margin:0 0 22px;line-height:1.6">Personas live through the ten weeks one week at a time. Each week you add that week's events and your decisions, play it, see what every persona did, and ask them questions. Finished runs (experiments and hand-in runs) are in the list at the top, to read and interview.</p>
     <label class="f">Name<input id="nName" value="main"></label>
     <label class="f">Model<select id="nModel"></select></label>
-    <label class="row small"><input type="checkbox" id="nSocial" checked> personas see each other's posts</label>
-    <label class="row small"><input type="checkbox" id="nAuto" checked> play each week automatically when the calendar reaches it</label>
-    <p><button class="p" id="nGo">Start</button> <button id="nBack" class="hidden">Back</button> <span class="small bad" id="nMsg"></span></p>
+    <label class="c"><input type="checkbox" id="nSocial" checked> Personas see each other's posts</label>
+    <label class="c"><input type="checkbox" id="nAuto" checked> Play each week automatically when the calendar reaches it</label>
+    <div class="row" style="margin-top:20px"><button class="p" id="nGo">Start simulation</button><button id="nBack" class="hidden">Back</button><span class="small bad" id="nMsg"></span></div>
   </div>
 </div>
 
 <main id="app" class="hidden">
   <aside>
     <div class="card">
-      <h2 id="wkTitle">Week</h2>
+      <h2>Events <span class="count" id="evCount"></span></h2>
       <div id="events"></div>
-      <div id="evForm">
-        <textarea id="evText" rows="2" placeholder="New event this week (paste the dashboard announcement)"></textarea>
-        <div class="row" style="margin-top:6px">
-          <select id="evEffect" title="How we read it: what it does to flights this week and next">
-            <option value="auto">effect: let the model read it</option><option value="none">no effect on flights</option><option value="delays">some delays</option>
-            <option value="some cancellations">some cancellations</option><option value="many cancellations">many cancellations</option></select>
-          <select id="evScope" title="Which flights"><option value="all">all flights</option><option value="bases">Orlando &amp; Philadelphia</option><option value="intl">Mexico &amp; Caribbean</option></select>
-          <label class="small row"><input type="checkbox" id="evKestrel"> Kestrel's own fault</label></div>
-        <input id="evReading" placeholder="How we read it (one line, for TEAM_DOC)" style="width:100%;margin-top:6px">
-        <div class="row" style="margin-top:6px"><button id="evAdd">Add event</button><span class="small" id="evMsg"></span></div>
-      </div>
+      <details class="sub add" id="evForm"><summary>Add an event to this week</summary>
+        <label class="f">Announcement<textarea id="evText" rows="3" placeholder="Paste the dashboard announcement"></textarea></label>
+        <label class="f">Effect on flights<select id="evEffect">
+          <option value="auto">Let the model read it</option><option value="none">No effect on flights</option><option value="delays">Some delays</option>
+          <option value="some cancellations">Some cancellations</option><option value="many cancellations">Many cancellations</option></select></label>
+        <div id="evManual" class="hidden">
+          <label class="f">Which flights<select id="evScope"><option value="all">All flights</option><option value="bases">Orlando &amp; Philadelphia</option><option value="intl">Mexico &amp; Caribbean</option></select></label>
+          <label class="c"><input type="checkbox" id="evKestrel"> Kestrel's own fault</label>
+          <label class="f"><span>How we read it <span class="faint">· one line, for TEAM_DOC</span></span><input id="evReading"></label>
+        </div>
+        <div class="row"><button class="p" id="evAdd">Add event</button><span class="small" id="evMsg"></span></div>
+      </details>
     </div>
+
     <div class="card">
-      <h2>Decisions</h2>
+      <h2>Decisions <span class="count" id="decCount"></span></h2>
       <div id="decs"></div>
-      <details id="decForm" style="margin-top:8px"><summary class="small">Add a decision</summary>
-        <label class="f" style="margin-top:8px">Starts in week<select id="decWeek"></select></label>
-        <div class="small" id="decWarn"></div>
-        <div id="decActs" style="margin-top:8px"></div>
-        <div class="row"><button class="small" id="decActAdd" style="padding:3px 8px">+ action</button><span class="small mute" id="decCost"></span></div>
-        <label class="f" style="margin-top:8px">Who gets it<select id="decTarget"></select></label>
-        <label class="f">Message, word for word <span id="decLen">0/600</span><textarea id="decMsg" rows="4"></textarea></label>
-        <label class="f">Why (three lines)<textarea id="decWhy" rows="3"></textarea></label>
+      <details class="sub add" id="decForm"><summary>Add a decision</summary>
+        <label class="f">Starts in week<select id="decWeek"></select></label>
+        <div id="decWarn"></div>
+        <div class="small mute" style="margin-bottom:6px;font-weight:500">Actions (up to 3)</div>
+        <div id="decActs"></div>
+        <div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="link" id="decActAdd">+ Add another action</button><span class="small mute" id="decCost"></span></div>
+        <label class="f">Who gets it<select id="decTarget"></select></label>
+        <label class="f"><span class="row" style="justify-content:space-between">Message, word for word <span id="decLen">0/600</span></span><textarea id="decMsg" rows="5"></textarea></label>
+        <label class="f"><span>Why <span class="faint">· three lines</span></span><textarea id="decWhy" rows="3"></textarea></label>
         <div class="row"><button class="p" id="decSave">Save decision</button></div>
       </details>
-      <div class="small" id="decMsgOut" style="margin-top:6px"></div>
+      <div class="small" id="decMsgOut" style="margin-top:10px"></div>
     </div>
+
     <div class="card">
-      <h2>Ask the personas</h2>
-      <label class="f">Who<select id="askWho"></select></label>
-      <textarea id="askQ" rows="3" placeholder="e.g. What have you heard about the strike, and what will you do?"></textarea>
-      <div class="row" style="margin-top:6px"><button class="p" id="askGo">Ask</button><select id="askModel" title="Model for answers"></select><span class="small mute" id="askInfo"></span></div>
-    </div>
-    <div class="card">
-      <h2>Hand-in</h2>
-      <p class="small mute">The five runs (plan_1, plan_2, nodecision_1, nodecision_2, plan_nosurprises) play weeks 1–10 now with this simulation's events, decisions and personas. Weeks already computed with the same inputs are reused: after a new announcement, add it here, press Start again, then build the ZIP.</p>
-      <div class="row" id="offStart"><button id="offGo">Start the 5 hand-in runs</button><select id="offModel" title="Model for the hand-in runs"></select></div>
-      <div class="small" id="offMsg" style="margin-top:6px"></div>
-      <div class="small" id="offInfo"></div>
-      <div class="row" style="margin-top:8px"><input id="team" value="09" style="width:60px"><button id="zipGo">Build ZIP + check.py</button></div>
-      <pre id="zipOut" class="small hidden" style="white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
+      <details id="handin"><summary><b>Hand-in</b> <span class="small mute" id="offShort"></span></summary>
+        <p class="small mute">The five runs (plan_1, plan_2, nodecision_1, nodecision_2, plan_nosurprises) play weeks 1–10 now with this simulation's events, decisions and personas. Weeks already computed with the same inputs are reused: after a new announcement, add it here, press Start again, then build the ZIP.</p>
+        <div class="row" id="offStart"><button id="offGo">Start the 5 hand-in runs</button><select id="offModel" title="Model for the hand-in runs" style="flex:1;min-width:0"></select></div>
+        <div class="small" id="offMsg" style="margin-top:8px"></div>
+        <div class="small" id="offInfo" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:14px"><label class="small mute" for="team">Team</label><input id="team" value="09" style="width:60px"><button id="zipGo">Build ZIP + run check.py</button></div>
+        <pre id="zipOut" class="small hidden" style="white-space:pre-wrap;max-height:300px;overflow:auto;background:var(--sunk);padding:12px;border-radius:10px;margin:12px 0 0"></pre>
+      </details>
     </div>
   </aside>
+
   <section>
+    <div class="wkhead"><div><h1 id="wkTitle">Week</h1><div class="wksub" id="wkSub"></div></div><span class="spacer"></span><span id="wkBadge"></span></div>
     <div id="ro"></div>
-    <div id="goals"></div>
     <div id="banner"></div>
-    <div id="answers"></div>
-    <div class="sum" id="sum"></div>
-    <div class="row flt" id="flt"></div>
-    <div class="grid" id="people"></div>
+    <div id="goals"></div>
+
+    <div class="card" id="askCard">
+      <h2>Ask the personas</h2>
+      <div class="composer">
+        <textarea id="askQ" rows="2" placeholder="e.g. What have you heard about the strike, and what will you do?"></textarea>
+        <div class="composer-bar">
+          <div class="opts">
+            <label for="askWho">Ask</label><select id="askWho"></select>
+            <label for="askModel">using</label><select id="askModel" title="Model for answers"></select>
+            <span id="askInfo"></span>
+          </div>
+          <span class="kbd">⌘↵</span>
+          <button class="p" id="askGo">Ask</button>
+        </div>
+      </div>
+      <div id="answers"></div>
+    </div>
+
+    <div class="card">
+      <h2>Personas <span class="count" id="pCount"></span></h2>
+      <div id="sum"></div>
+      <div class="grid" id="people"></div>
+    </div>
   </section>
 </main>
+
 
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");  // dashboard texts use **bold**
 const short = (s, n) => (s = String(s ?? "").replace(/\*\*/g, "")).length > n ? s.slice(0, n).trimEnd() + "…" : s;
+const initials = s => String(s ?? "").split(/[\s_-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("");
 const api = async (path, body) => { const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
 const store = {get(k,d){try{return localStorage.getItem(k) ?? d}catch{return d}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
@@ -160,15 +376,17 @@ const DATES = ["Nov 2–8","Nov 9–15","Nov 16–22","Nov 23–29","Nov 30–De
 const TAGS = {4:"Thanksgiving",8:"Christmas",9:"New Year"};
 const weekTag = w => w === 8 && (D?.surprises || []).some(e => e.week === 8 && e.known_crisis) ? "Christmas · strike" : TAGS[w];
 const COL = {"flies as planned":"var(--fly)","rebooked":"var(--reb)","moved to another airline":"var(--moved)","canceled the trip":"var(--cancel)"};
-const FLIGHT = {canceled:"✕ flight canceled", delayed:"◐ flight delayed", "on time":"✈ flew on time"};
+const FLIGHT = {canceled:"Flight canceled", delayed:"Flight delayed", "on time":"Flew on time"};
+const STATE = {played:"Played", stale:"Changed since played", running:"Playing…", "":"Not played"};
 const EFFECT = {"Lease":"halves cancellations for 2 weeks; canceled passengers get a seat the next morning","Backup ground":"strike days: cancellations 30%→7%, 3h+ delays 45%→15%, fewer lost bags","Free changes":"target can change or cancel bookings for free for 2 weeks","Goodwill":"disrupted passengers in the target get the credit or cash","partner airline":"canceled passengers in the target get a partner seat the same day","Hotel rooms":"stranded passengers in the target get a hotel","Extra airport":"phone wait on disruption days 120→20 min","Fare cap":"target sees capped fares","Fare sale":"target sees a fare sale","Double loyalty":"disrupted passengers in the target get double points","Merge low-load":"3% of ordinary-week flights are moved a few hours (saves $0.25M)"};
 const effectKey = a => Object.keys(EFFECT).find(k => String(a).toLowerCase().includes(k.toLowerCase()));
 const effectOf = a => EFFECT[effectKey(a)] || "";
 const STRIKE = "The workers of Kestrel's ground handling contractor (baggage, cabin cleaning, wheelchair assistance, fueling) are on a 48-hour strike at Orlando and Philadelphia on Dec 22-23, the busiest week of the year. The contractor will bring in replacement staff 'where it can'; some flights may be late or canceled. The union says the strike 'may be extended'.";
 const SCOPE = {all:"all flights", bases:"Orlando & Philadelphia flights", intl:"Mexico & Caribbean flights"};
-// Persona filters for the week view: [label, test(row, same persona last week)]
-const FILTERS = {all:["everyone", () => true], flew:["had a flight", r => r.had_flight_this_week], hit:["canceled or 3h+ delayed", r => ["canceled","delayed"].includes(r.flight_outcome)],
-  complaint:["complained", r => r.complaint], post:["posted", r => r.post], changed:["status changed", (r, b) => b && b.status !== r.status]};
+// Persona filters for the week view: [label, test(row, same persona last week)]; "s:<status>" filters by outcome
+const FILTERS = {all:["Everyone", () => true], flew:["Had a flight", r => r.had_flight_this_week], hit:["Canceled or 3h+ delayed", r => ["canceled","delayed"].includes(r.flight_outcome)],
+  complaint:["Complained", r => r.complaint], post:["Posted", r => r.post], changed:["Status changed", (r, b) => b && b.status !== r.status]};
+const fltTest = k => k.startsWith("s:") && COL[k.slice(2)] ? (r => r.status === k.slice(2)) : FILTERS[k]?.[1];
 // Board goals as metrics.json reports them, with the dossier's target
 const GOALS = [["goal_1","flights",v => `${v}%`,v => v >= 98,"≥98% of planned flights"],["goal_2","24h",v => `${v}%`,v => v >= 90,"≥90% of affected passengers rebooked or refunded in 24h"],
   ["goal_3","complaints",v => `${v.toLocaleString("en-US")}/mo`,v => v <= 2500,"no worse than last winter's ~2,500 a month"],["goal_3b","NPS",v => `${v > 0 ? "+" : ""}${v}`,v => v >= 12,"no worse than +12"],
@@ -181,14 +399,24 @@ function actionCost(a){
   return row[level] ?? row[a.level] ?? 0;
 }
 const cost = acts => acts.reduce((s, a) => s + actionCost(a), 0);
+// UI state that survives the 3-second refresh
+const UI = {open: new Set()};
 function evLine(s, now, i){
   const late = s.known_from && s.known_from > s.week;
-  const what = s.known_crisis ? "known crisis: strike-day flights at the bases follow the strike rates; stays in plan_nosurprises"
-    : s.effect && s.effect !== "none" ? `${s.effect} on ${SCOPE[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights";
-  const body = `${md(s.text)}
-    <div class="small mute">${what}${late?` · added after week ${s.known_from-1} was played: personas know it from week ${s.known_from}`:""}${s.reading && !s.known_crisis?`<br>read: ${esc(s.reading)}`:""}</div>`;
-  return now ? `<div class="item">${body}${RO?"":`<button class="small" style="padding:2px 8px;margin-top:4px" onclick="delEvent(${i})">remove</button>`}</div>`
-    : `<details class="item mute"><summary class="small">week ${s.week} · still in the news · ${esc(short(s.text, 60))}</summary>${body}</details>`;
+  const what = s.known_crisis ? "Known crisis: strike-day flights at the bases follow the strike rates; stays in plan_nosurprises"
+    : s.effect && s.effect !== "none" ? `${s.effect[0].toUpperCase()+s.effect.slice(1)} on ${SCOPE[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "No effect on flights";
+  const key = `ev:${s.week}:${s.text.slice(0,40)}`;
+  const meta = `<div class="meta">${what}${late?` · added after week ${s.known_from-1} was played: personas know it from week ${s.known_from}`:""}${s.reading && !s.known_crisis?`<br>Read as: ${esc(s.reading)}`:""}</div>`;
+  if (!now) return `<details class="sub" style="margin-top:0;padding-top:10px;border-top:0"><summary><span class="faint" style="white-space:nowrap">Week ${s.week}</span><span>${esc(short(s.text, 48))}</span></summary><div style="padding-left:16px">${md(s.text)}${meta}</div></details>`;
+  return `<div class="item">
+    <div class="clamp ${UI.open.has(key)?"open":""}" data-k="${esc(key)}">${md(s.text)}</div>
+    ${s.text.length > 220 ? `<button class="link more" onclick="toggleClamp(this)">${UI.open.has(key)?"Show less":"Show more"}</button>` : ""}
+    ${meta}${RO?"":`<button class="link danger" style="margin-top:8px" onclick="delEvent(${i})">Remove</button>`}</div>`;
+}
+function toggleClamp(btn){
+  const el = btn.previousElementSibling, k = el.dataset.k, open = !el.classList.contains("open");
+  el.classList.toggle("open", open); btn.textContent = open ? "Show less" : "Show more";
+  open ? UI.open.add(k) : UI.open.delete(k);
 }
 let S, META, D, RO = false, creating = false, loading = false, sel = 1, name = store.get("sess", ""), opened = "", flt = store.get("flt", "all");
 
@@ -200,11 +428,11 @@ async function load(){
   if (!sessions.concat(finished).find(r => r.name === name)) name = sessions[0]?.name || "";
   const opt = r => `<option value="${esc(r.name)}" ${r.name===name?"selected":""}>${esc(r.name)}</option>`;
   const hand = S.official.map(n => finished.find(r => r.name === n)).filter(Boolean), rest = finished.filter(r => !S.official.includes(r.name));
-  setHTML($("#sess"), (name ? "" : `<option value="" selected>choose…</option>`)
+  setHTML($("#sess"), (name ? "" : `<option value="" selected>Choose…</option>`)
     + (sessions.length ? `<optgroup label="Simulations">${sessions.map(opt).join("")}</optgroup>` : "")
     + (hand.length ? `<optgroup label="Hand-in runs (read-only)">${hand.map(opt).join("")}</optgroup>` : "")
     + (rest.length ? `<optgroup label="Finished runs (read-only)">${rest.map(opt).join("")}</optgroup>` : "")
-    + `<option value="__new">+ new simulation</option>`);
+    + `<option value="__new">+ New simulation</option>`);
   if (creating || !name) {
     $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); $("#nBack").classList.toggle("hidden", !name);
     D = null; drawHeader(null); return;
@@ -222,15 +450,15 @@ async function load(){
 }
 async function tick(){
   if (loading) return; loading = true;
-  try { await load(); } catch(e){ console.error(e); $("#calNow").textContent = e instanceof TypeError && /fetch/i.test(e.message) ? "server not responding…" : `page error: ${e.message}`; }
+  try { await load(); } catch(e){ console.error(e); $("#calNow").innerHTML = `<i class="live" style="background:var(--bad);box-shadow:none"></i>${e instanceof TypeError && /fetch/i.test(e.message) ? "Server not responding…" : `Page error: ${esc(e.message)}`}`; }
   loading = false;
 }
 function drawWho(){
   const key = name + D.personas.map(p => p.id).join();
   if ($("#askWho")._k === key) return; $("#askWho")._k = key;
   const groups = [...new Set(D.personas.map(p => p.group))];
-  $("#askWho").innerHTML = `<option value="all">all ${D.personas.length} personas</option>` + groups.map(g => `<option value="g:${esc(g)}">all ${esc(g)}</option>`).join("")
-    + D.personas.map(p => `<option value="p:${esc(p.id)}">${esc(p.name||p.id)} (${esc(p.id)})</option>`).join("");
+  $("#askWho").innerHTML = `<option value="all">all ${D.personas.length} personas</option><optgroup label="Groups">` + groups.map(g => `<option value="g:${esc(g)}">all ${esc(g)}</option>`).join("")
+    + `</optgroup><optgroup label="One persona">` + D.personas.map(p => `<option value="p:${esc(p.id)}">${esc(p.name||p.id)} (${esc(p.id)})</option>`).join("") + `</optgroup>`;
 }
 function weekState(w){
   const i = D.info, v = D.validity?.valid_through ?? i.played;
@@ -238,22 +466,24 @@ function weekState(w){
   if (w <= v) return "played"; if (w <= i.played) return "stale"; return "";
 }
 function drawHeader(d){
-  const c = S.calendar, cw = c.week;
-  $("#calNow").textContent = cw === 0 ? `calendar starts ${c.starts[0].slice(11,16)}` : cw === 11 ? "calendar finished"
-    : `now: week ${cw} · ${cw === 10 ? "ends" : "next week"} at ${c.starts[cw].slice(11,16)}`;
-  $("#logs").classList.toggle("hidden", !d); $("#del").classList.toggle("hidden", !d || RO);
-  if (!d) { setHTML($("#weeks"), ""); setHTML($("#runInfo"), ""); $("#play").classList.add("hidden"); $("#stop").classList.add("hidden"); return; }
+  const c = S.calendar, cw = c.week, at = k => c.starts[k].slice(11,16);
+  setHTML($("#calNow"), cw === 0 ? `<i class="live idle"></i>Calendar starts at <b>${at(0)}</b>` : cw === 11 ? `<i class="live idle"></i>Calendar finished`
+    : `<i class="live"></i><span>Now <b>week ${cw}</b> · ${cw === 10 ? "ends" : `week ${cw+1} at`} ${at(cw)}</span>`);
+  $("#del").classList.toggle("hidden", !d || RO);
+  if (!d) { $("#weeksWrap").classList.add("hidden"); $("#play").classList.add("hidden"); $("#stop").classList.add("hidden"); setHTML($("#runInfo"), ""); $("#menu").classList.add("hidden"); return; }
+  $("#weeksWrap").classList.remove("hidden"); $("#menu").classList.remove("hidden");
   const i = d.info, busy = ["running","queued"].includes(i.status), v = d.validity?.valid_through ?? i.played;
-  setHTML($("#weeks"), DATES.map((dt,k) => { const w = k+1;
-    return `<button class="${weekState(w)} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})"><b>Week ${w}</b>${dt}${weekTag(w)?`<br><span class="mute">${weekTag(w)}</span>`:""}</button>`; }).join(""));
+  setHTML($("#weeks"), DATES.map((dt,k) => { const w = k+1, st = weekState(w);
+    return `<button class="${st} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})" title="Week ${w}: ${STATE[st]}"><span class="wn">Week ${w}</span><span class="wd">${dt}</span><span class="wt">${weekTag(w) || "&nbsp;"}</span></button>`; }).join(""));
   const next = Math.min(10, v + 1);
   $("#play").classList.toggle("hidden", RO || busy || v >= 10); $("#stop").classList.toggle("hidden", !busy);
   $("#play").textContent = d.validity?.stale_from ? `Replay from week ${d.validity.stale_from}` : `Play week ${next}`;
   $("#play").onclick = () => play(next);
   const models = Object.keys(S.models).filter(m => !S.models[m].offline || m === i.model);  // an offline model shows as itself
-  if (document.activeElement?.id !== "modelSel") setHTML($("#runInfo"), busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
-    : RO ? `<span class="mute">${d.personas.length} personas · ${esc(i.type)} · seed ${esc(i.seed)} · ${esc(i.model)}${i.social?" · social":""}</span>`
-    : `<span class="mute">${d.personas.length} personas · <select id="modelSel" onchange="setModel(this.value)" title="Changing the model starts this simulation's history again">${models.map(m => `<option ${m===i.model?"selected":""}>${m}</option>`).join("")}</select>${i.auto?" · auto":""}${i.social?" · social":""}</span>`);
+  if (document.activeElement?.id !== "modelSel") setHTML($("#runInfo"), busy
+    ? `<span class="prog"><span>${esc(i.phase)} · ${i.calls_done}/${i.calls_total}</span><span class="track"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></span></span>`
+    : RO ? `<span class="tag">read-only</span><span class="tag">${esc(i.type)} · seed ${esc(i.seed)}</span><span class="tag">${esc(i.model)}</span><span class="tag">${d.personas.length} personas</span>${i.social?`<span class="tag">social</span>`:""}`
+    : `<select id="modelSel" onchange="setModel(this.value)" title="Changing the model starts this simulation's history again">${models.map(m => `<option ${m===i.model?"selected":""}>${m}</option>`).join("")}</select><span class="tag">${d.personas.length} personas</span>${i.auto?`<span class="tag">auto</span>`:""}${i.social?`<span class="tag">social</span>`:""}`);
 }
 async function setModel(m){
   if (!confirm(`Switch "${name}" to ${m}? Its history starts again from week 1 (flash-lite plays a 66-persona week in ~4 s, 3.7-flash in ~50 s).`)) { $("#runInfo")._h = null; load(); return; }
@@ -264,112 +494,139 @@ function pick(w){ sel = w; $("#decWeek").value = defaultDecWeek(); drawHeader(D)
 /* ---------- the selected week ---------- */
 function drawWeek(){
   const w = sel, st = weekState(w), i = D.info;
-  setHTML($("#wkTitle"), `Week ${w} · ${DATES[w-1]}${weekTag(w)?` · <span class="warn">${weekTag(w)}</span>`:""}`);
+  setHTML($("#wkTitle"), `Week ${w}`);
+  setHTML($("#wkSub"), `<span>${DATES[w-1]}</span>${weekTag(w)?`<span class="chip">${weekTag(w)}</span>`:""}`);
+  setHTML($("#wkBadge"), `<span class="badge ${st}">${STATE[st]}</span>`);
   const all = (D.surprises || []).map((s,k) => [s,k]), hasStrike = all.some(([s]) => s.known_crisis);
-  setHTML($("#events"), (all.filter(([s]) => s.week === w).map(([s,k]) => evLine(s, true, k)).join("") || `<div class="item mute">No events this week.${RO?"":" Add the dashboard's announcements here."}</div>`)
+  const evs = all.filter(([s]) => s.week === w), older = all.filter(([s]) => s.week < w);
+  $("#evCount").textContent = evs.length ? `${evs.length} this week` : ""; $("#evCount").classList.toggle("hidden", !evs.length);
+  setHTML($("#events"), (evs.map(([s,k]) => evLine(s, true, k)).join("") || `<div class="empty">No events this week.${RO?"":" Add the dashboard's announcements below."}</div>`)
     + (w === 8 && !hasStrike && !RO ? `<div class="item"><button onclick="addStrike()">Add the dossier's strike (Dec 22–23)</button></div>` : "")
-    + all.filter(([s]) => s.week < w).map(([s,k]) => evLine(s, false, k)).join("")
-    + (i.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : ""));
+    + (i.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : "")
+    + (older.length ? `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><div class="small faint" style="margin-top:8px;font-weight:500">Still in the news (${older.length})</div>${older.map(([s,k]) => evLine(s, false, k)).join("")}</div>` : ""));
   $("#evForm").classList.toggle("hidden", RO);
+  $("#evForm").querySelector("summary").textContent = `Add an event to week ${w}`;
   drawDecisions(w);
-  setHTML($("#ro"), RO ? `<div class="ro small"><b>${esc(name)}</b> is a finished run (read-only): read its weeks and ask its personas. ${esc(i.type)} · seed ${esc(i.seed)} · ${esc(i.model)}${D.config.surprises?` · events: ${esc(D.config.surprises)}`:""}${D.config.decisions?` · decisions: ${esc(D.config.decisions)}`:""}
-    ${D.outdated_from != null ? `<br><span class="bad">Outdated: ${D.outdated_from ? `the events or decisions for week ${D.outdated_from} on` : "the personas, model or code"} changed after this run was made.</span>` : ""}</div>` : "");
+  setHTML($("#ro"), RO ? `<div class="ro"><div><b>${esc(name)}</b> is a finished run (read-only): read its weeks and ask its personas.
+    <div class="mute">${esc(i.type)} · seed ${esc(i.seed)} · ${esc(i.model)}${D.config.surprises?` · events: ${esc(D.config.surprises)}`:""}${D.config.decisions?` · decisions: ${esc(D.config.decisions)}`:""}</div>
+    ${D.outdated_from != null ? `<div class="bad" style="margin-top:4px">Outdated: ${D.outdated_from ? `the events or decisions for week ${D.outdated_from} on` : "the personas, model or code"} changed after this run was made.</div>` : ""}</div></div>` : "");
   $("#offStart").classList.toggle("hidden", RO);
   const rows = (D.weekly||[]).filter(r => r.week === w);
-  setHTML($("#banner"), st === "stale" ? `<div class="banner">The events or decisions for this week changed after it was played. Press <b>Replay</b> to update it${i.auto?" (auto mode does this within 15 seconds)":""}.</div>` : "");
+  setHTML($("#banner"), st === "stale" ? `<div class="banner"><div>Events or decisions for this week changed after it was played. Press <b>Replay</b> to update it${i.auto?" (auto mode does this within 15 seconds)":""}.</div></div>` : "");
+  $("#pCount").textContent = rows.length ? `${rows.length}` : ""; $("#pCount").classList.toggle("hidden", !rows.length);
   if (!rows.length) {
-    setHTML($("#sum"), ""); setHTML($("#flt"), "");
-    setHTML($("#people"), `<div class="card mute" style="grid-column:1/-1">${st==="running"?"Playing this week…":`Week ${w} has not been played yet.`}</div>`); return;
+    setHTML($("#sum"), "");
+    setHTML($("#people"), `<div class="empty" style="grid-column:1/-1;padding:28px 0;text-align:center">${st==="running"?"Playing this week…":`Week ${w} has not been played yet.`}</div>`); return;
   }
   const prev = (D.weekly||[]).filter(r => r.week === w - 1), before = Object.fromEntries(prev.map(r => [r.persona, r]));
   const n = rows.length, cnt = s => rows.filter(r => r.status === s).length, yes = rows.filter(r => r.would_book_again === "yes").length;
-  const t = trustOf(rows), t0 = trustOf(prev);
-  setHTML($("#sum"), Object.keys(COL).map(s => `<span class="chip" style="background:${COL[s]}">${s}: ${cnt(s)}</span>`).join("")
-    + (t != null ? `<span class="pill">avg trust: <b>${t.toFixed(1)}</b>/5${t0 != null ? ` (${t-t0 >= 0 ? "+" : ""}${(t-t0).toFixed(1)})` : ""}</span>` : "")
-    + `<span class="pill">would book again: ${Math.round(100*yes/n)}%</span><span class="pill">complaints: ${rows.filter(r=>r.complaint).length}</span><span class="pill">posts: ${rows.filter(r=>r.post).length}</span>`);
-  if (!FILTERS[flt]) flt = "all";
-  setHTML($("#flt"), Object.entries(FILTERS).map(([k,[label,test]]) => `<button class="${k===flt?"on":""}" onclick="setFlt('${k}')">${label} · ${rows.filter(r => test(r, before[r.persona])).length}</button>`).join(""));
-  const by = Object.fromEntries(D.personas.map(p => [p.id, p])), shown = rows.filter(r => FILTERS[flt][1](r, before[r.persona]));
-  setHTML($("#people"), shown.map(r => { const p = by[r.persona] || {};
-    return `<div class="pc" style="border-left-color:${COL[r.status]||"var(--none)"}" onclick="askOne('${esc(r.persona)}')" title="Click to ask ${esc(p.name||r.persona)} a question">
-      <div class="row" style="justify-content:space-between"><b>${esc(p.name||r.persona)}</b><span class="small mute">${esc(r.persona)} · ${esc(p.group||"")}</span></div>
-      <div class="row small" style="margin-top:3px"><span class="chip" style="background:${COL[r.status]}">${esc(r.status)}</span><span class="mute">book again: <b>${esc(r.would_book_again)}</b></span>${r.trust ? `<span class="mute">trust <b>${r.trust}</b>/5${before[r.persona]?.trust && before[r.persona].trust !== r.trust ? (r.trust > before[r.persona].trust ? ' <span class="ok">↑</span>' : ' <span class="bad">↓</span>') : ""}</span>` : ""}${r.complaint?`<span class="bad">complained</span>`:""}</div>
-      ${(r.flights||[]).length?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]||""}${r.strike_day?" · strike day":""}${r.within_24h===false?' · <span class="bad">not resolved in 24h</span>':""}</div><details class="small mute" onclick="event.stopPropagation()"><summary>what happened</summary>${(r.flights||[]).map(esc).join("<br>")}</details>`
-        : FLIGHT[r.flight_outcome]?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]}</div>`
-        : r.had_flight_this_week === false ? `<div class="small mute" style="margin-top:3px">no flight this week</div>` : ""}
+  const t = trustOf(rows), tp = trustOf(prev);
+  if (!fltTest(flt)) flt = "all";
+  const count = k => rows.filter(r => fltTest(k)(r, before[r.persona])).length;
+  setHTML($("#sum"), `<div class="dist">${Object.keys(COL).map(s => cnt(s) ? `<i style="flex:${cnt(s)};background:${COL[s]}" title="${s}: ${cnt(s)}"></i>` : "").join("")}</div>
+    <div class="filters">${Object.entries(FILTERS).map(([k,[label]]) => `<button class="${k===flt?"on":""}" onclick="setFlt('${k}')">${label} · ${count(k)}</button>`).join("")}<span class="fsep"></span>${Object.keys(COL).map(s => `<button class="${flt==="s:"+s?"on":""}" onclick="setFlt('s:${s}')"><span class="dot" style="background:${COL[s]}"></span>${s} · ${cnt(s)}</button>`).join("")}</div>
+    <div class="kpis">${t != null ? `<span>Avg trust <b>${t.toFixed(1)}</b>/5${tp != null ? ` <span class="${t-tp > 0 ? "ok" : t-tp < 0 ? "bad" : ""}">${(t-tp >= 0 ? "+" : "")}${(t-tp).toFixed(1)}</span>` : ""}</span>` : ""}
+      <span>Would book again <b>${Math.round(100*yes/n)}%</b></span><span>Complaints <b>${rows.filter(r=>r.complaint).length}</b></span><span>Posts <b>${rows.filter(r=>r.post).length}</b></span><span class="faint">Click a persona to ask them a question</span></div>`);
+  const by = Object.fromEntries(D.personas.map(p => [p.id, p])), shown = rows.filter(r => fltTest(flt)(r, before[r.persona]));
+  setHTML($("#people"), shown.map(r => { const p = by[r.persona] || {}, b = before[r.persona], c = COL[r.status] || "var(--none)";
+    return `<div class="pc" onclick="askOne('${esc(r.persona)}')" title="Ask ${esc(p.name||r.persona)} a question">
+      <div class="who"><span class="av" style="--c:${c}">${esc(initials(p.name||r.persona))}</span><div class="nm"><b>${esc(p.name||r.persona)}</b><span>${esc(p.group||"")}</span></div></div>
+      <div class="facts"><span class="st" style="--c:${c}">${esc(r.status)}</span><span>Book again <b>${esc(r.would_book_again)}</b></span>${r.trust ? `<span>Trust <b>${r.trust}</b>/5${b?.trust && b.trust !== r.trust ? (r.trust > b.trust ? ' <span class="ok">↑</span>' : ' <span class="bad">↓</span>') : ""}</span>` : ""}${r.complaint?`<span class="bad">Complained</span>`:""}</div>
+      ${FLIGHT[r.flight_outcome] || (r.flights||[]).length ? `<div class="flight">${FLIGHT[r.flight_outcome]||""}${r.strike_day?" · strike day":""}${r.within_24h===false?' · <span class="bad">not resolved in 24h</span>':""}</div>`
+        : r.had_flight_this_week === false ? `<div class="flight">No flight this week</div>` : ""}
+      ${(r.flights||[]).length ? `<details ${UI.open.has("f:"+r.persona)?"open":""} onclick="event.stopPropagation()" ontoggle="this.open?UI.open.add('f:${esc(r.persona)}'):UI.open.delete('f:${esc(r.persona)}')"><summary>What happened ›</summary>${(r.flights||[]).map(esc).join("<br>")}</details>` : ""}
       ${r.said?`<div class="said">“${esc(r.said)}”</div>`:""}
-      ${r.post?`<div class="post">posted: ${esc(r.post)}</div>`:""}</div>`; }).join("")
-    || `<div class="card mute" style="grid-column:1/-1">No persona matches “${esc(FILTERS[flt][0])}” in week ${w}.</div>`);
+      ${r.post?`<div class="post"><b>Posted</b>${esc(r.post)}</div>`:""}</div>`; }).join("")
+    || `<div class="empty" style="grid-column:1/-1;padding:20px 0;text-align:center">No persona matches “${esc(FILTERS[flt]?.[0] ?? flt.slice(2))}” in week ${w}.</div>`);
 }
 function setFlt(k){ flt = k; store.set("flt", k); drawWeek(); }
 function drawDecisions(w){
   const decs = D.decisions || [], nod = D.info.type === "nodecision", full = decs.length >= 2;
-  setHTML($("#decs"), nod ? `<div class="mute small">No decisions in this ${RO?"run":"simulation"} (business as usual).</div>` :
-    decs.length ? decs.map((d,i) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · ${d.week > w ? `starts in week ${d.week}` : `from week ${d.week}`}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
-      ${d.actions.map(a=>`<div class="small">${esc(a.action+(a.level!=="on"?` (${a.level})`:""))} · $${cost([a]).toFixed(2)}M<br><span class="mute">→ ${esc(effectOf(a.action))}</span></div>`).join("")}“${esc(d.message)}”
-      ${RO?"":`<div class="row" style="margin-top:4px"><button class="small" style="padding:2px 8px" onclick="delDecision(${i})">remove</button></div>`}</div>`).join("") + budgetLine(decs)
-      + (full && !RO ? `<div class="small mute" style="margin-top:4px">Two decisions saved: the hand-in takes exactly two. Remove one to change it.</div>` : "")
-    : `<div class="mute small">No decisions yet.</div>`);
+  $("#decCount").textContent = nod ? "" : `${decs.length} of 2 used`; $("#decCount").classList.toggle("hidden", nod);
+  setHTML($("#decs"), nod ? `<div class="empty">No decisions in this ${RO?"run":"simulation"} (business as usual).</div>` :
+    decs.length ? decs.map((d,i) => `<div class="item" ${d.week > w ? 'style="opacity:.6"' : ""}>
+      <div class="row" style="justify-content:space-between"><b>Decision ${i+1}</b><span class="tag">${d.week > w ? `starts in week ${d.week}` : `from week ${d.week}${d.week===w?"":" · active"}`}</span></div>
+      <div class="small mute" style="margin:2px 0 12px">To ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}</div>
+      <ul class="acts">${d.actions.map(a=>`<li>${esc(a.action+(a.level!=="on"?` (${a.level})`:""))} <span class="mute" style="font-variant-numeric:tabular-nums">· $${cost([a]).toFixed(2)}M</span><span class="faint">${esc(effectOf(a.action))}</span></li>`).join("")}</ul>
+      <div class="quote"><div class="clamp">“${esc(d.message)}”</div></div>
+      ${RO?"":`<button class="link danger" style="margin-top:10px" onclick="delDecision(${i})">Remove</button>`}</div>`).join("") + budgetLine(decs)
+      + (full && !RO ? `<div class="small faint" style="margin-top:8px">Two decisions saved: the hand-in takes exactly two. Remove one to change it.</div>` : "")
+    : `<div class="empty">No decisions yet.</div>`);
   $("#decForm").classList.toggle("hidden", RO || nod || full);
   decCheck();
 }
 function drawGoals(){
   const g = D.goals_by_week?.[sel]; if (!g) { setHTML($("#goals"), ""); return; }
   const percent = (a, n) => n ? `${(100*a/n).toFixed(1)}%` : null;
-  const metric = (label, value, detail) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650">${value ?? "Not measured"}</div><div class="small mute">${detail}</div></div>`;
+  const metric = (label, value, detail, measured = true) => { const ok = measured && value != null;
+    const bar = ok && /%$/.test(value) ? `<div class="meter"><i style="width:${parseFloat(value)}%"></i></div>` : "";
+    return `<div class="stat"><div class="l">${label}</div><div class="v ${ok ? "" : "na"}">${value ?? "Not measured"}</div>${bar}<div class="d">${detail}</div></div>`; };
   const flights = metric("Itineraries operated", percent(g.operated, g.scheduled) ?? "No scheduled trips",
-    `${g.operated}/${g.scheduled} scheduled traveler itineraries · ${g.canceled} canceled, ${g.delayed} delayed`);
+    `${g.operated}/${g.scheduled} scheduled traveler itineraries · ${g.canceled} canceled, ${g.delayed} delayed`, !!g.scheduled);
   const solved = metric("Affected travelers resolved in 24h", percent(g.resolved_24h, g.affected) ?? "No affected trips",
-    g.affected ? `${g.resolved_24h}/${g.affected} affected · ${g.unresolved_24h} unresolved${g.unknown_24h ? ` · ${g.unknown_24h} unknown` : ""}` : "No canceled or 3h+ delayed itineraries this week");
+    g.affected ? `${g.resolved_24h}/${g.affected} affected · ${g.unresolved_24h} unresolved${g.unknown_24h ? ` · ${g.unknown_24h} unknown` : ""}` : "No canceled or 3h+ delayed itineraries this week", !!g.affected);
   const complaints = metric("Complaints recorded", g.complaints, `of ${g.personas} simulated travelers this week`);
   const nps = metric("NPS survey", g.nps == null ? "Not yet surveyed" : `${g.nps > 0 ? "+" : ""}${g.nps}`,
-    g.nps == null ? "Survey only after week 10" : `${g.nps_respondents} end-of-simulation responses; direct survey score`);
+    g.nps == null ? "Survey only after week 10" : `${g.nps_respondents} end-of-simulation responses; direct survey score`, g.nps != null);
   const bookings = metric("Kept Kestrel booking", percent(g.kept_kestrel, g.scheduled) ?? "No scheduled trips",
-    `${g.kept_kestrel}/${g.scheduled} scheduled traveler itineraries · revenue was not measured`);
+    `${g.kept_kestrel}/${g.scheduled} scheduled traveler itineraries · revenue was not measured`, !!g.scheduled);
   const trust = metric("Trust", g.trust_average == null ? null : `${g.trust_average.toFixed(1)}/5`,
     `${g.trust_answered} persona responses`);
   const bookAgain = metric("Would book again (yes)", percent(g.book_again_yes, g.personas),
     `${g.book_again_yes}/${g.personas} simulated travelers · ${g.personas-g.book_again_answered} answered maybe or did not answer`);
-  const history = Object.keys(D.goals_by_week).map(Number).filter(w => w <= sel).sort((a,b) => a-b).map(w => {
-    const x = D.goals_by_week[w];
-    return `<span class="pill" style="margin:2px">W${w}: ${x.operated}/${x.scheduled} operated · ${x.complaints} complaint${x.complaints===1?"":"s"} · trust ${x.trust_average == null ? "not measured" : `${x.trust_average.toFixed(1)}/5`}</span>`;
-  }).join("");
-  setHTML($("#goals"), `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Week ${sel} · recorded simulation results</h2><span class="small mute">${g.personas} personas</span></div>
-    <div class="row" style="margin-top:8px;gap:14px">${flights}${solved}${complaints}${nps}${bookings}${trust}${bookAgain}</div>
-    <div class="small" style="margin-top:8px">${history}</div>
-    <div class="small mute" style="margin-top:6px">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals, and actual revenue need operational data; this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
+  const weeks = Object.keys(D.goals_by_week).map(Number).filter(w => w <= sel).sort((a,b) => a-b);
+  const cell = (w, v) => `<td class="${w===sel?"cur":""}">${v}</td>`;
+  const history = weeks.length > 1 ? `<div class="scroll"><table class="hist"><thead><tr><th></th>${weeks.map(w => `<th class="${w===sel?"cur":""}">W${w}</th>`).join("")}</tr></thead><tbody>
+    <tr><td>Operated</td>${weeks.map(w => { const x = D.goals_by_week[w]; return cell(w, `${x.operated}/${x.scheduled}`); }).join("")}</tr>
+    <tr><td>Complaints</td>${weeks.map(w => cell(w, D.goals_by_week[w].complaints)).join("")}</tr>
+    <tr><td>Trust /5</td>${weeks.map(w => { const x = D.goals_by_week[w]; return cell(w, x.trust_average == null ? `<span class="faint" title="not measured">–</span>` : x.trust_average.toFixed(1)); }).join("")}</tr>
+    </tbody></table></div>` : "";
+  setHTML($("#goals"), `<div class="card"><h2>Results <span class="count">recorded from ${g.personas} personas</span></h2>
+    <div class="stats">${flights}${solved}${complaints}${bookAgain}${trust}${bookings}${nps}</div>
+    ${history}
+    <div class="note">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals and actual revenue need operational data, so this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
 }
 function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
 function budgetLine(decs){  // the engine's check when the server sent it, else the menu prices
   const [issues, checked] = D.budget || [[], null], c = checked ?? cost(decs.flatMap(d => d.actions));
-  return `<div class="small ${c>META.budget?"bad":"mute"}" style="margin-top:6px">Budget, all decisions: $${c.toFixed(2)}M of $${META.budget}M</div>`
-    + (issues.length ? `<div class="small warn" style="margin-top:4px">Still to fix for the hand-in: ${esc(issues.join("; "))}</div>` : "");
+  const pct = Math.max(0, Math.min(100, 100*c/META.budget)), over = c > META.budget;
+  return `<div class="item small"><div class="row" style="justify-content:space-between"><span class="mute" style="font-weight:500">Budget, all decisions</span><span class="${over?"bad":""}"><b>$${c.toFixed(2)}M</b> <span class="mute">of $${META.budget}M</span></span></div>
+    <div class="track" style="margin-top:8px"><i style="width:${pct}%;${over?"background:var(--bad)":""}"></i></div>
+    ${issues.length ? `<div class="warn" style="margin-top:8px">Still to fix for the hand-in: ${esc(issues.join("; "))}</div>` : ""}</div>`;
 }
 
 /* ---------- actions ---------- */
 async function play(until){ try { await api("/api/play", {name, until}); } catch(e){ alert(e.message); } load(); }
 $("#del").onclick = async () => {
+  $("#menu").open = false;
   if (!name || !confirm(`Delete the simulation "${name}"?`)) return;
   try { await api("/api/session/delete", {name}); name = ""; store.set("sess", ""); load(); } catch(e){ alert(e.message); }
 };
+$("#theme").onclick = () => {
+  const root = document.documentElement, dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark"; store.set("theme", root.dataset.theme); $("#menu").open = false;
+};
+document.addEventListener("click", e => { if (!$("#menu").contains(e.target)) $("#menu").open = false; });
 $("#stop").onclick = async () => { await api("/api/cancel", {name}); load(); };
 $("#sess").onchange = e => { creating = e.target.value === "__new"; if (!creating) { name = e.target.value; store.set("sess", name); } load(); };
 $("#nBack").onclick = () => { creating = false; $("#sess").value = name; load(); };
+$("#evEffect").onchange = e => $("#evManual").classList.toggle("hidden", e.target.value === "auto");
 
 async function readFile(f){ try { return (await api("/api/file?name=" + encodeURIComponent(f))).content; } catch { return []; } }
 $("#evAdd").onclick = async () => {
-  const text = $("#evText").value.trim(); if (!text) return;
+  const text = $("#evText").value.trim(); if (!text) { $("#evMsg").innerHTML = `<span class="bad">Paste the announcement first.</span>`; return; }
   const file = D.config.surprises || "surprises.json";
   const auto = $("#evEffect").value === "auto";
   const ev = auto ? {week: sel, text, effect: "auto"} : {week: sel, text, effect: $("#evEffect").value, scope: $("#evScope").value, kestrel_caused: $("#evKestrel").checked, reading: $("#evReading").value.trim() || "set by hand"};
   if (sel <= D.info.played) ev.known_from = D.info.played + 1;  // played weeks are history; personas learn it next week
-  $("#evMsg").textContent = auto ? "the model is reading it…" : "";
+  $("#evMsg").textContent = auto ? "The model is reading it…" : ""; $("#evAdd").disabled = true;
   try { const list = await readFile(file); list.push(ev); list.sort((a,b) => a.week - b.week);
     await api("/api/file", {name: file, content: list, note: `event added for week ${sel}`});
     const played = D.info.played;
     $("#evText").value = ""; $("#evReading").value = "";
     $("#evMsg").innerHTML = `<span class="ok">Added to week ${ev.week}.</span>` + (sel <= played ? ` <span class="mute">Weeks already played stay as they were; it acts from week ${Math.min(played + 1, 10)} on.</span>` : ""); load();
   } catch(e){ $("#evMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  $("#evAdd").disabled = false;
 };
 
 async function saveEvents(list, note){ const file = D.config.surprises || "surprises.json"; list.sort((a,b) => a.week - b.week); await api("/api/file", {name: file, content: list, note}); load(); }
@@ -385,7 +642,7 @@ async function addStrike(){
   list.push(ev); await saveEvents(list, "the dossier's strike added for week 8");
 }
 function actRow(a){ const acts = Object.keys(META.menu);
-  return `<div class="row act" style="margin-bottom:4px;flex-wrap:nowrap"><select class="aName" style="flex:1;min-width:0" onchange="this.nextElementSibling.innerHTML=levels(this.value);decCheck()">${acts.map(x=>`<option ${x===a?"selected":""}>${esc(x)}</option>`).join("")}</select><select class="aLevel" onchange="decCheck()">${levels(a)}</select><button class="small" style="padding:2px 8px" title="Remove this action" onclick="this.parentElement.remove();decCheck()">×</button></div>`; }
+  return `<div class="row act" style="margin-bottom:8px;flex-wrap:nowrap;gap:6px"><select class="aName" style="flex:1;min-width:0" onchange="this.nextElementSibling.innerHTML=levels(this.value);decCheck()">${acts.map(x=>`<option ${x===a?"selected":""}>${esc(x)}</option>`).join("")}</select><select class="aLevel" style="flex:0 0 auto;max-width:40%" onchange="decCheck()">${levels(a)}</select><button class="x" title="Remove this action" onclick="this.parentElement.remove();decCheck()">×</button></div>`; }
 function levels(a){ return Object.entries(META.menu[a]).map(([l,c]) => `<option value="${esc(l)}">${esc(l)} · $${c}M</option>`).join(""); }
 const actsNow = () => [...document.querySelectorAll("#decActs .act")].map(r => ({action: r.querySelector(".aName").value, level: r.querySelector(".aLevel").value}));
 // A decision must be locked before its week starts; in a simulation, weeks already played stay as history.
@@ -396,9 +653,10 @@ function decCheck(){
   if (cw >= 10) msgs.push("After 17:30 no decision can be locked on the dashboard.");
   else if (cw >= w) msgs.push(`Week ${w} has started: on the dashboard a decision locked now takes effect in week ${cw + 1}.`);
   if (w <= played) msgs.push(`This simulation has played week ${w}. Its actions run in weeks ${w}–${w + 1}, so ${played >= w + 1 ? `they will not act here; only the message reaches personas, from week ${played + 1}` : `they act here only in week ${w + 1}`}.`);
-  setHTML($("#decWarn"), msgs.map(m => `<div class="warn" style="margin-bottom:4px">${m}</div>`).join(""));
+  setHTML($("#decWarn"), msgs.map(m => `<div class="warn">${m}</div>`).join(""));
   const c = cost(actsNow()), total = c + cost((D.decisions || []).flatMap(d => d.actions));
-  setHTML($("#decCost"), `this decision $${c.toFixed(2)}M · with the saved one${(D.decisions||[]).length === 1 ? "" : "s"} <span class="${total > META.budget ? "bad" : ""}">$${total.toFixed(2)}M of $${META.budget}M</span>`);
+  setHTML($("#decCost"), `$${c.toFixed(2)}M · total <span class="${total > META.budget ? "bad" : ""}">$${total.toFixed(2)}M of $${META.budget}M</span>`);
+  $("#decActAdd").classList.toggle("hidden", document.querySelectorAll("#decActs .act").length >= 3);
 }
 $("#decWeek").onchange = decCheck;
 $("#decActAdd").onclick = () => { if (document.querySelectorAll("#decActs .act").length < 3) $("#decActs").insertAdjacentHTML("beforeend", actRow(Object.keys(META.menu)[1])); decCheck(); };
@@ -422,18 +680,18 @@ async function delDecision(i){
   await api("/api/file", {name: file, content: list, note: "decision removed"}); load();
 }
 
-function askOne(id){ $("#askWho").value = "p:" + id; $("#askQ").focus(); }
+function askOne(id){ $("#askWho").value = "p:" + id; $("#askCard").scrollIntoView({behavior:"smooth", block:"center"}); $("#askQ").focus({preventScroll:true}); }
+$("#askQ").onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("#askGo").click(); };
 $("#askGo").onclick = async () => {
-  const q = $("#askQ").value.trim(), who = $("#askWho").value, source = name, model = $("#askModel").value; if (!q) return;
+  const q = $("#askQ").value.trim(), who = $("#askWho").value, source = name, model = $("#askModel").value; if (!q) { $("#askQ").focus(); return; }
   const ids = who === "all" ? D.personas.map(p => p.id) : who.startsWith("g:") ? D.personas.filter(p => p.group === who.slice(2)).map(p => p.id) : [who.slice(2)];
   const week = Math.min(sel, D.validity?.valid_through ?? D.info.played);  // only weeks the personas have lived
-  $("#askGo").disabled = true; $("#askInfo").textContent = `asking ${ids.length}…`;
+  $("#askGo").disabled = true; $("#askInfo").textContent = `Asking ${ids.length}…`;
   try { const recs = await api("/api/interview", {source, personas: ids, question: q, week, model, asker: "a Kestrel board member"});
-    $("#answers").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">“${esc(q)}”</h2><button onclick="$('#answers').innerHTML=''" style="padding:2px 8px">close</button></div>
-      <p class="small mute">${week === 0 ? "Before week 1" : `At the end of week ${week}`} · ${esc(source)} · ${esc(model)} · ${recs.length} answer${recs.length===1?"":"s"}</p>`
-      + recs.map(r => `<div class="ans"><b>${esc(r.name||r.persona)}</b> <span class="small mute">${esc(r.persona)} · ${esc(r.group||"")}</span><div style="margin-top:4px">${esc(r.answer||r.error).replace(/\n/g,"<br>")}</div></div>`).join("") + `</div>`;
+    $("#answers").innerHTML = `<div class="answers-head"><div><b>“${esc(q)}”</b><div class="small mute" style="margin-top:2px">${week === 0 ? "Before week 1" : `At the end of week ${week}`} · ${esc(source)} · ${esc(model)} · ${recs.length} answer${recs.length===1?"":"s"}</div></div><button class="link" onclick="$('#answers').innerHTML=''">Clear</button></div>`
+      + recs.map(r => `<div class="ans"><span class="av">${esc(initials(r.name||r.persona))}</span><div style="min-width:0"><b>${esc(r.name||r.persona)}</b> <span class="small mute">${esc(r.persona)} · ${esc(r.group||"")}</span><div class="atext">${esc(r.answer||r.error).replace(/\n/g,"<br>")}</div></div></div>`).join("");
     $("#askInfo").textContent = "";
-  } catch(e){ $("#askInfo").textContent = e.message; }
+  } catch(e){ $("#askInfo").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
   $("#askGo").disabled = false;
 };
 
@@ -444,14 +702,14 @@ $("#offGo").onclick = async () => {
     $("#offMsg").innerHTML = `<span class="ok">Started: ${esc(r.runs.join(", "))}.</span>` + (r.issues.length ? ` <span class="warn">Decisions still to fix: ${esc(r.issues.join("; "))}</span>` : ""); load();
   } catch(e){ $("#offMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
 };
-$("#zipGo").onclick = async () => { $("#zipOut").classList.remove("hidden"); $("#zipOut").textContent = "building…";
+$("#zipGo").onclick = async () => { $("#zipOut").classList.remove("hidden"); $("#zipOut").textContent = "Building…";
   const old = S.official.filter(n => S.handin?.[n] != null).map(n => `! ${n} is outdated from week ${S.handin[n]}: start the hand-in runs again`);
   try { const r = await api("/api/submission", {team: $("#team").value}); $("#zipOut").textContent = `${r.zip}\n${[...old, ...r.notes.map(n=>"! "+n)].join("\n")}\n\n${r.check}`; } catch(e){ $("#zipOut").textContent = e.message; } };
 function openRun(n){ creating = false; name = n; store.set("sess", n); load(); }
 function drawOfficial(){
   const by = Object.fromEntries(S.runs.map(r => [r.name, r]));
   const state = (n, r) => {
-    if (!r) return `<span class="mute">not run</span>`;
+    if (!r) return `<span class="faint">not run</span>`;
     if (["running","queued"].includes(r.status)) return `<span class="warn">week ${r.played}/10 · ${r.calls_done}/${r.calls_total}</span>`;
     if (r.session) return `<span class="warn">live session, week ${r.played}</span>`;
     if (r.status !== "done") return `<span class="bad">${esc(r.status)}${r.error ? `: ${esc(r.error)}` : ""}</span>`;
@@ -459,11 +717,13 @@ function drawOfficial(){
     return o == null ? `<span class="ok">✓ up to date</span>` : `<span class="bad">outdated from week ${o}</span>`;
   };
   const cells = r => GOALS.map(([k,,fmt,ok,target]) => { const v = r?.metrics?.[k];
-    return `<td title="${esc(target)}">${v == null ? `<span class="mute">–</span>` : `<span class="${ok(v) ? "ok" : "bad"}">${fmt(v)}</span>`}</td>`; }).join("");
-  setHTML($("#offInfo"), `<div style="overflow-x:auto"><table class="tbl"><tr><th>run</th><th>state</th>${GOALS.map(([,label,,,target]) => `<th title="${esc(target)}">${label}</th>`).join("")}</tr>`
+    return `<td title="${esc(target)}">${v == null ? `<span class="faint">–</span>` : `<span class="${ok(v) ? "ok" : "bad"}">${fmt(v)}</span>`}</td>`; }).join("");
+  setHTML($("#offInfo"), `<div class="scroll"><table class="tbl"><tr><th>Run</th><th>State</th>${GOALS.map(([,label,,,target]) => `<th title="${esc(target)}">${label}</th>`).join("")}</tr>`
     + S.official.map(n => { const r = by[n];
       return `<tr><td>${r && (r.session || r.status === "done") ? `<a href="#" onclick="openRun('${n}');return false">${n}</a>` : n}</td><td>${state(n, r)}</td>${cells(r)}</tr>`; }).join("")
-    + `</table></div><div class="mute" style="margin-top:4px">Goals as in each run's metrics.json; hover a column for the board's target.</div>`);
+    + `</table></div><div class="faint" style="margin-top:6px">Goals as in each run's metrics.json; hover a column for the board's target.</div>`);
+  const ok = S.official.filter(n => by[n]?.status === "done" && !by[n].session && S.handin?.[n] == null).length;
+  $("#offShort").textContent = `· ${ok}/${S.official.length} up to date`;
 }
 $("#nGo").onclick = async () => {
   try { await api("/api/session", {name: $("#nName").value.trim(), type: "plan", seed: 1, model: $("#nModel").value, probe: true,
@@ -480,7 +740,7 @@ $("#nGo").onclick = async () => {
   $("#nModel").innerHTML = models.map(m => `<option ${m===S.default_model?"selected":""}>${m}</option>`).join("");
   $("#askModel").innerHTML = models.map(m => `<option ${m==="gemini-3.5-flash-lite"?"selected":""}>${m}</option>`).join("");
   $("#offModel").innerHTML = models.map(m => `<option>${m}</option>`).join("");
-  $("#decWeek").innerHTML = DATES.map((d,k) => `<option value="${k+1}">week ${k+1} · ${d}</option>`).join("");
+  $("#decWeek").innerHTML = DATES.map((d,k) => `<option value="${k+1}">Week ${k+1} · ${d}</option>`).join("");
   $("#decActs").innerHTML = actRow(Object.keys(META.menu)[1]);
   $("#decTarget").innerHTML = `<option value="everyone">everyone</option>` + (META.targets||[]).map(t => `<option>${esc(t)}</option>`).join("") + META.groups.map(g => `<option>${esc(g)}</option>`).join("");
   await tick();
