@@ -189,8 +189,12 @@ function drawHeader(d){
   $("#play").classList.toggle("hidden", busy || v >= 10); $("#stop").classList.toggle("hidden", !busy);
   $("#play").textContent = d.validity?.stale_from ? `Replay from week ${d.validity.stale_from}` : `Play week ${next}`;
   $("#play").onclick = () => play(next);
-  $("#runInfo").innerHTML = busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
-    : `<span class="mute">${d.personas.length} personas · ${esc(i.model)}${i.auto?" · auto":""}${i.social?" · social":""}</span>`;
+  if (document.activeElement?.id !== "modelSel") $("#runInfo").innerHTML = busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
+    : `<span class="mute">${d.personas.length} personas · <select id="modelSel" onchange="setModel(this.value)" title="Changing the model starts this simulation's history again">${Object.keys(S.models).filter(m => !S.models[m].offline).map(m => `<option ${m===i.model?"selected":""}>${m}</option>`).join("")}</select>${i.auto?" · auto":""}${i.social?" · social":""}</span>`;
+}
+async function setModel(m){
+  if (!confirm(`Switch "${name}" to ${m}? Its history starts again from week 1 (flash-lite plays a 66-persona week in ~4 s, 3.7-flash in ~50 s).`)) { load(); return; }
+  try { await api("/api/session/update", {name, model: m}); } catch(e){ alert(e.message); } load();
 }
 function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); }
 

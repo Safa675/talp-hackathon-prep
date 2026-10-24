@@ -131,7 +131,8 @@ class Limiter:
             self.cv.notify_all()
 
 
-LIMIT = Limiter(80)  # all personas of a week in one wave
+LIMIT = Limiter(80)  # flash-lite: all personas of a week in one wave (66 calls in ~4 s)
+THINKING_LIMIT = Limiter(30)  # thinking models slow down past ~30 calls in flight (measured: 66 at once took 128 s, 30 took 48 s)
 
 
 # ---------------------------------------------------------------- small helpers
@@ -245,7 +246,7 @@ def call(model, prompt, schema, seed, level, validate, system=sim.SYSTEM):
     last = ("", "", {})
     for _ in range(3):
         try:
-            with LIMIT:
+            with THINKING_LIMIT if MODELS.get(model, {"thinking": True})["thinking"] else LIMIT:
                 r = client().models.generate_content(
                     model=model, contents=prompt,
                     config=types.GenerateContentConfig(system_instruction=system, seed=seed,
@@ -1039,7 +1040,9 @@ class Manager:
 
     def update_session(self, name, **changes):
         run = self._free(name)
-        for k in ("decisions", "surprises", "auto", "social", "personas"):
+        if changes.pop("reset", False):  # forget every played week; the next play starts at week 1
+            run.info.update(played=0, chain=[], weeks={str(w): "pending" for w in WEEKS}, week_source={})
+        for k in ("decisions", "surprises", "auto", "social", "personas", "model"):
             if k in changes:
                 run.config[k] = changes[k]
                 run.info[{"decisions": "decisions_file", "surprises": "surprises_file",

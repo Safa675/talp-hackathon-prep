@@ -144,6 +144,8 @@ class Handler(BaseHTTPRequestHandler):
                 cfg = {k: body[k] for k in ("name", "type", "seed", "decisions", "surprises", "probe", "model",
                                             "personas", "auto", "social") if k in body}
                 cfg["replicate"] = int(time.time())  # a new simulation starts from scratch: no week is reused
+                cfg["surprises"] = f"surprises_{cfg['name']}.json"  # its own events, empty: nothing left over
+                (HERE / cfg["surprises"]).write_text("[]\n", encoding="utf-8")
                 return self.send(MGR.create_session(**cfg).info)
             if u.path == "/api/session/delete":  # the simulation goes; its checkpoints stay
                 MGR.delete_session(body["name"])
