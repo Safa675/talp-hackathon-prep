@@ -41,7 +41,7 @@ CKPT = HERE / "checkpoints"
 LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
-ENGINE_VERSION = 3  # 3: status meanings in the week prompt, keyword action names
+ENGINE_VERSION = 4  # 4: posting gate + @replies, dates in the prompt, known crisis in the news beforehand
 DEFAULT_PERSONAS = "personas_66.jsonl"  # talp-kestrel branch: 66 personas, each standing for real trips
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
@@ -56,10 +56,16 @@ ENGINE_HIDDEN = set(sim.HIDDEN_FIELDS) | {"window", "cluster", "segment", "segme
 SOCIAL_SCHEMA = dict(sim.SCHEMA, properties=dict(sim.SCHEMA["properties"], post={
     "type": "STRING",
     "description": "What you posted publicly on social media this week about your trip or Kestrel, in your own "
-                   "words; an empty string if you did not post. Most people do not post most weeks.",
+                   "words; an empty string if you did not post. Most people do not post most weeks. To answer "
+                   "someone in your feed, start the post with @ and their full name, e.g. '@Jane Doe ...'.",
 }))
 TRENDING_PER_WEEK = 2
 POST_CHARS = 400
+# Who is on social media in a given week (the code gives the chance to post; the model decides whether and what).
+# Without this gate 38% of persona-weeks carried a post and 57 of 66 personas posted; real passengers post rarely.
+# Being hit yourself (canceled or 3h+ late flight) or getting a company message raises the chance.
+POST_ONLINE = {"high": 0.40, "medium": 0.12, "low": 0.03}
+POST_ONLINE_HIT = 0.35
 
 MODELS = {
     "gemini-3.5-flash-lite": {"thinking": False, "note": "experiments, ~1 s/call"},
@@ -194,7 +200,8 @@ def prompt_code_hash():
                                             sim.effects, sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
                                             sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
     return h(parts, sim.P, sim.EVENT_EFFECTS, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
-             sim.STATUS_MEANING, sim.ACTIONS, sorted(sim.NETWORK),
+             sim.STATUS_MEANING, sim.ACTIONS, sorted(sim.NETWORK), sim.WEEK_DATES, POST_ONLINE, POST_ONLINE_HIT,
+             inspect.getsource(Run.step),
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -612,6 +619,9 @@ class Run:
             return []
         lines = [f'{self.by_id[c].get("name", c)}, someone you know, posted: "{self.posts[c]}"'
                  for c in p["connections"] if self.posts.get(c)]
+        me = "@" + str(p.get("name", p["id"])).lower()
+        lines += [f'{q.get("name", q["id"])} replied to you: "{self.posts[q["id"]]}"' for q in self.personas
+                  if q["id"] != p["id"] and q["id"] not in p["connections"] and me in self.posts.get(q["id"], "").lower()]
         trending = [q["id"] for q in self.personas if q["influencer"] and q["id"] != p["id"]
                     and q["id"] not in p["connections"] and self.posts.get(q["id"])]
         rng = random.Random(f"{self.info['seed']}-trending-{w}-{p['id']}")
@@ -753,7 +763,16 @@ class Run:
         prompt = sim.week_prompt(shown(p), self.memory[p["id"]], w, facts,
                                  sim.option_lines(self.decisions, p, w), sim.company_message(self.decisions, p, w))
         level = "LOW"  # MEDIUM in crisis weeks doubled the wait; LOW keeps a week under ~15 s
-        schema = SOCIAL_SCHEMA if self.config["social"] else sim.SCHEMA
+        online = False
+        if self.config["social"]:
+            # the bump is for news that is new to this persona this week, not for an old message still in force
+            hit = outcome in ("canceled", "delayed") or any(d["week"] == w and sim.targeted(p, d["target"])
+                                                           for d in self.decisions)
+            chance = POST_ONLINE.get(p.get("social_media_activity"), POST_ONLINE["medium"]) + (POST_ONLINE_HIT if hit else 0)
+            online = random.Random(f"{i['seed']}-{p['id']}-{w}-online").random() < chance
+            prompt += ("\nSOCIAL MEDIA: you are on social media this week and may post if you want to (most weeks "
+                       "people do not)." if online else "\nSOCIAL MEDIA: you are not posting on social media this week.")
+        schema = SOCIAL_SCHEMA if online else sim.SCHEMA
         parsed, text, err, use = call(i["model"], prompt, schema, i["seed"], level, sim.valid_week)
         self.count(err, use)
         e = {"persona": p["id"], "week": w, "prompt": sim.SYSTEM + "\n\n" + prompt, "response": text,
@@ -957,15 +976,25 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
         planned, canceled = planned + flights, canceled + c
 
     # goal 2: affected passengers rebooked within 24h or refunded
+    # A refund counts as "within 24h" only when the passenger could get it without the phone queue (app or website)
+    # or an offer within 24h existed; counting every cancellation as resolved put the no-decision run at 100%.
     hit = [r for r in weekly if r["flight_outcome"] in ("canceled", "delayed")]
-    ok = [r for r in hit if r.get("within_24h") or r["status"] == "canceled the trip"]
+    self_service = lambda r: str(by_id[r["persona"]].get("booking_channel", "")).lower() in ("app", "website")
+    ok = [r for r in hit if r.get("within_24h")
+          or (r["status"] in ("canceled the trip", "moved to another airline") and self_service(r))]
 
-    # goal 3: complaints a month, the dossier's 2,500 scaled by the complaint rate against this run's quiet weeks
-    rate = lambda rows: sum(w[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(w[r["persona"]] for r in rows), 1)
-    busy = {w for e in surprises for w in range(e["week"], e.get("until_week", e["week"] + 1) + 1)}
-    quiet = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] not in busy]
-    base = max(rate(quiet), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
-    complaints = COMPLAINTS_PER_MONTH * rate(weekly) / base if weekly else None
+    # goal 3: complaints a month in December (weeks 5-9), the dossier's 2,500 scaled by the complaint rate against
+    # the weeks before the first event (the same weeks in every run that shares a seed, so runs compare on one base).
+    # Weights are capped at the 75th percentile: uncapped, two or three "ordinary week" personas (120-230k trips
+    # each) carried over half of all complaint weight and a plan run could score worse than no decision.
+    cap = sorted(w.values())[int(0.75 * (len(w) - 1))] if w else 1
+    wc = {k: min(v, cap) for k, v in w.items()}
+    rate = lambda rows: sum(wc[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(wc[r["persona"]] for r in rows), 1)
+    first_event = min((e["week"] for e in surprises), default=11)
+    base_rows = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] < first_event]
+    base = max(rate(base_rows), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
+    december = [r for r in weekly if 5 <= r["week"] <= 9] or weekly
+    complaints = COMPLAINTS_PER_MONTH * rate(december) / base if weekly else None
 
     # goal 3b: NPS moved from +12 by the change in check-in 3a
     s, e = nps(probes, "start"), nps(probes, "end")
@@ -991,9 +1020,9 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
         "revenue_lost_usd": round(lost * scale + cap) if plan else None,
         "units": {
             "goal_1": f"% of planned Kestrel flights operated in week(s) {', '.join(map(str, metric_weeks))}, strike days left out (network, ~1,355 flights a week)",
-            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded"
+            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (no phone queue)"
                       + (", weighted by represents_trips" if weighted else ", unweighted"),
-            "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
+            "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against the weeks before the first event; weights capped at the 75th percentile",
             "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
             "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M",
         },

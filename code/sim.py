@@ -33,6 +33,9 @@ STATUS_MEANING = (
     "'canceled the trip' = you are not making the trip."
 )
 STRIKE_WEEK = 8
+# Dates in the prompt: without them personas misjudged how far away their flight was ("next week" in week 2)
+WEEK_DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
+              6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
 STRIKE_DATES = ("2026-12-22", "2026-12-23")
 HIDDEN_FIELDS = ("stratum", "strike_exposed", "touches_base")  # simulation labels, not known to the customer
 CRISIS_WEEKS = {7, 8, 9}  # higher thinking level
@@ -295,6 +298,9 @@ def week_facts(persona, week, rng, surprises, use_surprises, decisions=()):
         outcome = max(outcome, o, key=rank.get)
     if not trips:
         lines.append("You have no flight this week.")
+    for s in surprises:  # the dossier's known crisis was announced publicly long before its week (CEO letter)
+        if s.get("known_crisis") and s.get("known_from", 1) <= week < s["week"]:
+            lines.append(f"In the news, planned for week {s['week']}: {s['text']}")
     for s in news_until(surprises, week):  # known from its week on, then stays in the news
         head = "Announcement" if s["week"] == week else f"Still in the news (since week {s['week']})"
         reports = f" Reports say: {s['reading']}" if s.get("read_by") else ""
@@ -357,7 +363,7 @@ def week_prompt(persona, memory, week, facts, options, message):
         f"KESTREL FACTS: {KESTREL_FACTS}",
         f"PERSONA: {visible(persona)}",
         f"CURRENT_STATE: {memory}",
-        f"THIS_WEEK (week {week} of 10): " + " ".join(facts),
+        f"THIS_WEEK (week {week} of 10, {WEEK_DATES[week]}): " + " ".join(facts),
         "OPTIONS KNOWN TO THIS CUSTOMER: " + " ".join(options),
     ]
     if message:
