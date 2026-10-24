@@ -143,7 +143,11 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/session":
                 cfg = {k: body[k] for k in ("name", "type", "seed", "decisions", "surprises", "probe", "model",
                                             "personas", "auto", "social") if k in body}
+                cfg["replicate"] = int(time.time())  # a new simulation starts from scratch: no week is reused
                 return self.send(MGR.create_session(**cfg).info)
+            if u.path == "/api/session/delete":  # the simulation goes; its checkpoints stay
+                MGR.delete_session(body["name"])
+                return self.send({"ok": True})
             if u.path == "/api/session/update":
                 return self.send(MGR.update_session(body.pop("name"), **body).info)
             if u.path == "/api/play":

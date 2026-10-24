@@ -57,6 +57,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
   <div class="top">
     <h1>Kestrel simulation</h1>
     <select id="sess" title="Simulation"></select>
+    <button id="del" title="Delete this simulation" style="padding:3px 8px" class="small">delete</button>
     <span class="small mute" id="calNow"></span>
     <span class="spacer"></span>
     <span class="small" id="runInfo"></span>
@@ -239,6 +240,10 @@ function budgetLine(decs){
 
 /* ---------- actions ---------- */
 async function play(until){ try { await api("/api/play", {name, until}); } catch(e){ alert(e.message); } load(); }
+$("#del").onclick = async () => {
+  if (!name || !confirm(`Delete the simulation "${name}"?`)) return;
+  try { await api("/api/session/delete", {name}); name = ""; store.set("sess", ""); load(); } catch(e){ alert(e.message); }
+};
 $("#stop").onclick = async () => { await api("/api/cancel", {name}); load(); };
 $("#sess").onchange = e => { if (e.target.value === "__new") { $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); return; } name = e.target.value; store.set("sess", name); load(); };
 
