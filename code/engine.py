@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
-"""Checkpointed, resumable Kestrel simulation engine. World and prompts come from sim.py.
+"""Checkpointed Kestrel simulation engine, played week by week. World and prompts come from sim.py.
 
-    set -a; . ./.env; set +a
+    python server.py                                   # the control room: live sessions, interviews
     python engine.py plan_1 --type plan --seed 1 --decisions decisions.json --probe
-    python engine.py exp_a --type plan --seed 1 --decisions decisions.json --model gemini-3.5-flash-lite
-    python engine.py official --decisions decisions.json          # the five hand-in runs, in parallel
+    python engine.py plan_1 ... --until 3              # play only weeks 1-3 (a live session does this)
+    python engine.py official --decisions decisions.json
 
-Every week ends in a checkpoint named by a hash of everything that can change that week:
-the prompt code in sim.py, the personas, model, seed, the decisions in force and the surprises
-announced so far. A run starts after the last week whose whole chain is already on disk, so a late
-announcement for week 9 re-runs only weeks 9-10, and runs that share a prefix (plan_1 and
-nodecision_1 before the first decision week) compute those weeks once and share them.
-Personas in a week run in parallel; weeks run in sequence (week N reads week N-1's memory).
+A live session advances with the company calendar: when week N starts (and its announcement is in
+surprises.json) you play week N; between weeks you can interview any persona about what has happened
+to it so far. Every week ends in a checkpoint named by a hash of everything that can change that week:
+the prompt code in sim.py, the personas, model, seed, the decisions in force and the surprises announced
+up to then. Playing again starts after the last week whose chain is on disk, so a late announcement
+re-runs only the weeks it touches, and runs that share a prefix (plan_1 and nodecision_1 before the first
+decision) share those weeks. Personas in a week run in parallel; weeks run in sequence.
 """
 import argparse
+import functools
 import hashlib
 import inspect
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -35,9 +38,12 @@ HERE = sim.HERE
 RUNS = HERE / "runs"
 CKPT = HERE / "checkpoints"
 LOGS = HERE / "logs"
+SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
 ENGINE_VERSION = 1
 WEEKS = range(1, 11)
+DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
+         6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
 BASE_AIRPORTS = {"MCO", "PHL"}
 # Simulation labels some persona files carry; the customer must not see them.
 ENGINE_HIDDEN = set(sim.HIDDEN_FIELDS) | {"window", "cluster", "segment", "segment_description",
@@ -73,6 +79,14 @@ MENU = {
 }
 BUDGET = 3.0
 CHANNELS = ["app", "email", "text", "social media"]
+
+INTERVIEW_SYSTEM = (
+    "You are one Kestrel Air customer being interviewed. Stay in character, speak in the first person, "
+    "and answer only from the supplied persona and the experiences listed, which are everything you know. "
+    "Do not invent flights, policies, compensation or events that are not listed; if you do not know, say so. "
+    "Be concrete and honest about your feelings and plans. Answer in the language of the question, "
+    "in 2 to 5 sentences unless asked for more."
+)
 
 _lock = threading.Lock()
 _fp_locks = defaultdict(threading.Lock)
@@ -150,6 +164,7 @@ def resolve(path):
     return p if p.is_absolute() else (HERE / p if (HERE / p).exists() else Path.cwd() / p)
 
 
+@functools.lru_cache(maxsize=1)
 def prompt_code_hash():
     """Anything in sim.py that shapes a prompt or the world; editing it invalidates checkpoints."""
     parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message,
@@ -176,6 +191,9 @@ def client():
 def mock_answer(prompt, schema, seed):
     """Offline stand-in so the engine and UI can be tested without quota. Never hand in a mock run."""
     rng = random.Random(h(prompt, seed))
+    if schema is None:
+        q = prompt.rsplit("QUESTION", 1)[-1].split("\n")[0][:120]
+        return f"(mock answer, not a model) I heard your question{q} and I would tell you honestly how my trip went."
     if schema is sim.PROBE_SCHEMA:
         return json.dumps({k: rng.randint(2, 5) for k in sim.PROBE_QUESTIONS})
     week = prompt.split("THIS_WEEK", 1)[-1].split("OPTIONS KNOWN", 1)[0]
@@ -194,34 +212,40 @@ def mock_answer(prompt, schema, seed):
                        "memory_update": f"Status so far: {status}."})
 
 
-def call(model, prompt, schema, seed, level, validate):
-    """Returns (parsed, raw_text, error). Retries a malformed answer with the same prompt."""
+def usage(r):
+    u = getattr(r, "usage_metadata", None)
+    return {"in": getattr(u, "prompt_token_count", None), "out": getattr(u, "candidates_token_count", None),
+            "think": getattr(u, "thoughts_token_count", None), "version": getattr(r, "model_version", None)}
+
+
+def call(model, prompt, schema, seed, level, validate, system=sim.SYSTEM):
+    """Returns (parsed, raw_text, error, usage). With schema=None the answer is plain text.
+    Retries a malformed answer with the same prompt."""
     if MODELS.get(model, {}).get("offline"):
         text = mock_answer(prompt, schema, seed)
-        return json.loads(text), text, ""
+        return (json.loads(text) if schema else text), text, "", {}
     from google.genai import types
-    if MODELS.get(model, {"thinking": True})["thinking"]:
-        extra = {"thinking_config": types.ThinkingConfig(thinking_level=level)}
-    else:
-        extra = {"temperature": 1.0}
-    last = ("", "")
+    extra = {"thinking_config": types.ThinkingConfig(thinking_level=level)} \
+        if MODELS.get(model, {"thinking": True})["thinking"] else {"temperature": 1.0}
+    if schema:
+        extra.update(response_mime_type="application/json", response_schema=schema)
+    last = ("", "", {})
     for _ in range(3):
         try:
             with LIMIT:
                 r = client().models.generate_content(
                     model=model, contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=sim.SYSTEM, seed=seed, response_mime_type="application/json",
-                        response_schema=schema, max_output_tokens=2048, **extra),
+                    config=types.GenerateContentConfig(system_instruction=system, seed=seed,
+                                                       max_output_tokens=2048, **extra),
                 )
             text = r.text or ""
-            last = (text, "")
-            parsed = json.loads(text)
+            last = (text, "", usage(r))
+            parsed = json.loads(text) if schema else text.strip()
             if validate(parsed):
-                return parsed, text, ""
+                return parsed, text, "", last[2]
         except Exception as e:  # malformed JSON, 429, timeout
-            last = (last[0], repr(e))
-    return None, last[0], last[1] or "invalid answer"
+            last = (last[0], repr(e), last[2])
+    return None, last[0], last[1] or "invalid answer", last[2]
 
 
 # ---------------------------------------------------------------- inputs
@@ -275,6 +299,21 @@ def validate_decisions(decs):
     return issues, round(cost, 2)
 
 
+def inputs(cfg):
+    """Everything a run reads, re-read from disk each time so edits between weeks take effect."""
+    personas_text, personas = load_personas(resolve(cfg["personas"] or "personas.jsonl"))
+    decisions = [] if cfg["type"] == "nodecision" or not cfg["decisions"] else \
+        json.loads(resolve(cfg["decisions"]).read_text(encoding="utf-8"))
+    surprises = json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
+    if cfg["type"] == "plan_nosurprises":
+        surprises = []
+    fps = [h(prompt_code_hash(), personas_text, cfg["model"], cfg["seed"], cfg["replicate"])]
+    for w in WEEKS:
+        fps.append(h(fps[-1], w, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] == w]))
+    return {"personas_text": personas_text, "personas": personas, "decisions": decisions,
+            "surprises": surprises, "fps": fps}
+
+
 # ---------------------------------------------------------------- checkpoints
 def ckpt_path(fp):
     return CKPT / f"{fp}.json"
@@ -292,6 +331,14 @@ def save_ckpt(fp, data):
     tmp.replace(ckpt_path(fp))
 
 
+def chain_length(fps, limit=10):
+    """How many weeks from week 1 on already have a checkpoint for these inputs."""
+    n = 0
+    while n < limit and ckpt_path(fps[n + 1]).exists():
+        n += 1
+    return n
+
+
 def ckpt_stats():
     files = list(CKPT.glob("*.json")) if CKPT.exists() else []
     return {"count": len(files), "mb": round(sum(f.stat().st_size for f in files) / 1e6, 1),
@@ -300,92 +347,140 @@ def ckpt_stats():
 
 # ---------------------------------------------------------------- run
 class Run:
+    """One simulated timeline. A batch run plays weeks 1-10 at once; a live session (session=True)
+    plays them as the calendar advances and is saved in sessions/ between plays."""
+
     def __init__(self, name, type, seed, decisions=None, surprises=None, probe=False, model=DEFAULT_MODEL,
-                 personas=None, replicate=0):
-        self.cancel_flag = threading.Event()
-        self.info = {
-            "name": name, "type": type, "seed": int(seed), "model": model, "probe": bool(probe),
-            "decisions_file": decisions, "surprises_file": surprises or "surprises.json",
-            "personas_file": personas or "personas.jsonl", "replicate": int(replicate),
-            "status": "queued", "phase": "queued", "weeks": {str(w): "pending" for w in WEEKS},
-            "week_source": {}, "calls_done": 0, "calls_total": 0, "errors": 0, "resumed_from": 0,
-            "queued": now(), "started": None, "finished": None, "error": None, "metrics": None,
-        }
+                 personas=None, replicate=0, session=False, auto=False):
         if model not in MODELS:
             raise ValueError(f"unknown model {model}")
         if type not in ("plan", "nodecision", "plan_nosurprises"):
             raise ValueError(f"unknown type {type}")
+        if not re.fullmatch(r"[\w.-]+", name or ""):
+            raise ValueError("name: letters, digits, _ . - only")
+        self.cancel_flag = threading.Event()
+        self.config = {"name": name, "type": type, "seed": int(seed), "decisions": decisions,
+                       "surprises": surprises or "surprises.json", "probe": bool(probe), "model": model,
+                       "personas": personas or "personas.jsonl", "replicate": int(replicate or 0),
+                       "session": bool(session), "auto": bool(auto)}
+        c = self.config
+        self.info = {
+            "name": name, "type": type, "seed": c["seed"], "model": model, "probe": c["probe"],
+            "decisions_file": decisions, "surprises_file": c["surprises"], "personas_file": c["personas"],
+            "replicate": c["replicate"], "session": c["session"], "auto": c["auto"],
+            "status": "idle" if session else "queued", "phase": "not started" if session else "queued",
+            "weeks": {str(w): "pending" for w in WEEKS}, "week_source": {}, "played": 0, "target": 0,
+            "calls_done": 0, "calls_total": 0, "errors": 0, "tokens": {"in": 0, "out": 0, "think": 0},
+            "resumed_from": 0, "created": now(), "started": None, "finished": None, "error": None, "metrics": None,
+        }
 
     @property
     def name(self):
-        return self.info["name"]
+        return self.config["name"]
 
     def cancel(self):
         self.cancel_flag.set()
 
-    # -------------------------------------------- setup
+    def busy(self):
+        return self.info["status"] in ("queued", "running")
+
+    # -------------------------------------------- state on disk
+    def save(self):
+        if self.config["session"]:
+            SESSIONS.mkdir(exist_ok=True)
+            (SESSIONS / f"{self.name}.json").write_text(
+                json.dumps({"config": self.config, "info": self.info}, indent=2, ensure_ascii=False), encoding="utf-8")
+        out = RUNS / self.name
+        if out.exists() and not self.config["session"] or (out / "run.json").exists() and self.info["played"] == 10:
+            data = dict(self.info, fps=getattr(self, "fps", []))
+            (out / "engine.json").write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    @classmethod
+    def load(cls, path):
+        d = json.loads(Path(path).read_text(encoding="utf-8"))
+        run = cls(**d["config"])
+        run.info.update(d["info"])
+        if run.info["status"] in ("running", "queued"):
+            run.info.update(status="paused", phase="server restarted mid-week; play again to resume")
+        return run
+
+    def validity(self):
+        """Weeks played that still match the current inputs. Editing a decision or a surprise for week N
+        makes weeks N.. stale; playing again recomputes only those."""
+        try:
+            b = inputs(self.config)
+        except Exception as e:
+            return {"valid_through": 0, "error": f"{type(e).__name__}: {e}"}
+        ok = chain_length(b["fps"], self.info["played"])
+        return {"valid_through": ok, "stale_from": ok + 1 if ok < self.info["played"] else None,
+                "decisions": b["decisions"], "surprises": b["surprises"]}
+
+    # -------------------------------------------- execution
     def prepare(self):
-        i = self.info
-        self.personas_text, self.personas = load_personas(resolve(i["personas_file"]))
-        self.decisions = [] if i["type"] == "nodecision" or not i["decisions_file"] else \
-            json.loads(resolve(i["decisions_file"]).read_text(encoding="utf-8"))
-        surprises = json.loads(resolve(i["surprises_file"]).read_text(encoding="utf-8"))
-        self.surprises = [] if i["type"] == "plan_nosurprises" else surprises
-        base = h(prompt_code_hash(), self.personas_text, i["model"], i["seed"], i["replicate"])
-        self.fps = [base]
-        for w in WEEKS:
-            self.fps.append(h(self.fps[-1], w, [d for d in self.decisions if d["week"] <= w],
-                              [s for s in self.surprises if s["week"] == w]))
+        b = inputs(self.config)
+        self.personas_text, self.personas = b["personas_text"], b["personas"]
+        self.decisions, self.surprises, self.fps = b["decisions"], b["surprises"], b["fps"]
         self.memory = {p["id"]: "Has the trips listed in the persona booked. No problems so far." for p in self.personas}
 
     def probe_key(self, when):
         return h(self.fps[0] if when == "start" else self.fps[10], "probe", when)
 
-    # -------------------------------------------- execution
-    def execute(self):
-        i = self.info
+    def execute(self, until=10):
+        i, c = self.info, self.config
+        t0 = time.time()
+        self.cancel_flag.clear()
         try:
-            i.update(status="running", started=now(), phase="preparing")
+            i.update(status="running", started=now(), finished=None, error=None, phase="preparing", target=until,
+                     calls_done=0, errors=0, week_source={}, weeks={str(w): "pending" for w in WEEKS})
             self.prepare()
-            out = RUNS / i["name"]
-            archive(out)
-            out.mkdir(parents=True, exist_ok=True)
-            start = 0
-            while start < 10 and load_ckpt(self.fps[start + 1]):
-                start += 1
+            start = chain_length(self.fps, until)
             if start:
                 self.memory = {e["persona"]: e["memory_after"] for e in load_ckpt(self.fps[start])["entries"]}
                 for w in range(1, start + 1):
                     self.mark_reused(w, load_ckpt(self.fps[w]))
             n = len(self.personas)
             i["resumed_from"] = start
-            i["calls_total"] = n * (10 - start) + (n * 2 if i["probe"] else 0)
-            log("run_started", run=i["name"], type=i["type"], seed=i["seed"], model=i["model"],
-                resumed_from_week=start, fp_base=self.fps[0], decisions=len(self.decisions),
-                surprises=len(self.surprises))
-            self.write_engine_json()
-            if i["probe"]:
+            i["played"] = start
+            i["calls_total"] = n * (until - start) + (n * (1 + (until == 10)) if c["probe"] else 0)
+            log("run_started", run=self.name, session=c["session"], type=c["type"], seed=c["seed"], model=c["model"],
+                resumed_from_week=start, until=until, decisions=len(self.decisions), surprises=len(self.surprises))
+            if not c["session"]:
+                archive(RUNS / self.name)
+                (RUNS / self.name).mkdir(parents=True, exist_ok=True)
+            self.save()
+            if c["probe"]:
                 self.probe("start")
-            for w in range(start + 1, 11):
+            for w in range(start + 1, until + 1):
                 self.week(w)
-            if i["probe"]:
-                self.probe("end")
-            i["phase"] = "writing outputs"
-            assemble(self, out)
-            i.update(status="done", phase="done", finished=now())
-            log("run_finished", run=i["name"], metrics=i["metrics"], resumed_from_week=start,
-                seconds=round(time.time() - datetime.fromisoformat(i["started"]).timestamp()))
+            if until == 10:
+                if c["probe"]:
+                    self.probe("end")
+                i["phase"] = "writing outputs"
+                out = RUNS / self.name
+                if c["session"]:
+                    archive(out)
+                    out.mkdir(parents=True, exist_ok=True)
+                assemble(self, out)
+                i.update(status="done", phase="done: hand-in files written")
+                log("run_finished", run=self.name, metrics=i["metrics"], resumed_from_week=start,
+                    seconds=round(time.time() - t0), tokens=i["tokens"])
+            else:
+                i.update(status="paused", phase=f"played through week {until}")
+                log("weeks_played", run=self.name, through=until, resumed_from_week=start,
+                    seconds=round(time.time() - t0), tokens=i["tokens"])
         except Canceled:
-            i.update(status="canceled", phase="canceled", finished=now())
-            log("run_canceled", run=i["name"], note="finished calls are kept; a re-run resumes from them")
+            i.update(status="canceled" if not c["session"] else "paused", phase="stopped; finished calls are kept")
+            log("run_canceled", run=self.name, played=i["played"])
         except Exception as e:
-            i.update(status="failed", phase="failed", finished=now(), error=f"{type(e).__name__}: {e}")
-            log("run_failed", run=i["name"], error=i["error"])
-        self.write_engine_json()
+            i.update(status="failed", phase="failed", error=f"{type(e).__name__}: {e}")
+            log("run_failed", run=self.name, error=i["error"])
+        i["finished"] = now()
+        self.save()
         return self
 
     def mark_reused(self, w, ck):
-        self.info["weeks"][str(w)] = "reused"
+        mine = ck.get("origin_run") == self.name
+        self.info["weeks"][str(w)] = "computed" if mine else "reused"
         self.info["week_source"][str(w)] = {"fp": self.fps[w], "origin_run": ck.get("origin_run"),
                                             "created": ck.get("created")}
 
@@ -397,26 +492,27 @@ class Run:
             ck = load_ckpt(fp)
             if ck:
                 self.mark_reused(w, ck)
-                log("week_reused", run=i["name"], week=w, fp=fp, origin_run=ck.get("origin_run"))
+                log("week_reused", run=self.name, week=w, fp=fp, origin_run=ck.get("origin_run"))
                 i["calls_done"] += len(self.personas)
             else:
                 i["weeks"][str(w)] = "running"
                 t0 = time.time()
                 entries = self.compute(fp, lambda p: self.step(p, w))
                 ck = {"fp": fp, "prev": self.fps[w - 1], "week": w, "model": i["model"], "seed": i["seed"],
-                      "origin_run": i["name"], "created": now(), "seconds": round(time.time() - t0, 1),
+                      "origin_run": self.name, "created": now(), "seconds": round(time.time() - t0, 1),
                       "entries": entries}
                 save_ckpt(fp, ck)
                 i["weeks"][str(w)] = "computed"
-                i["week_source"][str(w)] = {"fp": fp, "origin_run": i["name"], "created": ck["created"]}
-                counts = Counter(e["status"] for e in entries)
-                log("week_done", run=i["name"], week=w, fp=fp, seconds=ck["seconds"], statuses=dict(counts),
+                i["week_source"][str(w)] = {"fp": fp, "origin_run": self.name, "created": ck["created"]}
+                log("week_done", run=self.name, week=w, fp=fp, seconds=ck["seconds"],
+                    statuses=dict(Counter(e["status"] for e in entries)),
                     complaints=sum(bool(e.get("complaint")) for e in entries))
         self.memory = {e["persona"]: e["memory_after"] for e in ck["entries"]}
-        self.write_engine_json()
+        i["played"] = w
+        self.save()
 
     def compute(self, fp, step):
-        """Run step for every persona, resuming from a partial file left by a crash or cancel."""
+        """Run step for every persona, resuming from a partial file left by a crash or a stop."""
         partial = CKPT / f"{fp}.partial.jsonl"
         CKPT.mkdir(exist_ok=True)
         done = {e["persona"]: e for e in read_jsonl(partial)}
@@ -447,10 +543,10 @@ class Run:
         prompt = sim.week_prompt(shown(p), self.memory[p["id"]], w, facts,
                                  sim.option_lines(self.decisions, p, w), sim.company_message(self.decisions, p, w))
         level = "MEDIUM" if w in sim.CRISIS_WEEKS else "LOW"
-        parsed, text, err = call(i["model"], prompt, sim.SCHEMA, i["seed"], level, sim.valid_week)
-        self.count(err)
+        parsed, text, err, use = call(i["model"], prompt, sim.SCHEMA, i["seed"], level, sim.valid_week)
+        self.count(err, use)
         e = {"persona": p["id"], "week": w, "prompt": sim.SYSTEM + "\n\n" + prompt, "response": text,
-             "error": err, "had_flight_this_week": has_flight, "flight_outcome": outcome}
+             "error": err, "had_flight_this_week": has_flight, "flight_outcome": outcome, "usage": use}
         if parsed:
             e.update(status=parsed["status"], would_book_again=parsed["would_book_again"],
                      complaint=bool(parsed.get("complaint")), support_contact=parsed.get("support_contact", ""),
@@ -465,33 +561,63 @@ class Run:
             ck = load_ckpt(key)
             if ck:
                 i["calls_done"] += len(self.personas)
-                log("probe_reused", run=i["name"], when=when, origin_run=ck.get("origin_run"))
             else:
                 def ask(p):
                     if self.cancel_flag.is_set():
                         return None
                     prompt = sim.probe_prompt(shown(p), self.memory[p["id"]])
-                    parsed, text, err = call(i["model"], prompt, sim.PROBE_SCHEMA, i["seed"], "LOW", sim.valid_probe)
-                    self.count(err)
+                    parsed, text, err, use = call(i["model"], prompt, sim.PROBE_SCHEMA, i["seed"], "LOW", sim.valid_probe)
+                    self.count(err, use)
                     return {"persona": p["id"], "prompt": sim.SYSTEM + "\n\n" + prompt, "response": text,
                             "error": err, "scores": parsed}
                 entries = self.compute(key, ask)
-                save_ckpt(key, {"fp": key, "when": when, "origin_run": i["name"], "created": now(),
-                                "entries": entries})
-                log("probe_done", run=i["name"], when=when)
-        self.write_engine_json()
+                save_ckpt(key, {"fp": key, "when": when, "origin_run": self.name, "created": now(),
+                                "model": i["model"], "entries": entries})
+                log("probe_done", run=self.name, when=when)
 
-    def count(self, err):
+    def count(self, err, use):
         with _lock:
             self.info["calls_done"] += 1
             if err:
                 self.info["errors"] += 1
+            for k in ("in", "out", "think"):
+                self.info["tokens"][k] += (use or {}).get(k) or 0
 
-    def write_engine_json(self):
-        out = RUNS / self.name
-        if out.exists():
-            data = dict(self.info, fps=getattr(self, "fps", []))
-            (out / "engine.json").write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    # -------------------------------------------- reading a timeline
+    def timeline(self):
+        """{persona id: [(week, prompt, response)]} for the weeks that match the current inputs."""
+        b = inputs(self.config)
+        valid = chain_length(b["fps"], self.info["played"])
+        out = defaultdict(list)
+        for w in range(1, valid + 1):
+            for e in load_ckpt(b["fps"][w])["entries"]:
+                out[e["persona"]].append((w, e["prompt"], e["response"]))
+        return b["personas"], valid, out
+
+    def rows(self):
+        """weekly.jsonl-shaped rows for the weeks played so far (live view of a session)."""
+        b = inputs(self.config)
+        valid = chain_length(b["fps"], self.info["played"])
+        rows = []
+        for w in range(1, valid + 1):
+            ck = load_ckpt(b["fps"][w])
+            for e in ck["entries"]:
+                rows.append({"persona": e["persona"], "week": w, "call": f"{self.name}-{e['persona']}-w{w}-week",
+                             "status": e["status"], "had_flight_this_week": e["had_flight_this_week"],
+                             "flight_outcome": e["flight_outcome"], "would_book_again": e["would_book_again"],
+                             "complaint": e["complaint"], "support_contact": e["support_contact"],
+                             "reused": ck.get("origin_run") != self.name})
+        return b, rows
+
+    def find_call(self, cid):
+        m = re.fullmatch(rf"{re.escape(self.name)}-(.+)-w(\d+)-week", cid)
+        if not m:
+            return None
+        b = inputs(self.config)
+        ck = load_ckpt(b["fps"][int(m.group(2))])
+        e = next((e for e in (ck or {}).get("entries", []) if e["persona"] == m.group(1)), None)
+        return e and {"id": cid, "persona": e["persona"], "week": e["week"], "prompt": e["prompt"],
+                      "response": e["response"], "model": self.config["model"], "error": e["error"]}
 
 
 # ---------------------------------------------------------------- outputs
@@ -566,33 +692,175 @@ def add_metrics(out, personas, weekly, probes):
     return m
 
 
+# ---------------------------------------------------------------- interviews
+def _between(text, start, end):
+    m = re.search(re.escape(start) + r"(.*?)(?:" + end + r"|$)", text, re.S)
+    return m.group(1).strip() if m else ""
+
+
+def experience(entries, upto):
+    """Turn a persona's week prompts and answers into a first-person record of what it lived through."""
+    lines, seen, memory = [], set(), "Has the trips listed in the persona booked. Nothing has happened yet."
+    for w, prompt, response in sorted(entries):
+        if w > upto:
+            continue
+        try:
+            r = json.loads(response)
+        except Exception:
+            r = {}
+        happened = _between(prompt, f"THIS_WEEK (week {w} of 10): ", r"\nOPTIONS KNOWN")
+        line = f"Week {w} ({DATES[w]}): {happened}"
+        for msg in _between(prompt, "EXACT_COMPANY_MESSAGE (received by you): ", r"\nTASK:").split("\n"):
+            if msg.strip() and msg not in seen:
+                seen.add(msg)
+                line += f' Kestrel sent you this message: "{msg.strip()}"'
+        if r:
+            line += (f" What you did: {r.get('action', '')}. You said: \"{r.get('said', '')}\"."
+                     f" Your booking: {r.get('status')}. Would book Kestrel again: {r.get('would_book_again')}.")
+            memory = r.get("memory_update") or memory
+        lines.append(line)
+    return lines, memory
+
+
+def interview_prompt(persona, lines, memory, week, question, asker):
+    when = "before week 1 (November 1)" if week == 0 else f"the end of week {week} ({DATES[week]})"
+    exp = "\n".join(lines) or "Nothing has happened yet; your trips are booked."
+    return (f"PERSONA: {json.dumps(shown(persona), ensure_ascii=False)}\n"
+            f"IT IS NOW {when}.\nYOUR EXPERIENCES SO FAR:\n{exp}\n"
+            f"WHAT IS ON YOUR MIND: {memory}\n"
+            f"QUESTION from {asker}: {question}\n"
+            "Answer as this person.")
+
+
+def interview(timeline, source, persona_ids, question, model, seed=1, week=None, asker="an interviewer"):
+    """Ask personas a free question about what they lived through up to `week`. Logged to logs/interviews.jsonl."""
+    personas, valid, entries = timeline
+    week = valid if week is None else max(0, min(int(week), valid))
+    chosen = [p for p in personas if p["id"] in set(persona_ids)]
+
+    def ask(p):
+        lines, memory = experience(entries.get(p["id"], []), week)
+        prompt = interview_prompt(p, lines, memory, week, question, asker)
+        answer, text, err, use = call(model, prompt, None, seed, "LOW", lambda a: bool(a), system=INTERVIEW_SYSTEM)
+        rec = {"ts": now(), "id": h(source, p["id"], week, question, now(), random.random())[:12], "source": source,
+               "persona": p["id"], "name": p.get("name"), "group": p.get("group"), "week": week, "asker": asker,
+               "question": question, "answer": answer or "", "error": err, "model": model, "usage": use,
+               "prompt": INTERVIEW_SYSTEM + "\n\n" + prompt}
+        LOGS.mkdir(exist_ok=True)
+        append_jsonl(LOGS / "interviews.jsonl", rec)
+        return rec
+
+    with ThreadPoolExecutor(max(1, len(chosen))) as pool:
+        recs = list(pool.map(ask, chosen))
+    log("interview", run=source, week=week, personas=len(recs), question=question[:200], model=model,
+        errors=sum(bool(r["error"]) for r in recs))
+    return recs
+
+
+def disk_timeline(name):
+    """Timeline of a finished run from its hand-in files (works for sim.py runs too)."""
+    d = RUNS / name
+    _, personas = load_personas(d / "personas.jsonl")
+    calls = {c["id"]: c for c in read_jsonl(d / "calls.jsonl")}
+    entries = defaultdict(list)
+    weeks = 0
+    for r in read_jsonl(d / "weekly.jsonl"):
+        c = calls.get(r["call"])
+        if c:
+            entries[r["persona"]].append((r["week"], c["prompt"], c["response"]))
+            weeks = max(weeks, r["week"])
+    return personas, weeks, entries
+
+
 # ---------------------------------------------------------------- manager
 class Manager:
     def __init__(self):
         self.runs = {}
+        for f in sorted(SESSIONS.glob("*.json")) if SESSIONS.exists() else []:
+            try:
+                run = Run.load(f)
+                self.runs[run.name] = run
+            except Exception as e:
+                log("session_load_failed", file=f.name, error=repr(e))
+
+    def _free(self, name):
+        cur = self.runs.get(name)
+        if cur and cur.busy():
+            raise ValueError(f"{name} is running")
+        return cur
 
     def submit(self, **cfg):
-        name = cfg["name"]
-        cur = self.runs.get(name)
-        if cur and cur.info["status"] in ("queued", "running"):
-            raise ValueError(f"{name} is already running")
+        """A batch run: weeks 1-10 now."""
+        cur = self._free(cfg["name"])
+        if cur and cur.config["session"]:
+            raise ValueError(f"{cfg['name']} is a live session; play it, or delete the session first")
         run = Run(**cfg)
-        self.runs[name] = run
-        log("run_queued", run=name, **{k: v for k, v in cfg.items() if k != "name"})
-        threading.Thread(target=run.execute, daemon=True, name=f"run-{name}").start()
+        self.runs[run.name] = run
+        log("run_queued", run=run.name, **{k: v for k, v in run.config.items() if k != "name"})
+        threading.Thread(target=run.execute, daemon=True, name=f"run-{run.name}").start()
         return run
 
-    def official(self, decisions, surprises=None, model=DEFAULT_MODEL, personas=None, seeds=(1, 2)):
+    def create_session(self, **cfg):
+        cur = self._free(cfg["name"])
+        if cur and cur.config["session"]:
+            raise ValueError(f"session {cfg['name']} already exists")
+        run = Run(session=True, **cfg)
+        self.runs[run.name] = run
+        run.save()
+        log("session_created", run=run.name, **{k: v for k, v in run.config.items() if k != "name"})
+        return run
+
+    def play(self, name, until):
+        run = self.runs[name]
+        if run.busy():
+            raise ValueError(f"{name} is already running")
+        until = max(1, min(10, int(until)))
+        run.info.update(status="queued", phase=f"queued to week {until}", target=until)
+        threading.Thread(target=run.execute, args=(until,), daemon=True, name=f"play-{name}").start()
+        return run
+
+    def update_session(self, name, **changes):
+        run = self._free(name)
+        for k in ("decisions", "surprises", "auto"):
+            if k in changes:
+                run.config[k] = changes[k]
+                run.info[{"decisions": "decisions_file", "surprises": "surprises_file"}.get(k, k)] = changes[k]
+        run.save()
+        log("session_updated", run=name, **changes)
+        return run
+
+    def delete_session(self, name):
+        run = self._free(name)
+        if not run or not run.config["session"]:
+            raise ValueError(f"no session {name}")
+        (SESSIONS / f"{name}.json").unlink(missing_ok=True)
+        del self.runs[name]
+        log("session_deleted", run=name, note="checkpoints are kept")
+
+    def official(self, decisions, surprises=None, model=DEFAULT_MODEL, personas=None, seeds=(1, 2), live=False):
+        """The five hand-in runs: now (batch), or as live sessions played with the calendar."""
         runs = []
         for name, kind, seed, probe in OFFICIAL:
-            seed = seeds[0] if seed == 1 else seeds[1]
-            runs.append(self.submit(name=name, type=kind, seed=seed, decisions=decisions, surprises=surprises,
-                                    probe=probe, model=model, personas=personas))
+            cfg = dict(name=name, type=kind, seed=seeds[0] if seed == 1 else seeds[1], decisions=decisions,
+                       surprises=surprises, probe=probe, model=model, personas=personas)
+            if live:
+                cur = self.runs.get(name)
+                runs.append(cur if cur and cur.config["session"] else self.create_session(auto=True, **cfg))
+            else:
+                runs.append(self.submit(**cfg))
         return runs
+
+    def timeline(self, source):
+        run = self.runs.get(source)
+        if run and run.config["session"] and not (RUNS / source / "weekly.jsonl").exists():
+            return run.timeline(), run.config
+        if run and run.busy():
+            return run.timeline(), run.config
+        return disk_timeline(source), json.loads((RUNS / source / "run.json").read_text(encoding="utf-8"))
 
 
 def list_runs(manager=None):
-    """Runs on disk plus runs in memory (live state wins)."""
+    """Runs on disk plus runs and sessions in memory (live state wins)."""
     rows = {}
     for d in sorted(RUNS.glob("*/")) if RUNS.exists() else []:
         info = {"name": d.name, "status": "done" if (d / "run.json").exists() else "incomplete"}
@@ -601,14 +869,15 @@ def list_runs(manager=None):
             info.pop("fps", None)
         elif (d / "run.json").exists():
             r = json.loads((d / "run.json").read_text(encoding="utf-8"))
-            info.update(type=r.get("type"), seed=r.get("seed"), model=r.get("model"), engine="sim.py",
+            info.update(type=r.get("type"), seed=r.get("seed"), model=r.get("model"), engine="sim.py", played=10,
                         finished=datetime.fromtimestamp((d / "run.json").stat().st_mtime).isoformat(timespec="seconds"))
         if (d / "metrics.json").exists():
             info["metrics"] = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
         rows[d.name] = info
     for name, run in (manager.runs.items() if manager else []):
-        rows[name] = dict(run.info)
-    return sorted(rows.values(), key=lambda r: r.get("started") or r.get("finished") or "", reverse=True)
+        rows[name] = dict(rows.get(name, {}), **run.info)
+    return sorted(rows.values(), key=lambda r: r.get("started") or r.get("finished") or r.get("created") or "",
+                  reverse=True)
 
 
 # ---------------------------------------------------------------- hand-in
@@ -637,7 +906,8 @@ def build_submission(team="NN"):
         else:
             notes.append(f"{doc} not found next to code/ or in code/")
     shutil.copytree(HERE, root / "code", ignore=shutil.ignore_patterns(
-        ".env", ".venv", ".claude", "runs", "checkpoints", "logs", "submission", "__pycache__", ".DS_Store", "*.pyc"))
+        ".env", ".venv", ".claude", "runs", "checkpoints", "logs", "sessions", "submission", "__pycache__",
+        ".DS_Store", "*.pyc"))
     zip_path = shutil.make_archive(str(base / name), "zip", base, name)
     res = subprocess.run([sys.executable, str(CHECK_PY), zip_path], capture_output=True, text=True)
     log("submission_built", zip=str(Path(zip_path).relative_to(HERE)), check_exit=res.returncode, notes=notes)
@@ -655,6 +925,7 @@ def main():
     ap.add_argument("--personas", default="personas.jsonl")
     ap.add_argument("--model", default=DEFAULT_MODEL, choices=list(MODELS))
     ap.add_argument("--probe", action="store_true")
+    ap.add_argument("--until", type=int, default=10, help="play weeks 1..until only")
     ap.add_argument("--replicate", type=int, default=0, help="a new number gives a fresh sample, ignoring checkpoints")
     ap.add_argument("--workers", type=int, default=30, help="LLM calls in flight across all runs")
     a = ap.parse_args()
@@ -664,15 +935,20 @@ def main():
     if a.name == "official":
         runs = mgr.official(a.decisions, a.surprises, a.model, a.personas)
     else:
-        runs = [mgr.submit(name=a.name, type=a.type, seed=a.seed, decisions=a.decisions, surprises=a.surprises,
-                           probe=a.probe, model=a.model, personas=a.personas, replicate=a.replicate)]
-    while any(r.info["status"] in ("queued", "running") for r in runs):
+        cfg = dict(name=a.name, type=a.type, seed=a.seed, decisions=a.decisions, surprises=a.surprises,
+                   probe=a.probe, model=a.model, personas=a.personas, replicate=a.replicate)
+        run = Run(**cfg)
+        mgr.runs[run.name] = run
+        threading.Thread(target=run.execute, args=(a.until,), daemon=True).start()
+        runs = [run]
+    time.sleep(0.2)
+    while any(r.busy() for r in runs):
         time.sleep(2)
         print(" | ".join(f"{r.name}: {r.info['phase']} {r.info['calls_done']}/{r.info['calls_total']}"
                          for r in runs), flush=True)
     for r in runs:
         print(r.name, r.info["status"], r.info["error"] or "", json.dumps(r.info["metrics"] or {})[:200])
-    return 0 if all(r.info["status"] == "done" for r in runs) else 1
+    return 0 if all(r.info["status"] in ("done", "paused") for r in runs) else 1
 
 
 if __name__ == "__main__":

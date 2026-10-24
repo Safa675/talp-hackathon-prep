@@ -10,3 +10,4 @@ __pycache__/
 # simulation engine caches and build outputs
 code/checkpoints/
 code/submission/
+code/sessions/
