@@ -205,14 +205,16 @@ function drawWeek(){
   if (!rows.length) {
     $("#sum").innerHTML = ""; $("#people").innerHTML = `<div class="card mute" style="grid-column:1/-1">${st==="running"?"Playing this week…":`Week ${w} has not been played yet.`}</div>`; return;
   }
+  const prev = (D.weekly||[]).filter(r => r.week === w - 1), before = Object.fromEntries(prev.map(r => [r.persona, r]));
   const n = rows.length, cnt = s => rows.filter(r => r.status === s).length, yes = rows.filter(r => r.would_book_again === "yes").length;
   $("#sum").innerHTML = Object.keys(COL).map(s => `<span class="chip" style="background:${COL[s]}">${s}: ${cnt(s)}</span>`).join("")
+    + (trustOf(rows) != null ? `<span class="pill">avg trust: <b>${trustOf(rows).toFixed(1)}</b>/5${trustOf(prev) != null ? ` (${(trustOf(rows)-trustOf(prev) >= 0 ? "+" : "")}${(trustOf(rows)-trustOf(prev)).toFixed(1)})` : ""}</span>` : "")
     + `<span class="pill">would book again: ${Math.round(100*yes/n)}%</span><span class="pill">complaints: ${rows.filter(r=>r.complaint).length}</span><span class="pill">posts: ${rows.filter(r=>r.post).length}</span>`;
   const by = Object.fromEntries(D.personas.map(p => [p.id, p]));
   $("#people").innerHTML = rows.map(r => { const p = by[r.persona] || {};
     return `<div class="pc" style="border-left-color:${COL[r.status]||"var(--none)"}" onclick="askOne('${esc(r.persona)}')" title="Click to ask ${esc(p.name||r.persona)} a question">
       <div class="row" style="justify-content:space-between"><b>${esc(p.name||r.persona)}</b><span class="small mute">${esc(r.persona)} · ${esc(p.group||"")}</span></div>
-      <div class="row small" style="margin-top:3px"><span class="chip" style="background:${COL[r.status]}">${esc(r.status)}</span><span class="mute">book again: <b>${esc(r.would_book_again)}</b></span>${r.complaint?`<span class="bad">complained</span>`:""}</div>
+      <div class="row small" style="margin-top:3px"><span class="chip" style="background:${COL[r.status]}">${esc(r.status)}</span><span class="mute">book again: <b>${esc(r.would_book_again)}</b></span>${r.trust ? `<span class="mute">trust <b>${r.trust}</b>/5${before[r.persona]?.trust && before[r.persona].trust !== r.trust ? (r.trust > before[r.persona].trust ? ' <span class="ok">↑</span>' : ' <span class="bad">↓</span>') : ""}</span>` : ""}${r.complaint?`<span class="bad">complained</span>`:""}</div>
       ${(r.flights||[]).length?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]||""}${r.strike_day?" · strike day":""}${r.within_24h===false?' · <span class="bad">not resolved in 24h</span>':""}</div><details class="small mute" onclick="event.stopPropagation()"><summary>what happened</summary>${(r.flights||[]).map(esc).join("<br>")}</details>`
         : FLIGHT[r.flight_outcome]?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]}</div>`:""}
       ${r.said?`<div class="said">“${esc(r.said)}”</div>`:""}
@@ -223,11 +225,13 @@ function drawGoals(){
   const v = D.validity?.valid_through ?? D.info.played;
   const items = [["Flights operated", g.goal_1, x => `${x}%`, x => x >= 98, "≥ 98%"], ["Affected passengers solved in 24h", g.goal_2, x => `${x}%`, x => x >= 90, "≥ 90%"],
     ["Complaints a month", g.goal_3, x => `~${x.toLocaleString()}`, x => x <= 2500, "≤ 2,500"], ["NPS", g.goal_3b, x => (x > 0 ? "+" : "") + x, x => x >= 12, "≥ +12"],
-    ["Revenue weeks 5–10", g.goal_4, x => `${x}%`, x => x >= 96, "≥ 96% of plan"]];
+    ["Revenue weeks 5–10", g.goal_4, x => `${x}%`, x => x >= 96, "≥ 96% of plan"],
+    ["Trust now", trustOf((D.weekly||[]).filter(r => r.week === v)), x => `${x.toFixed(1)}/5`, x => x >= 3.5, "personas, 1–5"]];
   $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Board goals</h2><span class="small mute">weeks 1–${v} played${g.revenue_lost_usd?` · revenue lost ~$${(g.revenue_lost_usd/1e6).toFixed(2)}M`:""}</span></div>
     <div class="row" style="margin-top:8px;gap:14px">${items.map(([label, x, f, good, target]) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650" class="${x == null ? "mute" : good(x) ? "ok" : "bad"}">${x == null ? "–" : f(x)}</div><div class="small mute">target ${target}</div></div>`).join("")}</div>
     <div class="small mute" style="margin-top:6px">NPS is measured only at the end (check-in before week 1 and after week 10).</div></div>`;
 }
+function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
 function budgetLine(decs){
   let cost = 0; decs.forEach(d => d.actions.forEach(a => cost += (META.menu[a.action]||{})[a.level] || 0));
   return `<div class="small ${cost>META.budget?"bad":"mute"}" style="margin-top:6px">Budget used: $${cost.toFixed(2)}M of $${META.budget}M</div>`;
@@ -247,7 +251,9 @@ $("#evAdd").onclick = async () => {
   $("#evMsg").textContent = auto ? "the model is reading it…" : "";
   try { const list = await readFile(file); list.push(ev); list.sort((a,b) => a.week - b.week);
     await api("/api/file", {name: file, content: list, note: `event added for week ${sel}`});
-    $("#evText").value = ""; $("#evReading").value = ""; $("#evMsg").innerHTML = `<span class="ok">Added.</span>`; load();
+    const played = D.info.played;
+    $("#evText").value = ""; $("#evReading").value = "";
+    $("#evMsg").innerHTML = `<span class="ok">Added.</span>` + (sel <= played ? ` <span class="mute">Weeks already played stay as they were; it acts from week ${Math.min(played + 1, 10)} on.</span>` : ""); load();
   } catch(e){ $("#evMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
 };
 

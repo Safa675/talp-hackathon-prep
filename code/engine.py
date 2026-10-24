@@ -490,11 +490,24 @@ class Run:
             run.info.update(status="paused", phase="server restarted mid-week; play again to resume")
         return run
 
+    def inputs_now(self):
+        """Current inputs. A live session keeps the weeks it already played as history: a new event or decision
+        for a played week does not replay it; it acts from the next week played on."""
+        b = inputs(self.config)
+        kept = self.info.get("chain") or []
+        if not self.config["session"] or not kept or kept[0] != b["fps"][0]:
+            return b  # a new persona file, model or seed starts the history again
+        fps = [kept[0]] + [fp for fp in kept[1:self.info["played"] + 1] if ckpt_path(fp).exists()]
+        for w in range(len(fps), 11):
+            fps.append(h(fps[-1], w, [d for d in b["decisions"] if d["week"] <= w],
+                         [s for s in b["surprises"] if s["week"] <= w]))
+        return dict(b, fps=fps)
+
     def validity(self):
         """Weeks played that still match the current inputs. Editing a decision or a surprise for week N
         makes weeks N.. stale; playing again recomputes only those."""
         try:
-            b = inputs(self.config)
+            b = self.inputs_now()
         except Exception as e:
             return {"valid_through": 0, "error": f"{type(e).__name__}: {e}"}
         ok = chain_length(b["fps"], self.info["played"])
@@ -503,7 +516,7 @@ class Run:
 
     # -------------------------------------------- execution
     def prepare(self):
-        b = inputs(self.config)
+        b = self.inputs_now()
         self.personas_text, self.personas = b["personas_text"], b["personas"]
         self.decisions, self.surprises, self.fps = b["decisions"], b["surprises"], b["fps"]
         self.by_id = {p["id"]: p for p in self.personas}
@@ -619,6 +632,7 @@ class Run:
                     posts=sum(bool(e.get("post")) for e in entries))
         self.carry(ck["entries"])
         i["played"] = w
+        i["chain"] = self.fps[:w + 1]
         self.save()
 
     def compute(self, fp, step):
@@ -669,6 +683,7 @@ class Run:
                      complaint=bool(parsed.get("complaint")), support_contact=parsed.get("support_contact", ""),
                      said=parsed.get("said", ""), action=parsed.get("action", ""),
                      post=str(parsed.get("post") or "").strip()[:POST_CHARS],
+                     trust=parsed.get("trust") if parsed.get("trust") in (1, 2, 3, 4, 5) else None,
                      memory_after=remember(self.memory[p["id"]], f"Week {w}: {parsed['memory_update']}"))
         return e
 
@@ -704,7 +719,7 @@ class Run:
     # -------------------------------------------- reading a timeline
     def timeline(self):
         """{persona id: [(week, prompt, response)]} for the weeks that match the current inputs."""
-        b = inputs(self.config)
+        b = self.inputs_now()
         valid = chain_length(b["fps"], self.info["played"])
         out = defaultdict(list)
         for w in range(1, valid + 1):
@@ -714,7 +729,7 @@ class Run:
 
     def rows(self):
         """weekly.jsonl-shaped rows for the weeks played so far (live view of a session)."""
-        b = inputs(self.config)
+        b = self.inputs_now()
         valid = chain_length(b["fps"], self.info["played"])
         rows = []
         for w in range(1, valid + 1):
@@ -725,7 +740,7 @@ class Run:
                              "flight_outcome": e["flight_outcome"], "would_book_again": e["would_book_again"],
                              "complaint": e["complaint"], "support_contact": e["support_contact"],
                              "post": e.get("post", ""), "feed": e.get("feed", []),
-                             "said": e.get("said", ""), "action": e.get("action", ""),
+                             "said": e.get("said", ""), "action": e.get("action", ""), "trust": e.get("trust"),
                              "strike_day": e.get("strike_day"), "within_24h": e.get("within_24h"),
                              "flights": e.get("flights", []), "reused": ck.get("origin_run") != self.name})
         return b, rows
@@ -734,7 +749,7 @@ class Run:
         m = re.fullmatch(rf"{re.escape(self.name)}-(.+)-w(\d+)-week", cid)
         if not m:
             return None
-        b = inputs(self.config)
+        b = self.inputs_now()
         ck = load_ckpt(b["fps"][int(m.group(2))])
         e = next((e for e in (ck or {}).get("entries", []) if e["persona"] == m.group(1)), None)
         return e and {"id": cid, "persona": e["persona"], "week": e["week"], "prompt": e["prompt"],
@@ -770,7 +785,7 @@ def assemble(run, out):
                            "had_flight_this_week": e["had_flight_this_week"], "flight_outcome": e["flight_outcome"],
                            "would_book_again": e["would_book_again"], "complaint": e["complaint"],
                            "support_contact": e["support_contact"], "post": e.get("post", ""),
-                           "said": e.get("said", ""), "action": e.get("action", ""),
+                           "said": e.get("said", ""), "action": e.get("action", ""), "trust": e.get("trust"),
                            "strike_day": e.get("strike_day"), "within_24h": e.get("within_24h"),
                            "feed": e.get("feed", []), "reused": i["weeks"][str(w)] == "reused"})
     if i["probe"]:

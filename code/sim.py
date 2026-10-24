@@ -59,6 +59,7 @@ SCHEMA = {
         "support_contact": {"type": "STRING"},
         "complaint": {"type": "BOOLEAN"},
         "memory_update": {"type": "STRING"},
+        "trust": {"type": "INTEGER", "description": "How much you trust Kestrel right now, 1 = not at all, 5 = completely."},
     },
     "required": ["status", "would_book_again", "action", "said", "reason", "memory_update"],
 }
