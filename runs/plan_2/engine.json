@@ -1,0 +1,138 @@
+{
+  "name": "plan_2",
+  "type": "plan",
+  "seed": 2,
+  "model": "gemini-3.5-flash-lite",
+  "probe": false,
+  "decisions_file": "exp/d2_free.json",
+  "surprises_file": "surprises_team09_week8.json",
+  "personas_file": "personas_66.jsonl",
+  "replicate": 0,
+  "session": false,
+  "auto": false,
+  "social": true,
+  "status": "done",
+  "phase": "done: hand-in files written",
+  "weeks": {
+    "1": "reused",
+    "2": "reused",
+    "3": "reused",
+    "4": "reused",
+    "5": "reused",
+    "6": "reused",
+    "7": "reused",
+    "8": "reused",
+    "9": "reused",
+    "10": "reused"
+  },
+  "week_source": {
+    "1": {
+      "fp": "53c5158a446892202031",
+      "origin_run": "fix_nd_s2",
+      "created": "2026-10-24T16:21:00"
+    },
+    "2": {
+      "fp": "7020162d8b82e7684d5a",
+      "origin_run": "fix_nd_s2",
+      "created": "2026-10-24T16:21:03"
+    },
+    "3": {
+      "fp": "50955505c3bb515787fc",
+      "origin_run": "fix_nd_s2",
+      "created": "2026-10-24T16:21:06"
+    },
+    "4": {
+      "fp": "08582f0749cb7280e718",
+      "origin_run": "fix_points_s2",
+      "created": "2026-10-24T16:21:10"
+    },
+    "5": {
+      "fp": "e4c10461e837cb158f08",
+      "origin_run": "fix_points_s2",
+      "created": "2026-10-24T16:21:12"
+    },
+    "6": {
+      "fp": "676cf6c49f94a2a3410f",
+      "origin_run": "fix_points_s2",
+      "created": "2026-10-24T16:21:16"
+    },
+    "7": {
+      "fp": "d5a80cbdef05e35a6130",
+      "origin_run": "doc8_plan_s2",
+      "created": "2026-10-24T16:34:57"
+    },
+    "8": {
+      "fp": "e36b82ca5d58bf86f689",
+      "origin_run": "doc8_plan_s2",
+      "created": "2026-10-24T16:35:22"
+    },
+    "9": {
+      "fp": "53b92347bcdc2c78942c",
+      "origin_run": "doc8_plan_s2",
+      "created": "2026-10-24T16:35:27"
+    },
+    "10": {
+      "fp": "b6a38cef53632016144c",
+      "origin_run": "doc8_plan_s2",
+      "created": "2026-10-24T16:35:36"
+    }
+  },
+  "played": 10,
+  "target": 10,
+  "calls_done": 0,
+  "calls_total": 0,
+  "errors": 0,
+  "tokens": {
+    "in": 0,
+    "out": 0,
+    "think": 0
+  },
+  "resumed_from": 10,
+  "created": "2026-10-24T16:43:37",
+  "started": "2026-10-24T16:43:37",
+  "finished": "2026-10-24T16:43:38",
+  "error": null,
+  "metrics": {
+    "goal_1": 96.86,
+    "goal_2": 100.0,
+    "goal_3": 3414,
+    "goal_3b": null,
+    "goal_4": 100.0,
+    "revenue_lost_usd": 0,
+    "units": {
+      "goal_1": "% of planned Kestrel flights operated in week(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, strike days left out (network, ~1,355 flights a week)",
+      "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded, weighted by represents_trips",
+      "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
+      "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+      "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M"
+    }
+  },
+  "log_id": "205765fdb9444363ad227ec7fe231384",
+  "chain": [
+    "d897c6204d2f7346a58f",
+    "53c5158a446892202031",
+    "7020162d8b82e7684d5a",
+    "50955505c3bb515787fc",
+    "08582f0749cb7280e718",
+    "e4c10461e837cb158f08",
+    "676cf6c49f94a2a3410f",
+    "d5a80cbdef05e35a6130",
+    "e36b82ca5d58bf86f689",
+    "53b92347bcdc2c78942c",
+    "b6a38cef53632016144c"
+  ],
+  "people": "02f5ecc5bb4a88a8ec94",
+  "fps": [
+    "d897c6204d2f7346a58f",
+    "53c5158a446892202031",
+    "7020162d8b82e7684d5a",
+    "50955505c3bb515787fc",
+    "08582f0749cb7280e718",
+    "e4c10461e837cb158f08",
+    "676cf6c49f94a2a3410f",
+    "d5a80cbdef05e35a6130",
+    "e36b82ca5d58bf86f689",
+    "53b92347bcdc2c78942c",
+    "b6a38cef53632016144c"
+  ]
+}

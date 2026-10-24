@@ -1,0 +1,350 @@
+{
+ "connections": {
+  "V-park-strike": [
+   "V-snowbird-strike",
+   "F-minor-strike",
+   "F-minor-ordinary"
+  ],
+  "V-park-holiday": [
+   "V-snowbird-holiday",
+   "V-snowbird-ordinary",
+   "A-senior-thanksgiving"
+  ],
+  "V-park-thanksgiving": [
+   "V-park-holiday",
+   "V-beach-strike",
+   "A-event-strike"
+  ],
+  "V-park-ordinary": [
+   "V-snowbird-thanksgiving",
+   "V-budget-ordinary",
+   "S-home-thanksgiving"
+  ],
+  "V-beach-strike": [
+   "B-corp-strike",
+   "A-senior-ordinary",
+   "S-home-strike"
+  ],
+  "V-beach-holiday": [
+   "B-contract-strike",
+   "A-event-strike",
+   "F-diaspora-holiday"
+  ],
+  "V-beach-thanksgiving": [
+   "F-grandkids-strike",
+   "V-park-strike",
+   "S-trip-thanksgiving"
+  ],
+  "V-beach-ordinary": [
+   "V-beach-holiday",
+   "V-snowbird-strike",
+   "F-adultkids-holiday"
+  ],
+  "V-snowbird-strike": [
+   "V-budget-thanksgiving",
+   "V-park-holiday",
+   "F-diaspora-ordinary"
+  ],
+  "V-snowbird-holiday": [
+   "V-park-strike",
+   "V-budget-thanksgiving",
+   "A-event-strike"
+  ],
+  "V-snowbird-thanksgiving": [
+   "V-snowbird-ordinary",
+   "V-beach-ordinary",
+   "B-corp-thanksgiving"
+  ],
+  "V-snowbird-ordinary": [
+   "V-beach-holiday",
+   "V-park-ordinary",
+   "F-diaspora-strike"
+  ],
+  "V-budget-strike": [
+   "V-beach-strike",
+   "V-beach-holiday",
+   "A-corp-ordinary"
+  ],
+  "V-budget-holiday": [
+   "V-budget-ordinary",
+   "V-beach-holiday",
+   "B-contract-thanksgiving"
+  ],
+  "V-budget-thanksgiving": [
+   "F-diaspora-holiday",
+   "B-corp-holiday",
+   "S-trip-thanksgiving"
+  ],
+  "V-budget-ordinary": [
+   "V-beach-strike",
+   "F-minor-ordinary",
+   "V-beach-thanksgiving"
+  ],
+  "F-grandkids-strike": [
+   "F-minor-holiday",
+   "B-contract-ordinary",
+   "V-snowbird-holiday"
+  ],
+  "F-grandkids-holiday": [
+   "F-minor-thanksgiving",
+   "V-budget-thanksgiving",
+   "A-senior-holiday"
+  ],
+  "F-grandkids-thanksgiving": [
+   "F-minor-ordinary",
+   "B-corp-thanksgiving",
+   "F-diaspora-strike"
+  ],
+  "F-grandkids-ordinary": [
+   "F-adultkids-strike",
+   "B-corp-holiday",
+   "A-event-strike"
+  ],
+  "F-adultkids-strike": [
+   "A-event-thanksgiving",
+   "F-adultkids-thanksgiving",
+   "F-diaspora-holiday"
+  ],
+  "F-adultkids-holiday": [
+   "A-event-thanksgiving",
+   "B-corp-holiday",
+   "A-event-strike"
+  ],
+  "F-adultkids-thanksgiving": [
+   "F-diaspora-ordinary",
+   "B-smb-strike",
+   "S-home-thanksgiving"
+  ],
+  "F-adultkids-ordinary": [
+   "B-corp-ordinary",
+   "B-smb-ordinary",
+   "F-minor-thanksgiving"
+  ],
+  "F-multigen-strike": [
+   "V-budget-thanksgiving",
+   "F-diaspora-holiday",
+   "B-contract-strike"
+  ],
+  "F-multigen-holiday": [
+   "F-adultkids-thanksgiving",
+   "F-grandkids-holiday",
+   "A-corp-holiday"
+  ],
+  "F-multigen-thanksgiving": [
+   "B-contract-strike",
+   "A-corp-ordinary",
+   "V-beach-thanksgiving"
+  ],
+  "F-multigen-ordinary": [
+   "A-event-strike",
+   "S-trip-ordinary",
+   "F-diaspora-ordinary"
+  ],
+  "F-diaspora-strike": [
+   "F-adultkids-ordinary",
+   "A-event-holiday",
+   "A-senior-thanksgiving"
+  ],
+  "F-diaspora-holiday": [
+   "F-diaspora-strike",
+   "F-adultkids-holiday",
+   "S-trip-ordinary"
+  ],
+  "F-diaspora-thanksgiving": [
+   "B-corp-thanksgiving",
+   "B-corp-ordinary",
+   "B-smb-strike"
+  ],
+  "F-diaspora-ordinary": [
+   "F-diaspora-thanksgiving",
+   "B-corp-holiday",
+   "B-corp-strike"
+  ],
+  "F-minor-strike": [
+   "F-diaspora-thanksgiving",
+   "A-senior-strike",
+   "B-contract-holiday"
+  ],
+  "F-minor-holiday": [
+   "A-event-holiday",
+   "B-corp-holiday",
+   "F-multigen-ordinary"
+  ],
+  "F-minor-thanksgiving": [
+   "F-multigen-thanksgiving",
+   "F-minor-strike",
+   "A-senior-strike"
+  ],
+  "F-minor-ordinary": [
+   "F-diaspora-strike",
+   "V-park-strike",
+   "V-park-ordinary"
+  ],
+  "S-home-strike": [
+   "F-grandkids-ordinary",
+   "S-trip-thanksgiving",
+   "A-senior-ordinary"
+  ],
+  "S-home-holiday": [
+   "S-trip-holiday",
+   "F-minor-thanksgiving",
+   "B-contract-thanksgiving"
+  ],
+  "S-home-thanksgiving": [
+   "A-corp-ordinary",
+   "A-event-ordinary",
+   "F-adultkids-ordinary"
+  ],
+  "S-home-ordinary": [
+   "F-adultkids-holiday",
+   "F-multigen-strike",
+   "B-corp-ordinary"
+  ],
+  "S-trip-strike": [
+   "A-event-ordinary",
+   "A-senior-ordinary",
+   "F-minor-strike"
+  ],
+  "S-trip-holiday": [
+   "A-event-ordinary",
+   "A-senior-holiday",
+   "F-minor-ordinary"
+  ],
+  "S-trip-thanksgiving": [
+   "S-trip-ordinary",
+   "V-budget-thanksgiving",
+   "A-senior-strike"
+  ],
+  "S-trip-ordinary": [
+   "S-trip-thanksgiving",
+   "B-corp-thanksgiving",
+   "F-diaspora-holiday"
+  ],
+  "B-corp-strike": [
+   "F-adultkids-ordinary",
+   "A-senior-holiday",
+   "B-corp-thanksgiving"
+  ],
+  "B-corp-holiday": [
+   "S-home-holiday",
+   "B-contract-thanksgiving",
+   "A-event-thanksgiving"
+  ],
+  "B-corp-thanksgiving": [
+   "F-minor-ordinary",
+   "A-senior-strike",
+   "B-contract-ordinary"
+  ],
+  "B-corp-ordinary": [
+   "A-senior-ordinary",
+   "V-budget-ordinary",
+   "S-trip-thanksgiving"
+  ],
+  "B-smb-strike": [
+   "S-home-ordinary",
+   "A-event-thanksgiving",
+   "F-adultkids-ordinary"
+  ],
+  "B-smb-holiday": [
+   "F-adultkids-ordinary",
+   "S-home-thanksgiving",
+   "B-smb-thanksgiving"
+  ],
+  "B-smb-thanksgiving": [
+   "B-contract-strike",
+   "F-multigen-holiday",
+   "F-diaspora-holiday"
+  ],
+  "B-smb-ordinary": [
+   "V-park-strike",
+   "F-grandkids-thanksgiving",
+   "V-park-holiday"
+  ],
+  "B-contract-strike": [
+   "A-senior-holiday",
+   "A-corp-ordinary",
+   "A-event-holiday"
+  ],
+  "B-contract-holiday": [
+   "F-grandkids-thanksgiving",
+   "S-home-thanksgiving",
+   "V-budget-ordinary"
+  ],
+  "B-contract-thanksgiving": [
+   "F-adultkids-thanksgiving",
+   "F-grandkids-strike",
+   "B-smb-thanksgiving"
+  ],
+  "B-contract-ordinary": [
+   "S-home-ordinary",
+   "B-corp-ordinary",
+   "V-snowbird-holiday"
+  ],
+  "A-senior-strike": [
+   "V-park-strike",
+   "B-smb-ordinary",
+   "S-trip-ordinary"
+  ],
+  "A-senior-holiday": [
+   "A-corp-ordinary",
+   "F-multigen-ordinary",
+   "F-minor-ordinary"
+  ],
+  "A-senior-thanksgiving": [
+   "S-trip-holiday",
+   "A-corp-holiday",
+   "S-home-holiday"
+  ],
+  "A-senior-ordinary": [
+   "F-multigen-ordinary",
+   "B-corp-ordinary",
+   "V-beach-holiday"
+  ],
+  "A-event-strike": [
+   "A-senior-ordinary",
+   "F-minor-strike",
+   "A-event-thanksgiving"
+  ],
+  "A-event-holiday": [
+   "F-multigen-strike",
+   "B-corp-holiday",
+   "F-minor-holiday"
+  ],
+  "A-event-thanksgiving": [
+   "A-senior-thanksgiving",
+   "A-senior-strike",
+   "B-smb-ordinary"
+  ],
+  "A-event-ordinary": [
+   "F-diaspora-thanksgiving",
+   "S-home-thanksgiving",
+   "F-multigen-strike"
+  ],
+  "A-corp-holiday": [
+   "V-park-strike",
+   "F-adultkids-ordinary",
+   "F-multigen-thanksgiving"
+  ],
+  "A-corp-ordinary": [
+   "V-budget-ordinary",
+   "V-beach-ordinary",
+   "B-contract-ordinary"
+  ]
+ },
+ "influencers": [
+  "V-park-holiday",
+  "V-beach-strike",
+  "V-snowbird-holiday",
+  "V-snowbird-ordinary",
+  "V-budget-ordinary",
+  "F-grandkids-strike",
+  "F-grandkids-ordinary",
+  "F-adultkids-strike",
+  "F-adultkids-holiday",
+  "F-adultkids-ordinary",
+  "F-minor-thanksgiving",
+  "S-home-ordinary",
+  "B-contract-ordinary",
+  "A-corp-ordinary"
+ ]
+}

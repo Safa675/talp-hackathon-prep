@@ -1,6 +1,13 @@
 # Team 09 · Kestrel Air: how we built the simulation
 
-66 LLM personas live through the ten weeks, one model call per persona per week. Code builds the world each persona sees: what happened to its flights, the recovery options that exist for it, the company's message, the news and its friends' posts. The model (gemini-3.5-flash-lite) decides what the person says, does and reports. Code: `code/sim.py` (world and prompts), `code/engine.py` (runs, checkpoints, metrics, interviews), `code/server.py` and `code/ui/simple.html` (a one-page control room).
+66 LLM personas live through the ten weeks, one model call per persona per week. Code builds the world each persona sees: what happened to its flights, the recovery options that exist for it, the company's message, the news and its friends' posts. The model (gemini-3.5-flash-lite) decides what the person says, does and reports. Code:
+- `code/sim.py`: world and prompts.
+- `code/engine.py`: runs, checkpoints, metrics, interviews.
+- `code/server.py` and `code/ui/simple.html`: a one-page control room.
+- `code/personas_build/`: how the 66 personas were made (segments, raking, LLM fill-in, frozen output).
+- `code/experiments/`: the decision experiments behind section 6.
+
+Inputs: `code/personas_66.jsonl`, `code/decisions_team09_fresh.json` and `code/exp/d2_free.json` (the locked decisions), and `code/surprises_team09_week8.json` (the events). The five hand-in runs are in `runs/`.
 
 ## 1. Personas: who and why
 
@@ -112,7 +119,7 @@ Each persona row counts with its `represents_trips` weight. "No worse than last 
 
 ## 6. Experiments
 
-**E1. Which week-8 package (gemini-3.5-flash-lite, seeds 1–3, weeks 1–7 identical within each seed).** Totals over three seeds; 16 persona flights on the strike days per seed.
+**E1. Which week-8 package (gemini-3.5-flash-lite, seeds 1–3, weeks 1–7 identical within each seed; `code/experiments/team09-decision-retest.md`).** Totals over three seeds; 16 persona flights on the strike days per seed.
 
 | Week-8 package | Cost | Strike-day cancellations / 48 | Resolved within 24h, weeks 8–9 | Complaints, weeks 8–9 (of 396 persona-weeks) | "Would book again: yes", week 10 (of 198) |
 |---|---:|---:|---:|---:|---:|
@@ -124,7 +131,7 @@ Each persona row counts with its `represents_trips` weight. "No worse than last 
 
 Backup ground handling plus the partner deal does the work. No third action was consistently better, and the gaps between them are a few complaint flags. A week-7 version lost partner cover in week 9 (resolution 3/4 against 4/4), so we chose week 8. We kept free changes as the third action because the union says the strike "may be extended", and free changes until Jan 3 protect travelers if it is. That choice rests on the risk, not on the simulation.
 
-**E2. Second model (seed 1, gemini-3.7-flash against 3.5-flash-lite).** The week-8 conclusion holds with both models.
+**E2. Second model (seed 1, gemini-3.7-flash against 3.5-flash-lite; `code/experiments/team09-model-check-3.7-flash.md`).** The week-8 conclusion holds with both models.
 
 | Model | Week-8 package | Goal 2 | NPS | Complaints, weeks 8–9 |
 |---|---|---:|---:|---:|
@@ -159,7 +166,7 @@ The 98% goal is met only under the mildest reading. The plan lands between 96.9%
 | "Would book again: yes", week 10 (weighted) | 59% | 69% | 34% | 62% | 97% |
 | Strike-day flights (16): canceled / 3h+ late | 0 / 3 | 1 / 1 | 3 / 8 | 3 / 8 | 0 / 3 |
 
-Runs `doc8_plan_s1`, `doc8_plan_s2`, `doc8_nd_s1`, `doc8_nd_s2`, `doc8_nos_s1`. Both messages reached all 66 personas word for word from their weeks (0 before). In both seeds the plan beats no decision on every measure the personas drive: a third to a half fewer complaint flags, higher trust, an NPS that ends near where it started instead of falling 20–32 points, and more people who would book again. The week-8 shutdown update cost both scenarios a little in weeks 8–10, and the plan's lead held.
+Runs `runs/plan_1`, `plan_2`, `nodecision_1`, `nodecision_2` and `plan_nosurprises`. The hand-in asks for check-ins only in `plan_1` and `nodecision_1`. So the NPS rows for seed 2 and for surprises off come from extra runs with the same inputs and check-ins switched on; their weeks are identical to the hand-in runs, because the engine reuses them. Both messages reached all 66 personas word for word from their weeks (0 before). In both seeds the plan beats no decision on every measure the personas drive: a third to a half fewer complaint flags, higher trust, an NPS that ends near where it started instead of falling 20–32 points, and more people who would book again. The week-8 shutdown update cost both scenarios a little in weeks 8–10, and the plan's lead held.
 
 The plan's revenue loss in seed 1 comes from one real switch: a persona offered a same-day partner seat "booked a last-minute ticket on a rival airline" instead. Without decisions, strike-day travelers canceled their trips: the family with an elderly parent in both seeds, plus a family with young children and a student group in seed 1. No-decision revenue swings between seeds (93.95% against 99.74%), so one seed proves little. With the surprises off, the plan lifts raw NPS from −26 to +11. Real customers would hardly reward a strike week that much, so we treat NPS gains as an upper bound.
 

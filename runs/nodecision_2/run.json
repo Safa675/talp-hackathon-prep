@@ -1,0 +1,7 @@
+{
+  "company": "kestrel",
+  "type": "nodecision",
+  "seed": 2,
+  "model": "gemini-3.5-flash-lite",
+  "decisions": []
+}
