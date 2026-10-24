@@ -20,7 +20,8 @@ from urllib.parse import parse_qs, urlparse
 import engine
 
 HERE = engine.HERE
-UI = HERE / "ui" / "index.html"
+UI = HERE / "ui" / "index.html"          # the full control room, at /advanced
+SIMPLE_UI = HERE / "ui" / "simple.html"  # one page: weeks, events, decisions, persona answers, questions
 VERSIONS = engine.LOGS / "versions"
 SETTINGS = HERE / "settings.json"
 SAFE = re.compile(r"^[\w.-]+\.jsonl?$")
@@ -208,7 +209,9 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
-            if u.path in ("/", "/index.html"):
+            if u.path in ("/", "/simple"):
+                return self.send(SIMPLE_UI.read_bytes(), ctype="text/html; charset=utf-8")
+            if u.path in ("/advanced", "/index.html"):
                 return self.send(UI.read_bytes(), ctype="text/html; charset=utf-8")
             if u.path == "/api/state":
                 return self.send(state())
@@ -216,6 +219,8 @@ class Handler(BaseHTTPRequestHandler):
                 _, personas = engine.load_personas(HERE / q.get("personas", engine.DEFAULT_PERSONAS))
                 return self.send({"menu": engine.MENU, "budget": engine.BUDGET, "channels": engine.CHANNELS,
                                   "dates": engine.DATES, "groups": sorted({p["group"] for p in personas}),
+                                  "targets": list(engine.sim.TARGET_RULES),
+                                  "news": engine.sim.STRIKE_NEWS,
                                   "personas": [{"id": p["id"], "group": p["group"], "name": p.get("name")} for p in personas]})
             if u.path == "/api/run":
                 r = run_detail(q["name"])

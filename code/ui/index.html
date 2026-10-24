@@ -816,7 +816,7 @@ let DEC = [], SUR = [];
 async function loadMeta(){ META = await api("/api/meta"); }
 function targetSel(d, i){
   const t = d.target, isList = Array.isArray(t), val = isList ? "__list" : t;
-  return `<select onchange="setTarget(${i},this.value)">${["everyone",...META.groups].map(g=>`<option value="${esc(g)}" ${g===val?"selected":""}>${g==="everyone"?"herkes":esc(g)}</option>`).join("")}<option value="__list" ${val==="__list"?"selected":""}>özel liste (id/grup)</option></select>
+  return `<select onchange="setTarget(${i},this.value)">${["everyone",...(META.targets||[]),...META.groups].map(g=>`<option value="${esc(g)}" ${g===val?"selected":""}>${g==="everyone"?"herkes":esc(g)}</option>`).join("")}<option value="__list" ${val==="__list"?"selected":""}>özel liste (id/grup)</option></select>
     ${isList?`<input style="width:100%;margin-top:4px" value="${esc(t.join(", "))}" onchange="DEC[${i}].target=this.value.split(',').map(s=>s.trim()).filter(Boolean);decChanged()" placeholder="V1, F2, students">`:""}`;
 }
 function setTarget(i, v){ DEC[i].target = v === "__list" ? [] : v; drawDecs(); }

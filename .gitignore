@@ -11,3 +11,6 @@ __pycache__/
 code/checkpoints/
 code/submission/
 code/sessions/
+code/runs/
+code/logs/
+code/settings.json

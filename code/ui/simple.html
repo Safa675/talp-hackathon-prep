@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kestrel Simulation</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--panel2:#f0f2f5;--ink:#15181d;--mute:#5d6672;--line:#dfe3e8;--acc:#2f5bd3;--acc-ink:#fff;--bad:#c2372f;--warn:#b7791f;--ok:#1f8a4c;
+  --fly:#3d9a62;--reb:#3f73d0;--moved:#e08a2c;--cancel:#c94a42;--none:#c9ced6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--panel:#191d23;--panel2:#20252c;--ink:#e7eaee;--mute:#9aa3ae;--line:#2c323a;--acc:#6d8ff0;--acc-ink:#0d1117;--none:#3a414a}}
+:root[data-theme="dark"]{--bg:#111418;--panel:#191d23;--panel2:#20252c;--ink:#e7eaee;--mute:#9aa3ae;--line:#2c323a;--acc:#6d8ff0;--acc-ink:#0d1117;--none:#3a414a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--acc)}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;max-width:1280px;margin:0 auto}
+h1{font-size:16px;margin:0}
+.spacer{flex:1}
+.mute{color:var(--mute)}.small{font-size:12.5px}.bad{color:var(--bad)}.warn{color:var(--warn)}.ok{color:var(--ok)}
+button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:6px 12px}
+button.p{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
+textarea{width:100%;resize:vertical}
+.weeks{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;max-width:1280px;margin:10px auto 0}
+.weeks button{padding:5px 2px;font-size:12px;line-height:1.2;border-radius:6px;text-align:center}
+.weeks button b{display:block;font-size:13px}
+.weeks .played{background:color-mix(in srgb,var(--fly) 22%,var(--panel));border-color:var(--fly)}
+.weeks .stale{background:color-mix(in srgb,var(--moved) 22%,var(--panel));border-color:var(--moved)}
+.weeks .running{animation:pulse 1s infinite alternate;border-color:var(--warn)}
+.weeks .sel{outline:2px solid var(--acc);outline-offset:1px}
+.weeks .now::after{content:"now";display:block;font-size:10px;color:var(--acc);font-weight:700}
+@keyframes pulse{to{opacity:.5}}
+main{max-width:1280px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:14px;margin:0 0 8px}
+.item{padding:7px 0;border-bottom:1px dashed var(--line)}.item:last-child{border:0}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;color:#fff;white-space:nowrap}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--panel2);color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.pc{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--none);border-radius:9px;padding:10px 12px;cursor:pointer}
+.pc:hover{border-color:var(--mute)}
+.pc .said{margin-top:6px}
+.pc .post{margin-top:6px;font-size:12.5px;border-left:2px solid var(--acc);padding-left:8px;color:var(--mute)}
+.sum{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.ans{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
+.bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--mute);margin-bottom:6px}
+.banner{border:1px solid var(--moved);border-radius:8px;padding:8px 10px;margin-bottom:12px;background:color-mix(in srgb,var(--moved) 10%,var(--panel))}
+.hidden{display:none!important}
+@media (max-width:900px){main{grid-template-columns:1fr}.weeks{grid-template-columns:repeat(5,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Kestrel simulation</h1>
+    <select id="sess" title="Simulation"></select>
+    <span class="small mute" id="calNow"></span>
+    <span class="spacer"></span>
+    <span class="small" id="runInfo"></span>
+    <button class="p" id="play">Play</button>
+    <button id="stop" class="hidden">Stop</button>
+    <a class="small" href="/advanced">advanced</a>
+  </div>
+  <div class="weeks" id="weeks"></div>
+</header>
+
+<div id="empty" class="hidden" style="max-width:520px;margin:40px auto;padding:0 16px">
+  <div class="card">
+    <h2>Start a simulation</h2>
+    <p class="small mute">30 personas live through the ten weeks with you, one week at a time. Each week you add the events from the dashboard and your decisions, play the week, read what every persona did, and ask them anything.</p>
+    <label class="f">Name<input id="nName" value="main"></label>
+    <label class="f">Model<select id="nModel"></select></label>
+    <label class="row small"><input type="checkbox" id="nSocial" checked> personas see each other's posts</label>
+    <label class="row small"><input type="checkbox" id="nAuto" checked> play each week automatically when the calendar reaches it</label>
+    <p><button class="p" id="nGo">Start</button> <span class="small bad" id="nMsg"></span></p>
+  </div>
+</div>
+
+<main id="app" class="hidden">
+  <aside>
+    <div class="card">
+      <h2 id="wkTitle">Week</h2>
+      <div id="events"></div>
+      <textarea id="evText" rows="2" placeholder="New event this week (paste the dashboard announcement)"></textarea>
+      <div class="row" style="margin-top:6px">
+        <select id="evEffect" title="How we read it: what it does to flights this week and next">
+          <option value="none">no effect on flights</option><option value="delays">some delays</option>
+          <option value="some cancellations">some cancellations</option><option value="many cancellations">many cancellations</option></select>
+        <select id="evScope" title="Which flights"><option value="all">all flights</option><option value="bases">Orlando &amp; Philadelphia</option><option value="intl">Mexico &amp; Caribbean</option></select>
+        <label class="small row"><input type="checkbox" id="evKestrel"> Kestrel's own fault</label></div>
+      <input id="evReading" placeholder="How we read it (one line, for TEAM_DOC)" style="width:100%;margin-top:6px">
+      <div class="row" style="margin-top:6px"><button id="evAdd">Add event</button><span class="small" id="evMsg"></span></div>
+    </div>
+    <div class="card">
+      <h2>Decisions</h2>
+      <div id="decs"></div>
+      <details id="decForm" style="margin-top:8px"><summary class="small">Add a decision starting this week</summary>
+        <div id="decActs" style="margin-top:8px"></div>
+        <button class="small" id="decActAdd" style="padding:3px 8px">+ action</button>
+        <label class="f" style="margin-top:8px">Who gets it<select id="decTarget"></select></label>
+        <label class="f">Message, word for word <span id="decLen">0/600</span><textarea id="decMsg" rows="4"></textarea></label>
+        <label class="f">Why (three lines)<textarea id="decWhy" rows="3"></textarea></label>
+        <div class="row"><button class="p" id="decSave">Save decision</button><span class="small" id="decMsgOut"></span></div>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Ask the personas</h2>
+      <label class="f">Who<select id="askWho"></select></label>
+      <textarea id="askQ" rows="3" placeholder="e.g. What have you heard about the strike, and what will you do?"></textarea>
+      <div class="row" style="margin-top:6px"><button class="p" id="askGo">Ask</button><select id="askModel" title="Model for answers"></select><span class="small mute" id="askInfo"></span></div>
+    </div>
+  </aside>
+  <section>
+    <div id="banner"></div>
+    <div id="answers"></div>
+    <div class="sum" id="sum"></div>
+    <div class="grid" id="people"></div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = async (path, body) => { const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
+const store = {get(k,d){try{return localStorage.getItem(k) ?? d}catch{return d}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+const DATES = ["Nov 2–8","Nov 9–15","Nov 16–22","Nov 23–29","Nov 30–Dec 6","Dec 7–13","Dec 14–20","Dec 21–27","Dec 28–Jan 3","Jan 4–10"];
+const TAGS = {4:"Thanksgiving",8:"Christmas · strike",9:"New Year"};
+const COL = {"flies as planned":"var(--fly)","rebooked":"var(--reb)","moved to another airline":"var(--moved)","canceled the trip":"var(--cancel)"};
+const FLIGHT = {canceled:"✕ flight canceled", delayed:"◐ flight delayed", "on time":"✈ flew on time"};
+const EFFECT = {"Lease":"halves cancellations for 2 weeks; canceled passengers get a seat the next morning","Backup ground":"strike days: cancellations 30%→7%, 3h+ delays 45%→15%, fewer lost bags","Free changes":"target can change or cancel bookings for free for 2 weeks","Goodwill":"disrupted passengers in the target get the credit or cash","partner airline":"canceled passengers in the target get a partner seat the same day","Hotel rooms":"stranded passengers in the target get a hotel","Extra airport":"phone wait on disruption days 120→20 min","Fare cap":"target sees capped fares","Fare sale":"target sees a fare sale","Double loyalty":"disrupted passengers in the target get double points","Merge low-load":"3% of ordinary-week flights are moved a few hours (saves $0.25M)"};
+const effectOf = a => Object.entries(EFFECT).find(([k]) => a.includes(k))?.[1] || "";
+const STRIKE = "Known crisis: 48-hour ground handling strike at Orlando and Philadelphia on Dec 22–23 (busiest week of the year). Personas hear about it in week 7.";
+let S, META, D, sel = +store.get("week", 1), name = store.get("sess", "");
+
+/* ---------- data ---------- */
+async function load(){
+  S = await api("/api/state");
+  const sessions = S.runs.filter(r => r.session);
+  if (!sessions.length) { $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); drawHeader(null); return; }
+  $("#empty").classList.add("hidden"); $("#app").classList.remove("hidden");
+  if (!sessions.find(r => r.name === name)) name = sessions[0].name;
+  const opts = sessions.map(r => `<option ${r.name===name?"selected":""}>${esc(r.name)}</option>`).join("") + `<option value="__new">+ new simulation</option>`;
+  if ($("#sess")._o !== opts) { $("#sess").innerHTML = opts; $("#sess")._o = opts; }
+  D = await api("/api/run?name=" + encodeURIComponent(name));
+  drawHeader(D); drawWeek();
+}
+function weekState(w){
+  const i = D.info, v = D.validity?.valid_through ?? i.played;
+  if (["running","queued"].includes(i.status) && w > v && w <= (i.target || 0)) return "running";
+  if (w <= v) return "played"; if (w <= i.played) return "stale"; return "";
+}
+function drawHeader(d){
+  const c = S.calendar, cw = c.week;
+  $("#calNow").textContent = cw === 0 ? `calendar starts ${c.starts[0].slice(11,16)}` : cw === 11 ? "calendar finished" : `now: week ${cw} · next week at ${c.starts[cw].slice(11,16)}`;
+  if (!d) { $("#weeks").innerHTML = ""; $("#play").classList.add("hidden"); return; }
+  const i = d.info, busy = ["running","queued"].includes(i.status), v = d.validity?.valid_through ?? i.played;
+  $("#weeks").innerHTML = DATES.map((dt,k) => { const w = k+1;
+    return `<button class="${weekState(w)} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})"><b>Week ${w}</b>${dt}${TAGS[w]?`<br><span class="mute">${TAGS[w]}</span>`:""}</button>`; }).join("");
+  const next = Math.min(10, v + 1);
+  $("#play").classList.toggle("hidden", busy || v >= 10); $("#stop").classList.toggle("hidden", !busy);
+  $("#play").textContent = d.validity?.stale_from ? `Replay from week ${d.validity.stale_from}` : `Play week ${next}`;
+  $("#play").onclick = () => play(next);
+  $("#runInfo").innerHTML = busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
+    : `<span class="mute">${esc(i.model)}${i.auto?" · auto":""}${i.social?" · social":""}</span>`;
+}
+function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); }
+
+/* ---------- the selected week ---------- */
+function drawWeek(){
+  const w = sel, st = weekState(w);
+  $("#wkTitle").innerHTML = `Week ${w} · ${DATES[w-1]}${TAGS[w]?` · <span class="warn">${TAGS[w]}</span>`:""}`;
+  const evs = (D.surprises||[]).filter(s => s.week === w);
+  const news = META.news?.[w];
+  $("#events").innerHTML = (w === 8 ? `<div class="item">${STRIKE}</div>` : "") + (news ? `<div class="item small"><span class="mute">Every persona sees:</span> ${esc(news)}</div>` : "")
+    + (evs.map(s => `<div class="item">${esc(s.text)}<div class="small mute">${s.effect && s.effect!=="none" ? `${esc(s.effect)} on ${{all:"all flights",bases:"Orlando & Philadelphia flights",intl:"Mexico & Caribbean flights"}[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights"}${s.reading?` · read: ${esc(s.reading)}`:""}</div></div>`).join("") || (news ? "" : `<div class="item mute">No events this week.</div>`))
+    + (D.info.type === "plan_nosurprises" ? `<div class="item small mute">This simulation ignores announcements (plan_nosurprises).</div>` : "");
+  const decs = D.decisions || [];
+  $("#decs").innerHTML = D.info.type === "nodecision" ? `<div class="mute small">No decisions in this simulation (business as usual).</div>` :
+    decs.length ? decs.map((d,i) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · from week ${d.week}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
+      ${d.actions.map(a=>`<div class="small">${esc(a.action+(a.level!=="on"?` (${a.level})`:""))}<br><span class="mute">→ ${esc(effectOf(a.action))}</span></div>`).join("")}“${esc(d.message)}”
+      <div class="row" style="margin-top:4px"><button class="small" style="padding:2px 8px" onclick="delDecision(${i})">remove</button></div></div>`).join("") + budgetLine(decs)
+    : `<div class="mute small">No decisions yet. You can make two, in any weeks.</div>`;
+  $("#decForm").classList.toggle("hidden", D.info.type === "nodecision" || decs.length >= 2);
+  const rows = (D.weekly||[]).filter(r => r.week === w);
+  $("#banner").innerHTML = st === "stale" ? `<div class="banner">The events or decisions for this week changed after it was played. Press <b>Replay</b> to update it${D.info.auto?" (auto mode does this within 15 seconds)":""}.</div>` : "";
+  if (!rows.length) {
+    $("#sum").innerHTML = ""; $("#people").innerHTML = `<div class="card mute" style="grid-column:1/-1">${st==="running"?"Playing this week…":`Week ${w} has not been played yet.`}</div>`; return;
+  }
+  const n = rows.length, cnt = s => rows.filter(r => r.status === s).length, yes = rows.filter(r => r.would_book_again === "yes").length;
+  $("#sum").innerHTML = Object.keys(COL).map(s => `<span class="chip" style="background:${COL[s]}">${s}: ${cnt(s)}</span>`).join("")
+    + `<span class="pill">would book again: ${Math.round(100*yes/n)}%</span><span class="pill">complaints: ${rows.filter(r=>r.complaint).length}</span><span class="pill">posts: ${rows.filter(r=>r.post).length}</span>`;
+  const by = Object.fromEntries(D.personas.map(p => [p.id, p]));
+  $("#people").innerHTML = rows.map(r => { const p = by[r.persona] || {};
+    return `<div class="pc" style="border-left-color:${COL[r.status]||"var(--none)"}" onclick="askOne('${esc(r.persona)}')" title="Click to ask ${esc(p.name||r.persona)} a question">
+      <div class="row" style="justify-content:space-between"><b>${esc(p.name||r.persona)}</b><span class="small mute">${esc(r.persona)} · ${esc(p.group||"")}</span></div>
+      <div class="row small" style="margin-top:3px"><span class="chip" style="background:${COL[r.status]}">${esc(r.status)}</span><span class="mute">book again: <b>${esc(r.would_book_again)}</b></span>${r.complaint?`<span class="bad">complained</span>`:""}</div>
+      ${(r.flights||[]).length?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]||""}${r.strike_day?" · strike day":""}${r.within_24h===false?' · <span class="bad">not resolved in 24h</span>':""}</div><details class="small mute" onclick="event.stopPropagation()"><summary>what happened</summary>${(r.flights||[]).map(esc).join("<br>")}</details>`
+        : FLIGHT[r.flight_outcome]?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]}</div>`:""}
+      ${r.said?`<div class="said">“${esc(r.said)}”</div>`:""}
+      ${r.post?`<div class="post">posted: ${esc(r.post)}</div>`:""}</div>`; }).join("");
+}
+function budgetLine(decs){
+  let cost = 0; decs.forEach(d => d.actions.forEach(a => cost += (META.menu[a.action]||{})[a.level] || 0));
+  return `<div class="small ${cost>META.budget?"bad":"mute"}" style="margin-top:6px">Budget used: $${cost.toFixed(2)}M of $${META.budget}M</div>`;
+}
+
+/* ---------- actions ---------- */
+async function play(until){ try { await api("/api/play", {name, until}); } catch(e){ alert(e.message); } load(); }
+$("#stop").onclick = async () => { await api("/api/cancel", {name}); load(); };
+$("#sess").onchange = e => { if (e.target.value === "__new") { $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); return; } name = e.target.value; store.set("sess", name); load(); };
+
+async function readFile(f){ try { return (await api("/api/file?name=" + encodeURIComponent(f))).content; } catch { return []; } }
+$("#evAdd").onclick = async () => {
+  const text = $("#evText").value.trim(); if (!text) return;
+  const file = D.config.surprises || "surprises.json";
+  const ev = {week: sel, text, effect: $("#evEffect").value, scope: $("#evScope").value, kestrel_caused: $("#evKestrel").checked, reading: $("#evReading").value.trim()};
+  try { const list = await readFile(file); list.push(ev); list.sort((a,b) => a.week - b.week);
+    await api("/api/file", {name: file, content: list, note: `event added for week ${sel}`});
+    $("#evText").value = ""; $("#evReading").value = ""; $("#evMsg").innerHTML = `<span class="ok">Added.</span>`; load();
+  } catch(e){ $("#evMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+};
+
+function actRow(a){ const acts = Object.keys(META.menu);
+  return `<div class="row act" style="margin-bottom:4px"><select class="aName" style="flex:1;min-width:0" onchange="this.nextElementSibling.innerHTML=levels(this.value)">${acts.map(x=>`<option ${x===a?"selected":""}>${esc(x)}</option>`).join("")}</select><select class="aLevel">${levels(a)}</select></div>`; }
+function levels(a){ return Object.entries(META.menu[a]).map(([l,c]) => `<option value="${esc(l)}">${esc(l)} · $${c}M</option>`).join(""); }
+$("#decActAdd").onclick = () => { if (document.querySelectorAll("#decActs .act").length < 3) $("#decActs").insertAdjacentHTML("beforeend", actRow(Object.keys(META.menu)[1])); };
+$("#decMsg").oninput = e => { $("#decLen").textContent = `${e.target.value.length}/600`; $("#decLen").className = e.target.value.length > 600 ? "bad" : ""; };
+$("#decSave").onclick = async () => {
+  const actions = [...document.querySelectorAll("#decActs .act")].map(r => ({action: r.querySelector(".aName").value, level: r.querySelector(".aLevel").value}));
+  const d = {week: sel, target: $("#decTarget").value, actions, message: $("#decMsg").value.trim(), channels: ["app","email","text"], why: $("#decWhy").value.trim()};
+  if (!d.message) { $("#decMsgOut").innerHTML = `<span class="bad">Write the message.</span>`; return; }
+  try { const file = D.config.decisions || `decisions_${name}.json`;
+    const list = D.config.decisions ? await readFile(file) : []; list.push(d); list.sort((a,b) => a.week - b.week);
+    const r = await api("/api/file", {name: file, content: list, note: `decision added for week ${sel}`});
+    if (!D.config.decisions) await api("/api/session/update", {name, decisions: file});
+    $("#decMsgOut").innerHTML = r.issues?.length ? `<span class="warn">Saved. Still to fix: ${esc(r.issues.join("; "))}</span>` : `<span class="ok">Saved.</span>`;
+    $("#decMsg").value = ""; $("#decWhy").value = ""; load();
+  } catch(e){ $("#decMsgOut").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+};
+async function delDecision(i){
+  if (!confirm("Remove this decision?")) return;
+  const file = D.config.decisions, list = await readFile(file); list.splice(i, 1);
+  await api("/api/file", {name: file, content: list, note: "decision removed"}); load();
+}
+
+function askOne(id){ $("#askWho").value = "p:" + id; $("#askQ").focus(); }
+$("#askGo").onclick = async () => {
+  const q = $("#askQ").value.trim(), who = $("#askWho").value; if (!q) return;
+  const ids = who === "all" ? D.personas.map(p => p.id) : who.startsWith("g:") ? D.personas.filter(p => p.group === who.slice(2)).map(p => p.id) : [who.slice(2)];
+  const week = Math.min(sel, D.validity?.valid_through ?? D.info.played);
+  $("#askGo").disabled = true; $("#askInfo").textContent = `asking ${ids.length}…`;
+  try { const recs = await api("/api/interview", {source: name, personas: ids, question: q, week, model: $("#askModel").value, asker: "a Kestrel board member"});
+    $("#answers").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">“${esc(q)}”</h2><button onclick="$('#answers').innerHTML=''" style="padding:2px 8px">close</button></div>
+      <p class="small mute">${week === 0 ? "Before week 1" : `At the end of week ${week}`} · ${recs.length} answer${recs.length>1?"s":""}</p>`
+      + recs.map(r => `<div class="ans"><b>${esc(r.name||r.persona)}</b> <span class="small mute">${esc(r.persona)} · ${esc(r.group||"")}</span><div style="margin-top:4px">${esc(r.answer||r.error).replace(/\n/g,"<br>")}</div></div>`).join("") + `</div>`;
+    $("#askInfo").textContent = "";
+  } catch(e){ $("#askInfo").textContent = e.message; }
+  $("#askGo").disabled = false;
+};
+
+$("#nGo").onclick = async () => {
+  try { await api("/api/session", {name: $("#nName").value.trim(), type: "plan", seed: 1, model: $("#nModel").value, probe: true,
+      social: $("#nSocial").checked, auto: $("#nAuto").checked, surprises: "surprises.json"});
+    name = $("#nName").value.trim(); store.set("sess", name); sel = 1; load();
+  } catch(e){ $("#nMsg").textContent = e.message; }
+};
+
+/* ---------- boot ---------- */
+(async () => {
+  META = await api("/api/meta");
+  await load();
+  const models = Object.keys(S.models).filter(m => !S.models[m].offline);
+  $("#nModel").innerHTML = models.map(m => `<option ${m===S.default_model?"selected":""}>${m}</option>`).join("");
+  $("#askModel").innerHTML = models.map(m => `<option ${m==="gemini-3.5-flash-lite"?"selected":""}>${m}</option>`).join("");
+  $("#decActs").innerHTML = actRow(Object.keys(META.menu)[1]);
+  $("#decTarget").innerHTML = `<option value="everyone">everyone</option>` + (META.targets||[]).map(t => `<option>${esc(t)}</option>`).join("") + META.groups.map(g => `<option>${esc(g)}</option>`).join("");
+  const ps = D?.personas || META.personas;
+  $("#askWho").innerHTML = `<option value="all">all personas</option>` + META.groups.map(g => `<option value="g:${esc(g)}">all ${esc(g)}</option>`).join("")
+    + ps.map(p => `<option value="p:${esc(p.id)}">${esc(p.name||p.id)} (${esc(p.id)})</option>`).join("");
+  setInterval(load, 3000);
+})();
+</script>
+</body>
+</html>

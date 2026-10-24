@@ -89,6 +89,7 @@ MENU = {
     "Merge low-load flights, announced at least 7 days ahead (passengers moved to other flights)": {"on": -0.25},
 }
 BUDGET = 3.0
+GROUPS = ["vacationers", "families visiting relatives", "students", "business travelers", "travel agencies"]
 CHANNELS = ["app", "email", "text", "social media"]
 
 INTERVIEW_SYSTEM = (
@@ -178,10 +179,10 @@ def resolve(path):
 @functools.lru_cache(maxsize=1)
 def prompt_code_hash():
     """Anything in sim.py that shapes a prompt or the world; editing it invalidates checkpoints."""
-    parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message,
-                                            sim.trips_in_week, sim.week_facts, sim.visible,
+    parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message, sim.effects,
+                                            sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
                                             sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
-    return h(parts, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
+    return h(parts, sim.P, sim.EVENT_EFFECTS, sim.STRIKE_NEWS, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -270,6 +271,15 @@ def load_personas(path):
     return text, personas
 
 
+MEMORY_WEEKS = 6
+
+
+def remember(memory, line):
+    """Memory is the last MEMORY_WEEKS weekly notes, so the strike is still remembered at week 10."""
+    kept = [l for l in memory.split("\n") if l.startswith("Week ")]
+    return "\n".join((kept + [line])[-MEMORY_WEEKS:])
+
+
 def shown(persona):
     return {k: v for k, v in persona.items() if k not in ENGINE_HIDDEN}
 
@@ -308,8 +318,13 @@ def validate_decisions(decs):
     for i, d in enumerate(decs, 1):
         if type(d.get("week")) is not int or not 1 <= d["week"] <= 10:
             issues.append(f"decision {i}: week must be 1-10")
-        if not d.get("target"):
+        t = d.get("target")
+        known = {"everyone", "all", *sim.TARGET_RULES, *GROUPS}
+        if not t:
             issues.append(f"decision {i}: no target")
+        elif any(x not in known and " " in x for x in (t if isinstance(t, list) else [t])):
+            issues.append(f"decision {i}: target '{t}' matches no one; use everyone, a group, persona ids or one of: "
+                          + ", ".join(sim.TARGET_RULES))
         acts = d.get("actions") or []
         if not 1 <= len(acts) <= 3:
             issues.append(f"decision {i}: needs 1-3 actions")
@@ -347,7 +362,7 @@ def inputs(cfg):
     fps = [h(prompt_code_hash(), personas_text, cfg["model"], cfg["seed"], cfg["replicate"],
              social_graph(personas) if cfg.get("social") else None)]
     for w in WEEKS:
-        fps.append(h(fps[-1], w, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] == w]))
+        fps.append(h(fps[-1], w, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] <= w]))
     return {"personas_text": personas_text, "personas": personas, "decisions": decisions,
             "surprises": surprises, "fps": fps}
 
@@ -461,11 +476,13 @@ class Run:
         self.by_id = {p["id"]: p for p in self.personas}
         self.memory = {p["id"]: "Has the trips listed in the persona booked. No problems so far." for p in self.personas}
         self.posts = {}  # persona id -> what it posted last week
+        self.last_status = {}
 
     def carry(self, entries):
         """State the next week reads: each persona's rolling memory and last week's posts."""
         self.memory = {e["persona"]: e["memory_after"] for e in entries}
         self.posts = {e["persona"]: e.get("post") or "" for e in entries}
+        self.last_status = {e["persona"]: e["status"] for e in entries}
 
     def feed(self, p, w):
         """What this persona saw from other personas this week: posts from its connections last week,
@@ -599,7 +616,9 @@ class Run:
             return None
         i = self.info
         rng = random.Random(f"{i['seed']}-{p['id']}-{w}")
-        has_flight, outcome, facts = sim.week_facts(p, w, rng, self.surprises, True)
+        has_flight, outcome, facts, world = sim.week_facts(p, w, rng, self.surprises, True, self.decisions)
+        if self.last_status.get(p["id"]):
+            facts = [f"Your booking status last week: {self.last_status[p['id']]}."] + facts
         feed = self.feed(p, w)
         if feed:
             facts = facts + ["Social media and people you know, last week: " + " | ".join(feed)]
@@ -610,13 +629,14 @@ class Run:
         parsed, text, err, use = call(i["model"], prompt, schema, i["seed"], level, sim.valid_week)
         self.count(err, use)
         e = {"persona": p["id"], "week": w, "prompt": sim.SYSTEM + "\n\n" + prompt, "response": text,
-             "error": err, "had_flight_this_week": has_flight, "flight_outcome": outcome, "usage": use, "feed": feed}
+             "error": err, "had_flight_this_week": has_flight, "flight_outcome": outcome, "usage": use, "feed": feed,
+             "strike_day": world["strike_day"], "within_24h": world["within_24h"], "flights": world["flights"]}
         if parsed:
             e.update(status=parsed["status"], would_book_again=parsed["would_book_again"],
                      complaint=bool(parsed.get("complaint")), support_contact=parsed.get("support_contact", ""),
                      said=parsed.get("said", ""), action=parsed.get("action", ""),
                      post=str(parsed.get("post") or "").strip()[:POST_CHARS],
-                     memory_after=f"Week {w}: {parsed['memory_update']}")  # rolling memory, as in sim.py
+                     memory_after=remember(self.memory[p["id"]], f"Week {w}: {parsed['memory_update']}"))
         return e
 
     def probe(self, when):
@@ -672,7 +692,9 @@ class Run:
                              "flight_outcome": e["flight_outcome"], "would_book_again": e["would_book_again"],
                              "complaint": e["complaint"], "support_contact": e["support_contact"],
                              "post": e.get("post", ""), "feed": e.get("feed", []),
-                             "reused": ck.get("origin_run") != self.name})
+                             "said": e.get("said", ""), "action": e.get("action", ""),
+                             "strike_day": e.get("strike_day"), "within_24h": e.get("within_24h"),
+                             "flights": e.get("flights", []), "reused": ck.get("origin_run") != self.name})
         return b, rows
 
     def find_call(self, cid):
@@ -715,6 +737,8 @@ def assemble(run, out):
                            "had_flight_this_week": e["had_flight_this_week"], "flight_outcome": e["flight_outcome"],
                            "would_book_again": e["would_book_again"], "complaint": e["complaint"],
                            "support_contact": e["support_contact"], "post": e.get("post", ""),
+                           "said": e.get("said", ""), "action": e.get("action", ""),
+                           "strike_day": e.get("strike_day"), "within_24h": e.get("within_24h"),
                            "feed": e.get("feed", []), "reused": i["weeks"][str(w)] == "reused"})
     if i["probe"]:
         for when, wk in (("start", 0), ("end", 11)):
