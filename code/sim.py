@@ -181,7 +181,9 @@ def option_lines(decisions, persona, week):
 
 
 def company_message(decisions, persona, week):
-    msgs = [d["message"] for d in decisions if d["week"] <= week and targeted(persona, d["target"])]
+    # A decision's services last two weeks; do not resend an expired offer as if it still applied.
+    msgs = [d["message"] for d in decisions
+            if d["week"] <= week <= d["week"] + 1 and targeted(persona, d["target"])]
     return "\n".join(msgs)
 
 
@@ -270,9 +272,12 @@ def leg_facts(persona, leg, week, rng, eff, events, strike_on=True):
         text += " Kestrel gives you double loyalty points on this trip."
     if strike:
         bags = str(persona.get("bags") or persona.get("checks_bags") or "").lower()
-        if ("checked" in bags or bags.startswith("yes")) and rng.random() < P["strike_bags_backup" if "backup" in eff else "strike_bags"]:
+        has_checked_bags = not bags.startswith(("no", "never")) and (
+            "checked" in bags or bags.startswith(("yes", "checks", "checking"))
+        )
+        if has_checked_bags and rng.random() < P["strike_bags_backup" if "backup" in eff else "strike_bags"]:
             text += " Your checked bags did not arrive with you; Kestrel says they will be delivered in 1-2 days."
-        if str(persona.get("airport_assistance") or "none").lower() not in ("none", "no", ""):
+        if str(persona.get("airport_assistance") or "none").lower() == "wheelchair":
             text += f" Wheelchair assistance took {'about 15 minutes' if 'backup' in eff else '60-90 minutes'}."
     return outcome, text, fast, strike
 
@@ -456,7 +461,8 @@ def write_metrics(out, personas):
     flown = [r for r in rows if r["had_flight_this_week"]]
     planned = [r for r in flown if not r.get("strike_day")]  # goal 1 leaves out the strike days
     disrupted = [r for r in flown if r["flight_outcome"] in ("canceled", "delayed")]  # canceled or 3h+ late
-    resolved = [r for r in disrupted if r.get("within_24h") or r["status"] == "canceled the trip"]  # rebooked <24h or refunded
+    # An offered seat or refund is not a completed recovery; refund completion time is not recorded.
+    resolved = [r for r in disrupted if r.get("within_24h") is True and r.get("status") == "rebooked"]
     late = [r for r in flown if r["week"] >= 5]
     lost = [r for r in late if r["status"] in ("moved to another airline", "canceled the trip")]
     m = {
@@ -467,7 +473,7 @@ def write_metrics(out, personas):
         "goal_4": round(100 * (1 - len(lost) / max(len(late), 1)), 1),
         "units": {
             "goal_1": "% of persona flights operated (not canceled), strike days left out",
-            "goal_2": "% of canceled or 3h+ delayed persona flights rebooked within 24h or refunded",
+            "goal_2": "% of canceled or 3h+ delayed persona flights confirmed rebooked within 24h; refund timing is unknown",
             "goal_3": "number of persona-weeks with a complaint",
             "goal_4": "% of persona flights in weeks 5-10 kept on Kestrel (revenue proxy)",
         },

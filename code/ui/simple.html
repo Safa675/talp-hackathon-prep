@@ -499,10 +499,12 @@ function drawWeek(){
   setHTML($("#wkBadge"), `<span class="badge ${st}">${STATE[st]}</span>`);
   const all = (D.surprises || []).map((s,k) => [s,k]), hasStrike = all.some(([s]) => s.known_crisis);
   const evs = all.filter(([s]) => s.week === w), older = all.filter(([s]) => s.week < w);
+  const upcoming = all.filter(([s]) => s.known_crisis && (s.known_from ?? 1) <= w && s.week > w);
   $("#evCount").textContent = evs.length ? `${evs.length} this week` : ""; $("#evCount").classList.toggle("hidden", !evs.length);
   setHTML($("#events"), (evs.map(([s,k]) => evLine(s, true, k)).join("") || `<div class="empty">No events this week.${RO?"":" Add the dashboard's announcements below."}</div>`)
     + (w === 8 && !hasStrike && !RO ? `<div class="item"><button onclick="addStrike()">Add the dossier's strike (Dec 22–23)</button></div>` : "")
     + (i.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : "")
+    + (upcoming.length ? `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><div class="small faint" style="margin-top:8px;font-weight:500">Known in advance (${upcoming.length})</div>${upcoming.map(([s,k]) => evLine(s, false, k)).join("")}</div>` : "")
     + (older.length ? `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><div class="small faint" style="margin-top:8px;font-weight:500">Still in the news (${older.length})</div>${older.map(([s,k]) => evLine(s, false, k)).join("")}</div>` : ""));
   $("#evForm").classList.toggle("hidden", RO);
   $("#evForm").querySelector("summary").textContent = `Add an event to week ${w}`;
@@ -563,7 +565,7 @@ function drawGoals(){
     return `<div class="stat"><div class="l">${label}</div><div class="v ${ok ? "" : "na"}">${value ?? "Not measured"}</div>${bar}<div class="d">${detail}</div></div>`; };
   const flights = metric("Itineraries operated", percent(g.operated, g.scheduled) ?? "No scheduled trips",
     `${g.operated}/${g.scheduled} scheduled traveler itineraries · ${g.canceled} canceled, ${g.delayed} delayed`, !!g.scheduled);
-  const solved = metric("Affected travelers resolved in 24h", percent(g.resolved_24h, g.affected) ?? "No affected trips",
+  const solved = metric("Confirmed rebooked in 24h", percent(g.resolved_24h, g.affected) ?? "No affected trips",
     g.affected ? `${g.resolved_24h}/${g.affected} affected · ${g.unresolved_24h} unresolved${g.unknown_24h ? ` · ${g.unknown_24h} unknown` : ""}` : "No canceled or 3h+ delayed itineraries this week", !!g.affected);
   const complaints = metric("Complaints recorded", g.complaints, `of ${g.personas} simulated travelers this week`);
   const nps = metric("NPS survey", g.nps == null ? "Not yet surveyed" : `${g.nps > 0 ? "+" : ""}${g.nps}`,
@@ -584,7 +586,7 @@ function drawGoals(){
   setHTML($("#goals"), `<div class="card"><h2>Results <span class="count">recorded from ${g.personas} personas</span></h2>
     <div class="stats">${flights}${solved}${complaints}${bookAgain}${trust}${bookings}${nps}</div>
     ${history}
-    <div class="note">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals and actual revenue need operational data, so this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
+    <div class="note">These values come from this week's persona records. A timely rebooking offer alone is not counted as a completed recovery; refund completion time is not recorded. Network-wide flight rates, monthly complaint totals and actual revenue need operational data, so this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
 }
 function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
 function budgetLine(decs){  // the engine's check when the server sent it, else the menu prices

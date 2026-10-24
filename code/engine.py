@@ -15,6 +15,8 @@ re-runs only the weeks it touches, and runs that share a prefix (plan_1 and node
 decision) share those weeks. Personas in a week run in parallel; weeks run in sequence.
 """
 import argparse
+import contextlib
+import fcntl
 import functools
 import hashlib
 import inspect
@@ -42,7 +44,7 @@ LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
 ENGINE_VERSION = 4  # 4: posting gate + @replies, dates in the prompt, known crisis in the news beforehand
-DEFAULT_PERSONAS = "personas_66.jsonl"  # talp-kestrel branch: 66 personas, each standing for real trips
+DEFAULT_PERSONAS = "personas_66_v2.jsonl"  # compact 66-person stress-test panel; previous runs keep their saved input
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
          6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
@@ -141,7 +143,7 @@ class Limiter:
 
 
 LIMIT = Limiter(80)  # flash-lite: all personas of a week in one wave (66 calls in ~4 s)
-THINKING_LIMIT = Limiter(30)  # thinking models slow down past ~30 calls in flight (measured: 66 at once took 128 s, 30 took 48 s)
+THINKING_LIMIT = Limiter(8)  # keep Gemini 3.7 weekly and end-probe calls progressing under provider throttling
 
 
 # ---------------------------------------------------------------- small helpers
@@ -420,7 +422,19 @@ def inputs(cfg):
     decisions = [] if cfg["type"] == "nodecision" or not cfg["decisions"] else \
         json.loads(resolve(cfg["decisions"]).read_text(encoding="utf-8"))
     sim.check_actions(decisions)
+    for i, decision in enumerate(decisions, 1):
+        for action in decision.get("actions", []):
+            levels = MENU.get(MENU_BY_KEY.get(sim.action_key(action.get("action"))))
+            if not levels or menu_level(levels, action.get("level")) is None:
+                raise ValueError(f"decision {i}: invalid action level for {action.get('action')!r}: {action.get('level')!r}")
     surprises =json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
+    for i, event in enumerate(surprises, 1):
+        if event.get("effect", "none") not in sim.EVENT_EFFECTS:
+            raise ValueError(f"event {i}: unknown flight effect {event.get('effect')!r}")
+        if type(event.get("week")) is not int or not 1 <= event["week"] <= 10:
+            raise ValueError(f"event {i}: week must be 1-10")
+        if event.get("until_week", event["week"]) < event["week"]:
+            raise ValueError(f"event {i}: until_week is before its announcement")
     if cfg["type"] == "plan_nosurprises":  # every surprise off; the known crisis stays
         surprises = [e for e in surprises if e.get("known_crisis") or e.get("known_crisis_update")]
     code = prompt_code_hash()
@@ -433,13 +447,31 @@ def inputs(cfg):
             "surprises": surprises, "fps": fps, "code": code, "people": people}
 
 
+def event_known(event, week):
+    """The dossier's known crisis can be read before it disrupts flights."""
+    return event["week"] <= week or bool(event.get("known_crisis") and event.get("known_from", 1) <= week)
+
+
 def week_fp(prev, w, code, decisions, surprises):
-    return h(prev, w, code, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] <= w])
+    return h(prev, w, code, [d for d in decisions if d["week"] <= w],
+             [s for s in surprises if event_known(s, w)])
 
 
 # ---------------------------------------------------------------- checkpoints
 def ckpt_path(fp):
     return CKPT / f"{fp}.json"
+
+
+@contextlib.contextmanager
+def checkpoint_lock(fp):
+    """Serialize a checkpoint across CLI processes as well as server threads."""
+    CKPT.mkdir(exist_ok=True)
+    with _fp_locks[fp], open(CKPT / f"{fp}.lock", "a+") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 def load_ckpt(fp):
@@ -519,7 +551,7 @@ class Run:
             "checkpoint_origin": ck.get("origin_run"), "created": ck.get("created"),
             "model": self.config["model"], "seed": self.config["seed"],
             "decisions_known": [d for d in self.decisions if d["week"] <= w],
-            "events_known": [s for s in self.surprises if s["week"] <= w],
+            "events_known": [s for s in self.surprises if event_known(s, w)],
             "entries": ck["entries"],
         })
 
@@ -569,20 +601,8 @@ class Run:
         return run
 
     def inputs_now(self):
-        """Current inputs. A live session keeps the weeks it already played as history: a new event or decision
-        for a played week does not replay it; it acts from the next week played on."""
-        b = inputs(self.config)
-        kept = self.info.get("chain") or []
-        if not self.config["session"] or not kept or self.info.get("people", b["people"]) != b["people"]:
-            return b  # new personas, model, seed or social setting: the history starts again
-        fps = [kept[0]]
-        for fp in kept[1:self.info["played"] + 1]:
-            if not ckpt_path(fp).exists():
-                break
-            fps.append(fp)
-        for w in range(len(fps), 11):  # weeks still to play follow today's code and inputs
-            fps.append(week_fp(fps[-1], w, b["code"], b["decisions"], b["surprises"]))
-        return dict(b, fps=fps)
+        """Read the current timeline. An edit in week N invalidates N and later, never earlier weeks."""
+        return inputs(self.config)
 
     def validity(self):
         """Weeks played that still match the current inputs. Editing a decision or a surprise for week N
@@ -591,7 +611,12 @@ class Run:
             b = self.inputs_now()
         except Exception as e:
             return {"valid_through": 0, "error": f"{type(e).__name__}: {e}"}
-        ok = chain_length(b["fps"], self.info["played"])
+        played = self.info["played"]
+        recorded = self.info.get("chain") or []
+        ok = 0
+        while ok < played and ok + 1 < len(recorded) and recorded[ok + 1] == b["fps"][ok + 1] \
+                and ckpt_path(recorded[ok + 1]).exists():
+            ok += 1
         return {"valid_through": ok, "stale_from": ok + 1 if ok < self.info["played"] else None,
                 "decisions": b["decisions"], "surprises": b["surprises"]}
 
@@ -700,7 +725,7 @@ class Run:
         i, fp = self.info, self.fps[w]
         i["weeks"][str(w)] = "waiting"
         i["phase"] = f"week {w}"
-        with _fp_locks[fp]:  # another run may be computing the same week right now
+        with checkpoint_lock(fp):  # another process may be computing the same week
             ck = load_ckpt(fp)
             if ck:
                 self.mark_reused(w, ck)
@@ -791,7 +816,7 @@ class Run:
     def probe(self, when):
         i, key = self.info, self.probe_key(when)
         i["phase"] = f"check-in ({when})"
-        with _fp_locks[key]:
+        with checkpoint_lock(key):
             ck = load_ckpt(key)
             if ck:
                 i["calls_done"] += len(self.personas)
@@ -821,7 +846,7 @@ class Run:
     def timeline(self):
         """{persona id: [(week, prompt, response)]} for the weeks that match the current inputs."""
         b = self.inputs_now()
-        valid = chain_length(b["fps"], self.info["played"])
+        valid = self.validity()["valid_through"] if self.config["session"] else chain_length(b["fps"], self.info["played"])
         out = defaultdict(list)
         for w in range(1, valid + 1):
             for e in load_ckpt(b["fps"][w])["entries"]:
@@ -831,7 +856,7 @@ class Run:
     def rows(self):
         """weekly.jsonl-shaped rows for the weeks played so far (live view of a session)."""
         b = self.inputs_now()
-        valid = chain_length(b["fps"], self.info["played"])
+        valid = self.validity()["valid_through"] if self.config["session"] else chain_length(b["fps"], self.info["played"])
         rows = []
         for w in range(1, valid + 1):
             ck = load_ckpt(b["fps"][w])
@@ -916,12 +941,24 @@ def nps(rows, when):
     return round(100 * (sum(x == 5 for x in s) - sum(x <= 3 for x in s)) / len(s), 1) if s else None
 
 
+def recovery_24h(row):
+    """A timely seat offer is not a completed recovery. Count an accepted rebooking only;
+    refund timing is unknown unless the simulation records an explicit completion time."""
+    if row.get("flight_outcome") not in ("canceled", "delayed"):
+        return None
+    if row.get("status") == "rebooked":
+        return row.get("within_24h") is True
+    if row.get("status") == "canceled the trip":
+        return None  # a refund is offered, but acceptance and payment time are not recorded
+    return False
+
+
 def observed_week_metrics(rows, probes=()):
     """Only observations recorded for one simulated week; no network or monthly extrapolation."""
     scheduled = [r for r in rows if r.get("had_flight_this_week")]
     affected = [r for r in scheduled if r.get("flight_outcome") in ("canceled", "delayed")]
-    resolved = [r for r in affected if r.get("within_24h") is True]
-    unresolved = [r for r in affected if r.get("within_24h") is False]
+    resolved = [r for r in affected if recovery_24h(r) is True]
+    unresolved = [r for r in affected if recovery_24h(r) is False]
     trust = [r["trust"] for r in rows if isinstance(r.get("trust"), (int, float))]
     return {
         "personas": len(rows),
@@ -977,13 +1014,9 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
             c += flights * sim.P["merge"]
         planned, canceled = planned + flights, canceled + c
 
-    # goal 2: affected passengers rebooked within 24h or refunded
-    # A refund counts as "within 24h" only when the passenger could get it without the phone queue (app or website)
-    # or an offer within 24h existed; counting every cancellation as resolved put the no-decision run at 100%.
+    # goal 2: count accepted, timely recovery; an offer or unconfirmed refund is insufficient
     hit = [r for r in weekly if r["flight_outcome"] in ("canceled", "delayed")]
-    self_service = lambda r: str(by_id[r["persona"]].get("booking_channel", "")).lower() in ("app", "website")
-    ok = [r for r in hit if r.get("within_24h")
-          or (r["status"] in ("canceled the trip", "moved to another airline") and self_service(r))]
+    ok = [r for r in hit if recovery_24h(r) is True]
 
     # goal 3: complaints a month in December (weeks 5-9), the dossier's 2,500 scaled by the complaint rate against
     # the weeks before the first event (the same weeks in every run that shares a seed, so runs compare on one base).
@@ -1000,9 +1033,9 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
     december = [r for r in weekly if 5 <= r["week"] <= 9] or weekly
     complaints = COMPLAINTS_PER_MONTH * rate(december) / base if weekly else None
 
-    # goal 3b: NPS moved from +12 by the change in check-in 3a
+    # goal 3b: directly observed end-survey NPS; the dossier's +12 is a target, not a simulated baseline
     s, e = nps(probes, "start"), nps(probes, "end")
-    nps_now = round(NPS_BASE + e - s, 1) if s is not None and e is not None else None
+    nps_now = e
 
     # goal 4: revenue weeks 5-10 as % of plan; lost trips x fare, minus the fare cap's lost revenue
     def fare(r):
@@ -1020,14 +1053,15 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
         "goal_2": round(100 * sum(w[r["persona"]] for r in ok) / sum(w[r["persona"]] for r in hit), 1) if hit else None,
         "goal_3": round(complaints) if complaints is not None else None,
         "goal_3b": nps_now,
+        "nps_start": s,
         "goal_4": round(100 * (1 - (lost * scale + cap) / (plan * scale)), 2) if plan else None,
         "revenue_lost_usd": round(lost * scale + cap) if plan else None,
         "units": {
             "goal_1": f"% of planned Kestrel flights operated in week(s) {', '.join(map(str, metric_weeks))}, strike days left out (network, ~1,355 flights a week)",
-            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)"
+            "goal_2": "% of passengers on canceled or 3h+ delayed flights confirmed rebooked within 24h; refund completion time is not recorded"
                       + (", weighted by represents_trips" if weighted else ", unweighted"),
             "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
-            "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+            "goal_3b": "direct NPS from the end check-in 3a answers (survey runs only); +12 is the board target",
             "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M",
         },
     }
@@ -1132,9 +1166,9 @@ def disk_timeline(name):
 
 # ---------------------------------------------------------------- manager
 class Manager:
-    def __init__(self):
+    def __init__(self, load_sessions=True):
         self.runs = {}
-        for f in sorted(SESSIONS.glob("*.json")) if SESSIONS.exists() else []:
+        for f in (sorted(SESSIONS.glob("*.json")) if load_sessions and SESSIONS.exists() else []):
             try:
                 run = Run.load(f)
                 self.runs[run.name] = run
@@ -1300,7 +1334,7 @@ def main():
     a = ap.parse_args()
     load_env()
     LIMIT.set(a.workers)
-    mgr = Manager()
+    mgr = Manager(load_sessions=False)  # batch CLI must not rewrite an active server session
     if a.name == "official":
         runs = mgr.official(a.decisions, a.surprises, a.model, a.personas, social=not a.no_social)
     else:
