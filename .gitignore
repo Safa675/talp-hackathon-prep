@@ -1,0 +1,17 @@
+# Secrets: the Vertex key lives only here, never in code or the submission ZIP.
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Generated outputs (runs are rebuilt on demand; final runs go into the ZIP)
+outputs/
+submission/
+*.zip
+
+# Third-party documents that are not ours to publish
+docs/guidelines/*.pdf
