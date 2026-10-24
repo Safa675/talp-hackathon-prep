@@ -134,7 +134,7 @@ def disk_detail(name):
         else:
             try:
                 surprises = json.loads(engine.resolve(eng["surprises_file"]).read_text(encoding="utf-8"))
-                surprises = [e for e in surprises if e.get("known_crisis") or run["type"] != "plan_nosurprises"]
+                surprises = [e for e in surprises if e.get("known_crisis") or e.get("known_crisis_update") or run["type"] != "plan_nosurprises"]
             except Exception:
                 surprises = []
         played = max((r["week"] for r in rows), default=0)

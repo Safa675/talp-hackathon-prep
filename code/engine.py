@@ -422,7 +422,7 @@ def inputs(cfg):
     sim.check_actions(decisions)
     surprises =json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
     if cfg["type"] == "plan_nosurprises":  # every surprise off; the known crisis stays
-        surprises = [e for e in surprises if e.get("known_crisis")]
+        surprises = [e for e in surprises if e.get("known_crisis") or e.get("known_crisis_update")]
     code = prompt_code_hash()
     people = h(personas_text, cfg["model"], cfg["seed"], cfg["replicate"],
                social_graph(personas) if cfg.get("social") else None)

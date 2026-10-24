@@ -44,5 +44,15 @@
   "kestrel_caused": false,
   "until_week": 8,
   "reading": "The known 48-hour ground handling strike at both bases on Dec 22-23, the busiest week of the year."
+ },
+ {
+  "week": 9,
+  "known_crisis_update": true,
+  "text": "Known crisis outcome: the ground handling strike lasted 48 hours and was not extended. The contractor covered about half of its shifts with replacement staff.",
+  "effect": "none",
+  "scope": "bases",
+  "kestrel_caused": false,
+  "until_week": 9,
+  "reading": "The strike is over and was not extended; about half of the contractor's shifts were covered during it. No new disruption; it shapes what passengers remember and say."
  }
 ]

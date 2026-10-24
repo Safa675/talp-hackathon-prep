@@ -283,7 +283,7 @@ def week_facts(persona, week, rng, surprises, use_surprises, decisions=()):
     trips = trips_in_week(persona, week)
     eff = effects(decisions, persona, week)
     if not use_surprises:  # plan_nosurprises: every surprise off, the known crisis stays
-        surprises = [e for e in surprises if e.get("known_crisis")]
+        surprises = [e for e in surprises if e.get("known_crisis") or e.get("known_crisis_update")]
     events = events_in_force(surprises, week)
     strike_on = strike_announced(surprises, week)
     lines, outcome, world = [], "none", {"strike_day": False, "within_24h": None, "flights": []}
