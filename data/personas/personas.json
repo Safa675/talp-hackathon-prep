@@ -1,0 +1,604 @@
+{
+  "meta": {
+    "company": "Kestrel Air",
+    "weekly_passengers": 210000,
+    "structure": "group (from dossier) -> archetype (customer type, carries the real-customer share) -> member (individual persona)",
+    "weight_rule": "member.weight = archetype.share * weekly_passengers / members in archetype (weekly passengers each persona stands for)",
+    "strike": "Week 8, Dec 22-23, Orlando (MCO) and Philadelphia (PHL). A trip is strike-exposed if it departs or arrives at MCO or PHL on those days."
+  },
+  "archetypes": [
+    {
+      "id": "F-A",
+      "group": "families visiting relatives",
+      "label": "Holiday family with young kids",
+      "share": 0.18,
+      "core_tension": "Fixed holiday dates and small children against a cheap ticket with little slack.",
+      "shared": {
+        "age_range": "30-45", "household": "couple with 2-3 children", "income": "$50k-$90k",
+        "price_consciousness": "high", "dates": "fixed around the holiday", "checked_bags": "2-3",
+        "preferred_channel": "app, then phone", "news_from": ["Facebook", "family group chat"],
+        "flies_kestrel": "about twice a year, holidays"
+      },
+      "members": [
+        {
+          "id": "F-A-1", "name": "Darnell Brooks", "age": 38, "city": "Orlando", "state": "FL",
+          "tagline": "warehouse supervisor, dad of two",
+          "quote": "Christmas at my mom's is not optional. Just get my kids there.",
+          "tags": ["fixed date", "paycheck to paycheck", "quick temper"],
+          "wins_over": "a real person on the phone and a confirmed seat the same day",
+          "breaks_at": "being told the next free seat is after Christmas",
+          "trip": {"week": 8, "date": "Dec 23", "route": "MCO-ATL", "fixed_date": true, "checked_bags": 3,
+                   "travels_with": "wife and two children (4 and 7)", "assistance": null},
+          "attributes": {"money": "lives paycheck to paycheck, no savings for a second ticket", "patience": "low",
+                         "temper": "gets angry fast", "social_role": "posts on Facebook when upset",
+                         "knows_refund_rights": false, "also_flies": "Southwest", "customer_since": "2019"},
+          "connections": ["F-A-3", "V-A-3"],
+          "backstory": "Darnell runs a night shift at a distribution center near the Orlando airport. Every Christmas the family drives or flies to his mother's house in Atlanta; this year Kestrel was $160 cheaper than flying Delta for four people. A missed paycheck in the spring means there is no cushion for buying new tickets."
+        },
+        {
+          "id": "F-A-2", "name": "Jenna Kowalski", "age": 34, "city": "Allentown", "state": "PA",
+          "tagline": "part-time dental hygienist, plans everything",
+          "quote": "I packed the car seats a week ago. Please don't make me unpack.",
+          "tags": ["planner", "anxious", "Instagram"],
+          "wins_over": "early, honest notice and a free option to fly a day earlier",
+          "breaks_at": "a vague 'we are working on it' while two toddlers melt down at the gate",
+          "trip": {"week": 8, "date": "Dec 22", "route": "PHL-MCO", "fixed_date": false, "checked_bags": 2,
+                   "travels_with": "husband and two children (2 and 5)", "assistance": null},
+          "attributes": {"money": "comfortable but careful", "patience": "medium", "baseline_anxiety": "high",
+                         "social_role": "small Instagram account (1,200 followers) about family travel",
+                         "knows_refund_rights": "partly", "also_flies": "Frontier", "customer_since": "2021",
+                         "plans_ahead": true},
+          "connections": ["F-A-1", "V-B-1", "V-A-1"],
+          "backstory": "Jenna drives 70 minutes to Philadelphia because Kestrel's fares beat the closer airport. The trip is to her in-laws near Orlando; her husband could take Dec 21 off if needed. She reads every airline email and will act on it the same day."
+        },
+        {
+          "id": "F-A-3", "name": "Luis Ortega", "age": 41, "city": "Kissimmee", "state": "FL",
+          "tagline": "school bus mechanic, calm family man",
+          "quote": "Things go wrong at airports. What matters is if they fix it.",
+          "tags": ["forgiving", "WhatsApp family chat", "loyal-ish"],
+          "wins_over": "being treated with respect and a clear plan",
+          "breaks_at": "seeing people he knows treated badly",
+          "trip": {"week": 8, "date": "Dec 27", "route": "MCO-SJU", "fixed_date": false, "checked_bags": 3,
+                   "travels_with": "wife and three children", "assistance": null},
+          "attributes": {"money": "tight but stable", "patience": "high", "tendency_to_forgive": "high",
+                         "social_role": "reads the family WhatsApp group, rarely posts", "knows_refund_rights": false,
+                         "also_flies": "JetBlue", "customer_since": "2016"},
+          "connections": ["F-A-1", "A-B-1"],
+          "backstory": "Luis has flown Kestrel to Puerto Rico every year since 2016 to see his parents. He flies after the strike days, so his flight should run, but a crowded airport and missing bags could still reach him. His sisters share every travel horror story in the family chat."
+        }
+      ]
+    },
+    {
+      "id": "F-B",
+      "group": "families visiting relatives",
+      "label": "Older traveler visiting family",
+      "share": 0.12,
+      "core_tension": "Depends on airport help and the phone line, exactly what a strike and a busy call center take away.",
+      "shared": {
+        "age_range": "65-80", "employment": "retired", "income": "fixed income, Social Security plus pension",
+        "price_consciousness": "high", "dates": "mostly fixed", "preferred_channel": "phone",
+        "news_from": ["local TV news", "church or neighbors", "family calls"], "flies_kestrel": "once or twice a year"
+      },
+      "members": [
+        {
+          "id": "F-B-1", "name": "Maria Russo", "age": 71, "city": "Philadelphia", "state": "PA",
+          "tagline": "retired seamstress, flying to her grandchildren",
+          "quote": "I don't want to be a bother. I just need someone to push the chair.",
+          "tags": ["wheelchair assistance", "phone only", "embarrassed to complain"],
+          "wins_over": "a person who calls her by name and stays with her",
+          "breaks_at": "being left alone at the gate with no wheelchair",
+          "trip": {"week": 8, "date": "Dec 22", "route": "PHL-MCO", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone (part of her church group booked by Faithway Group Travel)",
+                   "assistance": "wheelchair from curb to seat"},
+          "attributes": {"money": "fixed income", "patience": "high", "embarrassed_to_complain": true,
+                         "social_role": "no social media; hears news from church and her son", "knows_refund_rights": false,
+                         "uses_app": false, "customer_since": "2018"},
+          "connections": ["A-A-1", "F-B-3"],
+          "backstory": "Maria has bad knees and always asks for a wheelchair. Her son in Orlando books nothing; her church's travel agent booked her seat with the rest of the Christmas group. She has never filed a complaint in her life but tells her son and her church friends everything."
+        },
+        {
+          "id": "F-B-2", "name": "Harold Jenkins", "age": 76, "city": "The Villages", "state": "FL",
+          "tagline": "retired Army sergeant, writes letters",
+          "quote": "I was in the Army forty years ago. I know when someone is giving me the runaround.",
+          "tags": ["veteran", "files complaints", "uses a cane"],
+          "wins_over": "straight talk and a promise that is kept",
+          "breaks_at": "being treated like a number on hold",
+          "trip": {"week": 8, "date": "Dec 23", "route": "MCO-PHL", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": "wheelchair through the airport"},
+          "attributes": {"money": "pension, modest savings", "patience": "medium", "temper": "slow, but firm on fairness",
+                         "complaint_history": "has filed complaints with the DOT and the BBB before",
+                         "knows_refund_rights": true, "sense_of_fairness": "very strong", "customer_since": "2014",
+                         "served_in_military": true},
+          "connections": ["F-B-3"],
+          "backstory": "Harold flies to his daughter in Philadelphia every Christmas. He keeps a folder of airline rules and has won a DOT complaint before. He has a cane and accepts a wheelchair only for long airport walks."
+        },
+        {
+          "id": "F-B-3", "name": "Gloria Bennett", "age": 68, "city": "Wilmington", "state": "DE",
+          "tagline": "retired teacher, Facebook sharer",
+          "quote": "Did you see this? I read it on Facebook this morning.",
+          "tags": ["Facebook", "believes headlines", "flexible"],
+          "wins_over": "clear facts she can share with her friends",
+          "breaks_at": "news stories about stranded seniors",
+          "trip": {"week": 10, "date": "Jan 6", "route": "PHL-RSW", "fixed_date": false, "checked_bags": 1,
+                   "travels_with": "her sister", "assistance": null},
+          "attributes": {"money": "teacher pension, comfortable", "patience": "high",
+                         "social_role": "shares news articles on Facebook several times a day",
+                         "believes_rumors": true, "knows_refund_rights": false, "customer_since": "2020"},
+          "connections": ["F-B-1", "F-B-2", "V-B-3"],
+          "backstory": "Gloria and her sister rent a condo in Fort Myers every January. She is not flying during the strike, but she reads and shares everything about it, and her opinion of Kestrel will be formed by what her feed shows her."
+        }
+      ]
+    },
+    {
+      "id": "V-A",
+      "group": "vacationers",
+      "label": "Caribbean and Mexico package vacationer",
+      "share": 0.15,
+      "core_tension": "A prepaid resort that does not refund: a lost day of flying is a lost day of a paid vacation.",
+      "shared": {
+        "age_range": "28-55", "income": "$60k-$130k", "price_consciousness": "medium",
+        "dates": "fixed by vacation days and a prepaid hotel", "checked_bags": "1-2",
+        "preferred_channel": "app and email", "news_from": ["Instagram", "TikTok", "TripAdvisor"],
+        "flies_kestrel": "once or twice a year for vacations"
+      },
+      "members": [
+        {
+          "id": "V-A-1", "name": "Priya Shah", "age": 32, "city": "Cherry Hill", "state": "NJ",
+          "tagline": "marketing analyst, review writer",
+          "quote": "I paid $2,400 for that resort. Every hour at the airport is money gone.",
+          "tags": ["prepaid resort", "writes reviews", "Instagram"],
+          "wins_over": "a same-day seat on another airline",
+          "breaks_at": "losing a resort night with no help or apology",
+          "trip": {"week": 8, "date": "Dec 22", "route": "PHL-CUN", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "partner", "assistance": null},
+          "attributes": {"money": "good salary, some credit card debt", "patience": "medium",
+                         "writes_reviews": "Google, Trustpilot and TripAdvisor", "knows_refund_rights": true,
+                         "also_flies": "Spirit", "customer_since": "2022"},
+          "connections": ["F-A-2", "A-B-2"],
+          "backstory": "Priya booked a non-refundable all-inclusive in Cancún for Dec 22-28 as her first real vacation in two years. She writes detailed reviews of every trip and her friends read them before booking."
+        },
+        {
+          "id": "V-A-2", "name": "Kevin O'Neill", "age": 52, "city": "Media", "state": "PA",
+          "tagline": "insurance broker, golf trip with friends",
+          "quote": "If it falls apart I'll just buy a ticket on American. Time is worth more.",
+          "tags": ["can afford a rival ticket", "low patience", "credit card"],
+          "wins_over": "proof that the operation is under control",
+          "breaks_at": "uncertainty about whether his flight will go",
+          "trip": {"week": 8, "date": "Dec 27", "route": "PHL-PUJ", "fixed_date": true, "checked_bags": 2,
+                   "travels_with": "three friends", "assistance": null},
+          "attributes": {"money": "high income", "patience": "low", "also_flies": "American",
+                         "payment": "premium credit card with trip insurance", "knows_refund_rights": true,
+                         "social_role": "tells his golf friends, no posting", "customer_since": "2023"},
+          "connections": ["B-A-1", "V-A-1"],
+          "backstory": "Kevin and three friends booked Kestrel to Punta Cana because one friend insisted on the cheap fare. He flies after the strike days, but if the news looks bad he will book American and argue about the refund later."
+        },
+        {
+          "id": "V-A-3", "name": "Aaliyah Carter", "age": 29, "city": "Orlando", "state": "FL",
+          "tagline": "ER nurse, booked months ahead",
+          "quote": "I work Christmas so I can travel after. That trip is my reward.",
+          "tags": ["shift worker", "TikTok viewer", "plans ahead"],
+          "wins_over": "respect for her time and quick answers in the app",
+          "breaks_at": "a long hold time between night shifts",
+          "trip": {"week": 9, "date": "Jan 2", "route": "MCO-MBJ", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "best friend", "assistance": null},
+          "attributes": {"money": "stable, saving for a house", "patience": "medium",
+                         "social_role": "watches TikTok, rarely posts", "knows_refund_rights": "partly",
+                         "also_flies": "Southwest", "customer_since": "2020"},
+          "connections": ["S-A-1", "F-A-1"],
+          "backstory": "Aaliyah works Christmas in the emergency room so she can take a week in Jamaica in January. Her flight is after the strike, but what she sees on TikTok during Christmas week will decide how nervous she is."
+        }
+      ]
+    },
+    {
+      "id": "V-B",
+      "group": "vacationers",
+      "label": "Florida getaway and theme park traveler",
+      "share": 0.20,
+      "core_tension": "Theme park tickets and rentals are dated; a delay costs money but a day's shift is often possible.",
+      "shared": {
+        "age_range": "25-60", "income": "$55k-$120k", "price_consciousness": "high",
+        "dates": "semi-flexible", "checked_bags": "1-2", "preferred_channel": "app",
+        "news_from": ["Reddit", "TikTok", "Facebook"], "flies_kestrel": "once or twice a year"
+      },
+      "members": [
+        {
+          "id": "V-B-1", "name": "Mike Hernandez", "age": 45, "city": "Boston", "state": "MA",
+          "tagline": "IT project manager, Disney dad",
+          "quote": "Park tickets are dated. I need to land on the 22nd, bags and all.",
+          "tags": ["Disney trip", "Reddit", "checks bags"],
+          "wins_over": "accurate information he can plan around",
+          "breaks_at": "landing in Orlando with no bags and no answers",
+          "trip": {"week": 8, "date": "Dec 22", "route": "BOS-MCO", "fixed_date": true, "checked_bags": 3,
+                   "travels_with": "wife and two teenagers", "assistance": null},
+          "attributes": {"money": "comfortable", "patience": "medium",
+                         "social_role": "active on r/WaltDisneyWorld, answers other people's questions",
+                         "believes_rumors": false, "knows_refund_rights": true, "customer_since": "2022"},
+          "connections": ["F-A-2", "S-A-2"],
+          "backstory": "Mike planned the family Disney trip for a year: dated park tickets from Dec 23. His flight lands in Orlando on a strike day, so even if it flies, baggage could be the problem. He posts trip reports on Reddit that thousands of Disney fans read."
+        },
+        {
+          "id": "V-B-2", "name": "Chloe Nguyen", "age": 26, "city": "Brooklyn", "state": "NY",
+          "tagline": "freelance designer, deal hunter",
+          "quote": "If there's a sale, I'm already on the plane.",
+          "tags": ["last-minute", "deal hunter", "TikTok"],
+          "wins_over": "a fare sale and free changes",
+          "breaks_at": "hidden fees and surge prices",
+          "trip": {"week": 4, "date": "Nov 26", "route": "LGA-MCO", "fixed_date": false, "checked_bags": 0,
+                   "travels_with": "roommate", "assistance": null},
+          "attributes": {"money": "irregular income", "patience": "medium", "uses_deals": "always",
+                         "social_role": "posts deals and travel hacks on TikTok", "knows_refund_rights": "partly",
+                         "also_flies": "Spirit, Frontier", "customer_since": "2024"},
+          "connections": ["S-A-1", "S-B-1"],
+          "backstory": "Chloe flies wherever is cheapest that weekend. She booked a Thanksgiving weekend in Orlando and is already watching fares for January. She is not affected by the strike but decides her next trip on whatever is cheap and trending."
+        },
+        {
+          "id": "V-B-3", "name": "Linda Park", "age": 58, "city": "Columbus", "state": "OH",
+          "tagline": "empty-nester, reads the fine print",
+          "quote": "We can go a day later. Just tell us early and don't charge us for it.",
+          "tags": ["flexible", "email", "knows her rights"],
+          "wins_over": "free date changes offered early",
+          "breaks_at": "change fees during a crisis that is not her fault",
+          "trip": {"week": 8, "date": "Dec 23", "route": "CMH-MCO", "fixed_date": false, "checked_bags": 1,
+                   "travels_with": "husband", "assistance": null},
+          "attributes": {"money": "comfortable", "patience": "high", "knows_refund_rights": true,
+                         "preferred_channel": "email", "social_role": "Facebook, shares rarely", "customer_since": "2019"},
+          "connections": ["F-B-3"],
+          "backstory": "Linda and her husband spend Christmas week in a rented Orlando condo. They are retired early and flexible; if Kestrel tells them in time and does not charge, they will happily move a day."
+        }
+      ]
+    },
+    {
+      "id": "S-A",
+      "group": "students",
+      "label": "Homebound college student",
+      "share": 0.09,
+      "core_tension": "Cheapest fare against getting home for Christmas, with no money for plan B.",
+      "shared": {
+        "age_range": "18-23", "income": "under $25k, parents help a little", "price_consciousness": "very high",
+        "dates": "mostly flexible after exams", "preferred_channel": "app only, never calls",
+        "news_from": ["TikTok", "Instagram", "Reddit", "group chats"], "flies_kestrel": "2-3 times a year"
+      },
+      "members": [
+        {
+          "id": "S-A-1", "name": "Kayla Simmons", "age": 20, "city": "Philadelphia", "state": "PA",
+          "tagline": "Temple communications student, TikTok voice",
+          "quote": "If they cancel, I'm sleeping at the gate and posting every minute of it.",
+          "tags": ["opinion leader", "flexible dates", "TikTok 8k"],
+          "wins_over": "free changes and being told the truth",
+          "breaks_at": "corporate non-answers",
+          "trip": {"week": 8, "date": "Dec 22", "route": "PHL-SJU", "fixed_date": false, "checked_bags": 0,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "part-time barista", "patience": "low",
+                         "social_role": "TikTok creator with 8,000 followers, posts travel drama",
+                         "believes_rumors": "sometimes exaggerates", "knows_refund_rights": "partly",
+                         "also_flies": "Spirit", "customer_since": "2023"},
+          "connections": ["S-A-3", "V-A-3", "V-B-2", "S-B-2"],
+          "backstory": "Kayla flies home to her grandmother in San Juan after finals. She only carries a backpack and could fly any day that week. Her travel-chaos videos regularly get tens of thousands of views."
+        },
+        {
+          "id": "S-A-2", "name": "Berat Kaya", "age": 22, "city": "Philadelphia", "state": "PA",
+          "tagline": "Drexel electrical engineering student, fact-checker",
+          "quote": "Tell me the real numbers and I'll plan around them.",
+          "tags": ["fixed date", "checks rumors", "Reddit"],
+          "wins_over": "clear facts and a concrete rebooking option",
+          "breaks_at": "being told the next free seat is after Christmas",
+          "trip": {"week": 8, "date": "Dec 23", "route": "PHL-MCO", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "tight student budget, small emergency fund", "patience": "medium",
+                         "temper": "slow", "social_role": "reads Reddit, corrects wrong information",
+                         "believes_rumors": false, "knows_refund_rights": true, "also_flies": "Frontier",
+                         "customer_since": "2023", "family_note": "his mother in Orlando uses a wheelchair and has surgery on Dec 24"},
+          "connections": ["S-A-1", "V-B-1", "B-A-1"],
+          "backstory": "Berat is in his fourth year of electrical engineering at Drexel. His mother lives in Orlando and has knee surgery on Dec 24, so he must arrive on the 23rd. He booked Kestrel because it was $40 cheaper than Frontier and he reads airline rules before trusting anyone."
+        },
+        {
+          "id": "S-A-3", "name": "Marcus Webb", "age": 19, "city": "Orlando", "state": "FL",
+          "tagline": "community college student, works part-time",
+          "quote": "Everyone online says they're a mess, so... probably a mess?",
+          "tags": ["follower", "paycheck to paycheck", "flexible"],
+          "wins_over": "cash, not credits",
+          "breaks_at": "a surprise cost he cannot cover",
+          "trip": {"week": 10, "date": "Jan 5", "route": "MCO-PHL", "fixed_date": false, "checked_bags": 0,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "paycheck to paycheck", "patience": "high",
+                         "social_role": "follows Kayla and other creators, easily swayed", "believes_rumors": true,
+                         "knows_refund_rights": false, "also_flies": "Spirit", "customer_since": "2024"},
+          "connections": ["S-A-1", "S-B-2"],
+          "backstory": "Marcus visits his dad in Philadelphia in January. He is not flying during the strike, but he follows Kayla and believes what his feed tells him. A $120 refund would decide whether he can make rent."
+        }
+      ]
+    },
+    {
+      "id": "S-B",
+      "group": "students",
+      "label": "Student on a winter-break trip",
+      "share": 0.06,
+      "core_tension": "Group trips organised in chats: one friend's bad news spreads to all of them at once.",
+      "shared": {
+        "age_range": "18-24", "income": "low, parents often pay", "price_consciousness": "very high",
+        "dates": "flexible-ish", "preferred_channel": "app", "news_from": ["Instagram", "Snapchat", "group chats"],
+        "flies_kestrel": "1-2 times a year"
+      },
+      "members": [
+        {
+          "id": "S-B-1", "name": "Emily Chen", "age": 21, "city": "State College", "state": "PA",
+          "tagline": "Penn State student, trip organizer",
+          "quote": "I'm the one who picked Kestrel. If it goes wrong, five people blame me.",
+          "tags": ["group organizer", "Instagram", "responsible"],
+          "wins_over": "free changes for the whole group",
+          "breaks_at": "having to explain a mess to five friends",
+          "trip": {"week": 9, "date": "Dec 28", "route": "PHL-CUN", "fixed_date": false, "checked_bags": 1,
+                   "travels_with": "five friends", "assistance": null},
+          "attributes": {"money": "parents pay half", "patience": "medium",
+                         "social_role": "runs the trip group chat, posts on Instagram",
+                         "knows_refund_rights": "partly", "customer_since": "2024"},
+          "connections": ["V-B-2", "S-B-3"],
+          "backstory": "Emily organised a Cancún trip for six friends after Christmas and chose Kestrel for price. She watches every news item about the airline because she feels responsible for the whole group."
+        },
+        {
+          "id": "S-B-2", "name": "Jordan Miller", "age": 22, "city": "Orlando", "state": "FL",
+          "tagline": "UCF senior, going home for the holidays",
+          "quote": "Honestly I'll fly whenever, just make it cheap.",
+          "tags": ["very flexible", "no bags", "Snapchat"],
+          "wins_over": "free changes",
+          "breaks_at": "paying more because of their problem",
+          "trip": {"week": 8, "date": "Dec 22", "route": "MCO-PHL", "fixed_date": false, "checked_bags": 0,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "student loans, part-time job", "patience": "high",
+                         "social_role": "Snapchat with friends, follows Kayla", "knows_refund_rights": false,
+                         "also_flies": "Frontier", "customer_since": "2022"},
+          "connections": ["S-A-1", "S-A-3"],
+          "backstory": "Jordan flies home to his parents near Philadelphia every December. He has no checked bag and no plans before the 25th, so a free move to another day costs him nothing."
+        },
+        {
+          "id": "S-B-3", "name": "Sofia Ramirez", "age": 19, "city": "New Brunswick", "state": "NJ",
+          "tagline": "Rutgers freshman, first in family at college",
+          "quote": "My parents paid for this ticket. I can't ask them for another one.",
+          "tags": ["first-gen student", "anxious", "parents pay"],
+          "wins_over": "simple instructions and reassurance",
+          "breaks_at": "confusing apps and long phone queues",
+          "trip": {"week": 8, "date": "Dec 23", "route": "PHL-MIA", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "parents pay, no money of her own", "patience": "medium", "baseline_anxiety": "high",
+                         "first_in_family_to_college": true, "social_role": "family group chat, Instagram",
+                         "knows_refund_rights": false, "customer_since": "2025"},
+          "connections": ["S-B-1"],
+          "backstory": "Sofia is flying home for her first Christmas since starting college. Her parents saved for the ticket. She has never had a flight canceled and does not know what she is entitled to."
+        }
+      ]
+    },
+    {
+      "id": "B-A",
+      "group": "business travelers",
+      "label": "Small business owner who pays the fare",
+      "share": 0.06,
+      "core_tension": "Their own money and their own time: they compare price and reliability like a supplier.",
+      "shared": {
+        "age_range": "35-60", "income": "business owner, variable", "price_consciousness": "medium-high",
+        "dates": "fixed by meetings", "preferred_channel": "app, sometimes phone",
+        "news_from": ["LinkedIn", "X", "local business news"], "flies_kestrel": "4-8 times a year"
+      },
+      "members": [
+        {
+          "id": "B-A-1", "name": "Raj Patel", "age": 45, "city": "Philadelphia", "state": "PA",
+          "tagline": "owns an HVAC supply company",
+          "quote": "I don't need free snacks. I need the plane to leave on time.",
+          "tags": ["reliability first", "LinkedIn", "data-driven"],
+          "wins_over": "operational proof: on-time numbers, backup plans",
+          "breaks_at": "a pattern of disruption",
+          "trip": {"week": 10, "date": "Jan 5", "route": "PHL-ORD", "fixed_date": true, "checked_bags": 0,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "comfortable", "patience": "medium", "also_flies": "American",
+                         "has_tsa_precheck": true, "social_role": "posts business commentary on LinkedIn",
+                         "knows_refund_rights": true, "customer_since": "2017"},
+          "connections": ["B-B-1", "S-A-2", "V-A-2"],
+          "backstory": "Raj flies to suppliers in Chicago every few weeks and chooses Kestrel when the schedule fits. He is not flying in the strike week, but he decides who gets his 2027 business by watching how airlines handle December."
+        },
+        {
+          "id": "B-A-2", "name": "Denise Howard", "age": 50, "city": "Orlando", "state": "FL",
+          "tagline": "event planner, client event on Dec 23",
+          "quote": "My client's party starts at six. I am on a plane by noon, one way or another.",
+          "tags": ["business critical", "quick temper", "X/Twitter"],
+          "wins_over": "a confirmed seat on any airline, fast",
+          "breaks_at": "a queue and no answer",
+          "trip": {"week": 8, "date": "Dec 22", "route": "MCO-PHL", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "can afford a rival ticket", "patience": "low", "temper": "gets angry fast",
+                         "social_role": "posts complaints on X and tags the airline", "knows_refund_rights": true,
+                         "also_flies": "Southwest", "customer_since": "2018"},
+          "connections": ["B-B-2"],
+          "backstory": "Denise runs a small event company and is producing a client's holiday party in Philadelphia on Dec 23. If her flight is in doubt she will buy a Southwest ticket immediately and demand Kestrel's refund."
+        },
+        {
+          "id": "B-A-3", "name": "Carlos Mendes", "age": 39, "city": "Orlando", "state": "FL",
+          "tagline": "import business owner, trade fairs in Mexico",
+          "quote": "One bad week doesn't change much for me. Price does.",
+          "tags": ["price driven", "WhatsApp", "flexible"],
+          "wins_over": "good fares on Mexico routes",
+          "breaks_at": "fare spikes",
+          "trip": {"week": 3, "date": "Nov 17", "route": "MCO-MEX", "fixed_date": false, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "variable", "patience": "high", "social_role": "WhatsApp business groups",
+                         "knows_refund_rights": "partly", "also_flies": "Volaris", "customer_since": "2015"},
+          "connections": ["A-B-2"],
+          "backstory": "Carlos flies to Mexico City for trade fairs a few times a year and has used Kestrel since 2015. He flies in November, well before the strike, and is pragmatic about disruptions."
+        }
+      ]
+    },
+    {
+      "id": "B-B",
+      "group": "business travelers",
+      "label": "Corporate traveler whose employer pays",
+      "share": 0.04,
+      "core_tension": "The employer pays and a travel desk books: loyalty is to the schedule, not the brand.",
+      "shared": {
+        "age_range": "28-60", "income": "$80k-$160k", "price_consciousness": "low (employer pays)",
+        "dates": "fixed by work", "preferred_channel": "app, corporate travel desk",
+        "news_from": ["LinkedIn", "colleagues", "cable news"], "flies_kestrel": "when the company policy picks it"
+      },
+      "members": [
+        {
+          "id": "B-B-1", "name": "Steven Clarke", "age": 33, "city": "Philadelphia", "state": "PA",
+          "tagline": "management consultant, road warrior",
+          "quote": "I'll just have the travel desk move me. Not my money, but my evening.",
+          "tags": ["TSA PreCheck", "rival elite status", "switches instantly"],
+          "wins_over": "nothing much; he wants zero friction",
+          "breaks_at": "any delay that makes him miss dinner at home",
+          "trip": {"week": 8, "date": "Dec 22", "route": "CLT-PHL", "fixed_date": true, "checked_bags": 0,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "employer pays", "patience": "low", "has_tsa_precheck": true,
+                         "loyalty": "gold status on American", "employer_pays": true,
+                         "social_role": "complains to colleagues", "knows_refund_rights": true, "customer_since": "2025"},
+          "connections": ["B-A-1"],
+          "backstory": "Steven's firm books Kestrel when it is cheapest. He is flying home from a client in Charlotte on Dec 22 and would rather pay for American than wait in a line."
+        },
+        {
+          "id": "B-B-2", "name": "Natalie Brooks", "age": 41, "city": "Orlando", "state": "FL",
+          "tagline": "pharma sales rep, Kestrel frequent flyer",
+          "quote": "I fly them every other week. I know the crews by name.",
+          "tags": ["Kestrel loyalty tier", "frequent flyer", "forgiving"],
+          "wins_over": "being recognised as a regular",
+          "breaks_at": "being treated like a stranger after years of loyalty",
+          "trip": {"week": 8, "date": "Dec 22", "route": "MCO-PHL", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "employer pays", "patience": "high", "loyalty": "Kestrel Plus member",
+                         "employer_pays": true, "social_role": "LinkedIn, colleagues", "knows_refund_rights": true,
+                         "customer_since": "2016"},
+          "connections": ["B-A-2"],
+          "backstory": "Natalie covers hospitals in Philadelphia and Orlando and has flown Kestrel twice a month for years. She is flying to the company's year-end meeting on Dec 22."
+        },
+        {
+          "id": "B-B-3", "name": "Greg Lawson", "age": 55, "city": "Philadelphia", "state": "PA",
+          "tagline": "government contractor, cheapest-fare policy",
+          "quote": "Policy says cheapest fare. If they change that policy, I'm gone.",
+          "tags": ["policy bound", "cable news", "unaffected"],
+          "wins_over": "fare and schedule; his company decides",
+          "breaks_at": "headlines that make his travel manager drop the airline",
+          "trip": {"week": 10, "date": "Jan 7", "route": "PHL-MCO", "fixed_date": true, "checked_bags": 1,
+                   "travels_with": "alone", "assistance": null},
+          "attributes": {"money": "employer pays", "patience": "medium", "employer_pays": true,
+                         "social_role": "watches cable news, talks to colleagues", "knows_refund_rights": "partly",
+                         "customer_since": "2021"},
+          "connections": ["B-B-1"],
+          "backstory": "Greg's company only reimburses the cheapest fare, which is usually Kestrel. He flies to an Orlando conference in January, and whether his travel manager keeps Kestrel on the list depends on December's headlines."
+        }
+      ]
+    },
+    {
+      "id": "A-A",
+      "group": "travel agencies",
+      "label": "Group travel agency (churches, schools, teams)",
+      "share": 0.05,
+      "core_tension": "One owner decides for dozens of passengers and next season's group contract.",
+      "shared": {
+        "age_range": "45-65", "business": "small group travel agency", "price_consciousness": "high",
+        "dates": "fixed group dates", "preferred_channel": "phone and email with Kestrel's group desk",
+        "news_from": ["clients", "industry newsletters", "Facebook groups"], "flies_kestrel": "several group bookings a year"
+      },
+      "members": [
+        {
+          "id": "A-A-1", "name": "Patricia Gomez", "age": 54, "city": "Philadelphia", "state": "PA",
+          "tagline": "owner, Faithway Group Travel (church groups)",
+          "quote": "Thirty-eight of my people fly on the 22nd. If one of them is left alone, I hear about it for years.",
+          "tags": ["38-person group", "contract renewal in January", "protective"],
+          "wins_over": "a named contact and help for her elderly travelers",
+          "breaks_at": "her seniors stranded without assistance",
+          "trip": {"week": 8, "date": "Dec 22", "route": "PHL-MCO", "fixed_date": true, "checked_bags": 38,
+                   "travels_with": "church group of 38, many over 65", "assistance": "6 wheelchair requests"},
+          "attributes": {"group_size": 38, "next_contract": "Easter group of 60, decided in January",
+                         "rival_offer": "Frontier group desk", "patience": "medium",
+                         "social_role": "talks to clients and church leaders", "knows_refund_rights": true,
+                         "customer_since": "2013"},
+          "connections": ["F-B-1", "A-A-2"],
+          "backstory": "Patricia has booked church trips on Kestrel for ten years. Her Christmas group includes Maria Russo and five other wheelchair users. She decides where the Easter group of 60 flies in January."
+        },
+        {
+          "id": "A-A-2", "name": "Brian Fletcher", "age": 47, "city": "Orlando", "state": "FL",
+          "tagline": "owner, SunCoast Team Travel (youth sports)",
+          "quote": "Parents pay me, not the airline. Any mess is my mess.",
+          "tags": ["youth teams", "cost focused", "parents' Facebook groups"],
+          "wins_over": "reliable group fares",
+          "breaks_at": "parents' complaints landing on him",
+          "trip": {"week": 9, "date": "Jan 2", "route": "MCO-PHL", "fixed_date": true, "checked_bags": 22,
+                   "travels_with": "youth soccer team of 22 with chaperones", "assistance": null},
+          "attributes": {"group_size": 22, "patience": "medium", "social_role": "manages parents' Facebook groups",
+                         "knows_refund_rights": true, "customer_since": "2017"},
+          "connections": ["A-A-1", "A-A-3"],
+          "backstory": "Brian books youth soccer teams to tournaments. His next Kestrel group flies to Philadelphia on Jan 2; anxious parents read every strike headline and call him."
+        },
+        {
+          "id": "A-A-3", "name": "Angela Moore", "age": 60, "city": "Harrisburg", "state": "PA",
+          "tagline": "owner, Keystone School Tours (school bands)",
+          "quote": "With minors, I don't gamble. I need guarantees I can show the principal.",
+          "tags": ["school groups", "liability minded", "rules"],
+          "wins_over": "written guarantees and a clear disruption policy",
+          "breaks_at": "uncertainty she cannot explain to schools",
+          "trip": {"week": 3, "date": "Nov 20", "route": "PHL-MCO", "fixed_date": true, "checked_bags": 45,
+                   "travels_with": "high school band of 45 students", "assistance": null},
+          "attributes": {"group_size": 45, "patience": "medium", "need_for_control": "high",
+                         "social_role": "school administrators, email", "knows_refund_rights": true,
+                         "customer_since": "2015"},
+          "connections": ["A-A-2"],
+          "backstory": "Angela takes school bands to Orlando parades. Her November group flies before the strike, but she is already quoting spring trips and schools ask her which airline is safe to book."
+        }
+      ]
+    },
+    {
+      "id": "A-B",
+      "group": "travel agencies",
+      "label": "Caribbean and Mexico family-trip agency",
+      "share": 0.05,
+      "core_tension": "Agencies whose reputation travels by word of mouth inside close communities.",
+      "shared": {
+        "age_range": "40-60", "business": "neighborhood travel agency", "price_consciousness": "high",
+        "dates": "holiday peaks", "preferred_channel": "phone, WhatsApp with clients",
+        "news_from": ["clients", "WhatsApp", "community radio"], "flies_kestrel": "many bookings each season"
+      },
+      "members": [
+        {
+          "id": "A-B-1", "name": "Rafael Torres", "age": 49, "city": "Philadelphia", "state": "PA",
+          "tagline": "owner, Isla Travel (Puerto Rico and Dominican Republic)",
+          "quote": "My clients are my neighbors. If Kestrel fails them, they come to my door, not theirs.",
+          "tags": ["120 passengers Dec 21-24", "WhatsApp", "community reputation"],
+          "wins_over": "partner rebooking and help he can promise clients",
+          "breaks_at": "having nothing to tell 120 worried families",
+          "trip": {"week": 8, "date": "Dec 22", "route": "PHL-SJU", "fixed_date": true, "checked_bags": 150,
+                   "travels_with": "about 120 clients across several flights Dec 21-24", "assistance": "several elderly clients"},
+          "attributes": {"group_size": 120, "patience": "medium", "social_role": "WhatsApp broadcast to 900 clients",
+                         "knows_refund_rights": true, "also_books": "JetBlue, Spirit", "customer_since": "2012"},
+          "connections": ["F-A-3", "A-B-3"],
+          "backstory": "Rafael's agency books families from North Philadelphia to Puerto Rico and the Dominican Republic. About 120 of his clients fly Kestrel Dec 21-24. His WhatsApp updates reach 900 households."
+        },
+        {
+          "id": "A-B-2", "name": "Mei Lin", "age": 44, "city": "Orlando", "state": "FL",
+          "tagline": "owner, Sunshine Vacations (Cancún packages)",
+          "quote": "My Google rating is my business. One bad week shows up for a year.",
+          "tags": ["package tours", "online reviews", "16-person group"],
+          "wins_over": "goodwill she can pass on to clients",
+          "breaks_at": "one-star reviews caused by the airline",
+          "trip": {"week": 8, "date": "Dec 23", "route": "MCO-CUN", "fixed_date": true, "checked_bags": 16,
+                   "travels_with": "package group of 16", "assistance": null},
+          "attributes": {"group_size": 16, "patience": "medium", "social_role": "manages Google and Yelp reviews",
+                         "knows_refund_rights": true, "customer_since": "2019"},
+          "connections": ["V-A-1", "B-A-3"],
+          "backstory": "Mei sells Cancún packages with hotel and transfers. A 16-person group leaves Orlando on Dec 23. Her clients review her, not the airline, so she feels every delay in her ratings."
+        },
+        {
+          "id": "A-B-3", "name": "Samuel Okafor", "age": 52, "city": "Orlando", "state": "FL",
+          "tagline": "owner, Atlantic Gateway Travel (Bahamas groups)",
+          "quote": "I watch how they handle Christmas. Then I decide where my groups go.",
+          "tags": ["cautious", "watches the industry", "unaffected"],
+          "wins_over": "evidence that Kestrel took care of people",
+          "breaks_at": "stories from other agents about stranded groups",
+          "trip": {"week": 9, "date": "Dec 30", "route": "MCO-NAS", "fixed_date": true, "checked_bags": 25,
+                   "travels_with": "New Year group of 25", "assistance": null},
+          "attributes": {"group_size": 25, "patience": "high", "risk_attitude": "conservative",
+                         "social_role": "industry WhatsApp group of agents", "knows_refund_rights": true,
+                         "customer_since": "2014"},
+          "connections": ["A-B-1", "A-A-2"],
+          "backstory": "Samuel runs New Year trips to Nassau. His group flies Dec 30, after the strike. He hears other agents' stories first and moves future groups based on them."
+        }
+      ]
+    }
+  ]
+}
