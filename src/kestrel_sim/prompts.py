@@ -2,7 +2,6 @@
 import re
 
 from . import config
-from .personas import profile_text
 
 FRAME = """You are role-playing one real customer of {company}, a US low-cost airline based in \
 Orlando and Philadelphia. Stay fully in character: speak and decide as this person would, \
@@ -37,7 +36,7 @@ def parse_status(text):
 
 
 def _head(p):
-    return FRAME.format(company=config.COMPANY) + "\n\n=== WHO YOU ARE ===\n" + profile_text(p)
+    return FRAME.format(company=config.COMPANY) + "\n\n=== WHO YOU ARE ===\n" + p["profile"]
 
 
 def probe_prompt(p, context="It is November 1, before any of the events of the next ten weeks."):
@@ -100,19 +99,18 @@ def strike_scenario(p, variant="nodecision"):
 
     variant "plan" assumes partner rebooking, hotels and extra staff are in place.
     """
-    t = p["trip"]
-    if p["strike_exposed"] and variant == "plan":
-        return (f"It is {t['date']}, Christmas week. Ground handling workers (baggage, cleaning, wheelchair "
-                f"agents, fuelers) are on a 48-hour strike in Orlando and Philadelphia; Kestrel brought in "
-                f"backup ground crews. Your flight {t['route']} on {t['date']} has been CANCELED. The app "
-                f"offers you a seat on a partner airline the same day, departing 21:40, at no extra cost, "
-                f"or a full refund. The phone wait is about 15 minutes.")
     if p["strike_exposed"]:
-        return (f"It is {t['date']}, Christmas week. Ground handling workers (baggage, cleaning, wheelchair "
-                f"agents, fuelers) are on a 48-hour strike in Orlando and Philadelphia. Your flight "
-                f"{t['route']} on {t['date']} has been CANCELED. The app says the next Kestrel flight with "
-                f"free seats is on Dec 26. The phone line has a 2-hour wait. Meal vouchers and hotels are only "
-                f"given for delays Kestrel itself causes.")
+        t = next(t for t in p["trips"] if t["date"] in config.STRIKE_DATES and {t["from"], t["to"]} & config.BASES)
+        flight = f"Your flight {t['from']}-{t['to']} on {t['date']} has been CANCELED."
+        intro = (f"It is {t['date']}, Christmas week. Ground handling workers (baggage, cleaning, wheelchair "
+                 f"agents, fuelers) are on a 48-hour strike in Orlando and Philadelphia")
+        if variant == "plan":
+            return (f"{intro}; Kestrel brought in backup ground crews. {flight} The app offers you a seat on a "
+                    f"partner airline the same day, departing 21:40, at no extra cost, or a full refund. "
+                    f"The phone wait is about 15 minutes.")
+        return (f"{intro}. {flight} The app says the next Kestrel flight with free seats is on Dec 26. The phone "
+                f"line has a 2-hour wait. Meal vouchers and hotels are only given for delays Kestrel itself causes.")
+    trips = ", ".join(f"{t['date']} {t['from']}-{t['to']}" for t in p["trips"])
     return (f"It is Dec 23, Christmas week. Ground handling workers are on a 48-hour strike at Kestrel's "
             f"Orlando and Philadelphia bases. News and social media show long lines and canceled flights. "
-            f"Your own trip ({t['date']}, {t['route']}) is not directly affected so far.")
+            f"Your own Kestrel trips ({trips}) are not directly affected so far.")

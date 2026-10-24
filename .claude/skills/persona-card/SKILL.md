@@ -5,12 +5,12 @@ description: Show Kestrel Air personas as profile cards (name, tagline, quote, t
 
 # Persona card
 
-Personas live in `data/personas/personas.json` (archetype -> members). Test results live in
-`outputs/persona_tests/<timestamp>-<variant>/results.jsonl`.
+Load personas with `kestrel_sim.personas.load_personas("clusters" | "curated")`: both sets come back in
+one shape (see CLAUDE.md). Test results live in `outputs/persona_tests/<timestamp>-<set>-<variant>/results.jsonl`.
 
 ## In chat: one card per persona
 
-Render each persona as this block, filled from personas.json and, if a run is given, from results.jsonl:
+Render each persona as this block, filled from the loaded persona and, if a run is given, from results.jsonl:
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -29,17 +29,20 @@ Render each persona as this block, filled from personas.json and, if a run is gi
 └──────────────────────────────────────────────┘
 ```
 
-- Name is the first name only; tagline and city come from the member.
-- Quote: the member's `quote`, or a line it actually said in the run if the user asks for live output.
-- Tags: the member's `tags` (max 3).
+- Name is the first name only; the second line is `tagline · home`.
+- Quote: `quote` (curated set only). Cluster personas have none: leave the line out, or use a line the
+  persona actually said in the run if the user asks for live output.
+- Tags: `tags` (max 3).
+- The two labelled rows are `card_rows`: WINS OVER / BREAKS AT for curated, VALUES / WHEN IT GOES WRONG
+  for clusters. Add TRIPS from `trips` and STANDS FOR from `weight` (passenger trips over ten weeks).
 - WOULD BOOK AGAIN = `intent` from results (from check-in items 2a and reversed 2b). Leave the bar out if there is no run.
 - Never invent scores: a value that is not in the files is left out.
 
 ## As a page
 
 ```bash
-python scripts/render_cards.py                                          # personas only
-python scripts/render_cards.py outputs/persona_tests/<run>/results.jsonl # with test results
+python scripts/render_cards.py --personas clusters                                  # personas only
+python scripts/render_cards.py --personas curated outputs/persona_tests/<run>/results.jsonl  # with results
 ```
 
-This writes a self-contained `cards.html` (light and dark themes, grouped by archetype, with each persona's interview and week 8 reaction in a collapsible section).
+This writes a self-contained `cards.html` (light and dark themes, grouped by archetype or segment, with each persona's interview and week 8 reaction in a collapsible section).

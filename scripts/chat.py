@@ -1,7 +1,8 @@
 """Chat with one persona in the terminal (rehearsal for the board's live question).
 
-    python scripts/chat.py S-A-2
-    python scripts/chat.py F-B-1 --memory "Week 8: flight canceled, rebooked on a partner the same night."
+    python scripts/chat.py V-park-strike
+    python scripts/chat.py S-A-2 --personas curated
+    python scripts/chat.py F-B-1 --personas curated --memory "Week 8: flight canceled, rebooked on a partner the same night."
 """
 import argparse
 import sys
@@ -18,12 +19,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("persona")
     ap.add_argument("--memory", default="", help="what this persona lived through, if anything")
+    ap.add_argument("--personas", choices=sorted(config.PERSONA_SETS), default=config.DEFAULT_PERSONA_SET)
     ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
 
-    p = next((x for x in load_personas() if x["id"] == args.persona), None)
+    p = next((x for x in load_personas(args.personas) if x["id"] == args.persona), None)
     if p is None:
-        sys.exit(f"Unknown persona {args.persona}")
+        sys.exit(f"Unknown persona {args.persona} in the {args.personas} set")
     llm = Gemini(seed=args.seed)
     history = []
     print(f"Talking to {p['name']} ({p['tagline']}). Empty line to quit.\n")

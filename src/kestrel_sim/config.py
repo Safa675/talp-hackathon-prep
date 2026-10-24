@@ -9,8 +9,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
-PERSONA_SOURCE = DATA_DIR / "personas" / "personas.json"
-PERSONA_EXPORT = DATA_DIR / "personas" / "personas.jsonl"
+PERSONA_DIR = DATA_DIR / "personas"
+PERSONA_SETS = {
+    "clusters": PERSONA_DIR / "clusters" / "personas.jsonl",   # 66, data-grounded (pipelines/personas)
+    "curated": PERSONA_DIR / "curated" / "personas.json",      # 30, hand-written archetypes
+}
+DEFAULT_PERSONA_SET = os.environ.get("TALP_PERSONAS", "clusters")
 OUTPUT_DIR = ROOT / "outputs"
 
 COMPANY = "Kestrel Air"
@@ -18,6 +22,11 @@ COMPANY_SLUG = "kestrel"
 DEFAULT_MODEL = os.environ.get("TALP_MODEL", "gemini-3.5-flash-lite")
 DEFAULT_TEMPERATURE = 1.0
 MAX_WORKERS = int(os.environ.get("TALP_WORKERS", "30"))
+
+# Calendar and the known crisis (dossier).
+WEEK1_MONDAY = "2026-11-02"
+STRIKE_DATES = {"2026-12-22", "2026-12-23"}
+BASES = {"MCO", "PHL"}
 
 # Weekly statuses from the dossier ("What each persona reports every week").
 PASSENGER_STATUSES = ["flies as planned", "rebooked", "moved to another airline", "canceled the trip"]

@@ -1,12 +1,14 @@
 """Instantiate one representative persona per cluster (clusters.json) with Gemini. Run once; output is frozen.
 We fix: cluster, weight, trips (dates/routes from the cluster's window), age range, gender, home area.
 The LLM fills: name, life details, behaviour traits and a short narrative consistent with the cluster.
-Usage: python3 gen_personas.py  -> personas.jsonl, gen_calls.jsonl
+Usage: python3 pipelines/personas/gen_personas.py  -> data/personas/clusters/personas.jsonl, gen_calls.jsonl
 """
 import datetime as dt, json, random, sys, concurrent.futures as cf
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
-from llm import generate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from kestrel_sim.llm import generate  # noqa: E402
+
+OUT = Path(__file__).resolve().parents[2] / "data" / "personas" / "clusters"
 
 MODEL, SEED = "gemini-3.5-flash", 2026
 D0 = dt.date(2026, 11, 2)
@@ -150,7 +152,7 @@ no health details except airport assistance when the cluster requires it; no ste
 "past_kestrel_experience": one sentence. "reaction_to_disruption": one sentence on what they typically do when a flight goes wrong."""
 
 def main():
-    data = json.loads(Path("clusters.json").read_text())
+    data = json.loads((OUT / "clusters.json").read_text(encoding="utf-8"))
     rng = random.Random(SEED); personas = []
     for k, c in enumerate(data["clusters"]):
         s = SPEC[c["segment"]]; home, legs = trips_for(c, rng, k)
@@ -171,9 +173,9 @@ def main():
             g = json.loads(resp); g["name"] = p["name"]; p.update(g); calls.append({"persona": p["id"], "model": MODEL, "seed": SEED + personas.index(p), "prompt": pr, "response": resp})
     names = [p["name"] for p in personas]
     dup = {n for n in names if names.count(n) > 1}
-    with open("personas.jsonl", "w", encoding="utf-8") as f:
+    with open(OUT / "personas.jsonl", "w", encoding="utf-8") as f:
         for p in personas: f.write(json.dumps(p, ensure_ascii=False) + "\n")
-    with open("gen_calls.jsonl", "w", encoding="utf-8") as f:
+    with open(OUT / "gen_calls.jsonl", "w", encoding="utf-8") as f:
         for c in calls: f.write(json.dumps(c, ensure_ascii=False) + "\n")
     print(f"{len(personas)} personas written; duplicate names: {sorted(dup) or 'none'}; strike-exposed: {sum(p['strike_exposed'] for p in personas)}; international: {sum(p['international'] for p in personas)}")
 

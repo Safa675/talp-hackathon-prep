@@ -5,6 +5,8 @@ Step 3  raking (IPF) so the segment x window table matches BOTH margins: segment
 Each non-empty cell = one cluster = one persona; its weight = passenger trips it stands for over the 10 weeks.
 """
 import json
+from pathlib import Path
+OUT = Path(__file__).resolve().parents[2] / "data" / "personas" / "clusters"   # outputs live with the data
 
 # --- calendar margin (dossier + stated assumptions) -------------------------------------------
 ORD = 7 * 210_000                      # weeks 1-3, 5-7, 10 at 210k/week (dossier)
@@ -58,7 +60,7 @@ for i, (g, k, d, s, _) in enumerate(SEG):
         clusters.append({"cluster": f"{k}:{w}", "group": g, "segment": k, "segment_description": d, "window": w,
                          "share_pct": round(100 * share, 3), "represents_trips": round(share * TOTAL)})
 json.dump({"total_trips_10_weeks": TOTAL, "windows": WIN, "clusters": clusters},
-          open("clusters.json", "w"), ensure_ascii=False, indent=1)
+          open(OUT / "clusters.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 print(f"total trips over 10 weeks ~{TOTAL:,}  | windows: " + ", ".join(f"{w} {WIN[w]:,}" for w in WK))
 print(f"clusters: {len(clusters)}")

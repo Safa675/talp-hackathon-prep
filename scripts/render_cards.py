@@ -1,8 +1,9 @@
 """Render persona cards as one self-contained HTML page.
 
-    python scripts/render_cards.py                       # cards from personas only
-    python scripts/render_cards.py outputs/persona_tests/<run>/results.jsonl
+    python scripts/render_cards.py [--personas clusters|curated]              # personas only
+    python scripts/render_cards.py --personas curated outputs/persona_tests/<run>/results.jsonl
 """
+import argparse
 import html
 import json
 import sys
@@ -56,11 +57,11 @@ def card(p, r):
     s = (r or {}).get("strike") or {}
     status = s.get("status")
     st_cls = "st-" + status.split()[0] if status else ""
-    tags = "".join(f'<span class="tag">{esc(t)}</span>' for t in p["tags"])
-    t = p["trip"]
-    rows = [("Wins over", esc(p["wins_over"])), ("Breaks at", esc(p["breaks_at"])),
-            ("Trip", f"{esc(t['date'])} · {esc(t['route'])}{' · strike-exposed' if p['strike_exposed'] else ''}"),
-            ("Stands for", f"{p['weight']:,} pax/week")]
+    tags = "".join(f'<span class="tag">{esc(t)}</span>' for t in p["tags"][:3])
+    trips = "<br>".join(f"{esc(t['date'])} · {esc(t['from'])}→{esc(t['to'])}" for t in p["trips"])
+    rows = [(k, esc(v)) for k, v in p["card_rows"]]
+    rows += [("Trips", trips + (" · strike-exposed" if p["strike_exposed"] else "")),
+             ("Stands for", f"{p['weight']:,} trips")]
     if r:
         rows.append(("W8 test", f'<span class="{st_cls}">{esc(status)}</span> · again: {esc(s.get("book_again"))}'))
     rows_html = "".join(f'<div class="row"><span class="k">{k}</span><span class="v">{v}</span></div>' for k, v in rows)
@@ -73,10 +74,11 @@ def card(p, r):
         extra = (f"<details><summary>What {esc(p['name'].split()[0])} said</summary>"
                  f"<p>{esc(r.get('interview'))}</p><p><b>W8:</b> {esc(s.get('thoughts'))}</p>"
                  f"{'<p><b>Post:</b> ' + esc(s.get('post')) + '</p>' if s.get('post') else ''}</details>")
+    quote = f'<div class="q">“{esc(p["quote"])}”</div>' if p.get("quote") else '<div style="height:14px"></div>'
     return f"""<div class="card"><div class="top"><div class="av">{esc(p['name'][0])}</div><div>
 <div class="name">{esc(p['name'].split()[0])}, {p['age']}</div>
-<div class="meta">{esc(p['tagline'])} · {esc(p['city'])}, {esc(p['state'])}</div></div></div>
-<div class="q">“{esc(p['quote'])}”</div><div class="tags">{tags}</div>{rows_html}{bar}
+<div class="meta">{esc(p['tagline'])} · {esc(p['home'])}</div></div></div>
+{quote}<div class="tags">{tags}</div>{rows_html}{bar}
 <div class="foot"><span class="dot"></span>SIMULATED PERSONA · {esc(p['id'])}</div>{extra}</div>"""
 
 
@@ -88,25 +90,30 @@ def render_cards(personas, results, path):
             if current is not None:
                 sections.append("</div>")
             current = p["archetype"]
-            sections.append(f"<h2>{esc(p['archetype_label'])}</h2><p class='arch'>{esc(p['group'])} · "
-                            f"{esc(p['core_tension'])}</p><div class='grid'>")
+            note = f" · {esc(p['core_tension'])}" if p.get("core_tension") else ""
+            sections.append(f"<h2>{esc(p['archetype_label'])}</h2><p class='arch'>{esc(p['group'])}{note}</p>"
+                            f"<div class='grid'>")
         sections.append(card(p, by_id.get(p["id"])))
     sections.append("</div>")
     doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Kestrel Personas</title>
 <style>{CSS}</style></head><body><h1>Kestrel Air · simulated passengers</h1>
-<p class="sub">{len(personas)} personas · 10 archetypes · 5 groups · team-09 Pegasus</p>
+<p class="sub">{len(personas)} personas · {len({p['archetype'] for p in personas})} {'archetypes' if personas and personas[0]['set'] == 'curated' else 'segments'} · {len({p['group'] for p in personas})} groups · team-09 Pegasus</p>
 {''.join(sections)}</body></html>"""
     Path(path).write_text(doc, encoding="utf-8")
     return path
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("results", nargs="?", help="results.jsonl from scripts/test_personas.py")
+    ap.add_argument("--personas", choices=sorted(config.PERSONA_SETS), default=config.DEFAULT_PERSONA_SET)
+    args = ap.parse_args()
     results = []
-    if len(sys.argv) > 1:
-        results = [json.loads(l) for l in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines() if l.strip()]
-        target = Path(sys.argv[1]).with_name("cards.html")
+    if args.results:
+        results = [json.loads(l) for l in Path(args.results).read_text(encoding="utf-8").splitlines() if l.strip()]
+        target = Path(args.results).with_name("cards.html")
     else:
-        target = config.OUTPUT_DIR / "cards.html"
+        target = config.OUTPUT_DIR / f"cards-{args.personas}.html"
         target.parent.mkdir(parents=True, exist_ok=True)
-    print(render_cards(load_personas(), results, target))
+    print(render_cards(load_personas(args.personas), results, target))

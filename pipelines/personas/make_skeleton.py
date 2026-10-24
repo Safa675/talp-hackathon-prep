@@ -1,8 +1,11 @@
-"""30-persona skeleton for Kestrel Air (fixed fields only; narratives come later from the LLM).
+"""(Superseded by make_clusters.py + gen_personas.py; kept for reference.)
+30-persona skeleton for Kestrel Air (fixed fields only; narratives come later from the LLM).
 Grounding: dossier (bases, routes 75/25, week-8 load, groups) + NHTS 2022 air-trip profile (purpose, party size,
 children, age), income shifted down for a low-cost carrier. Strike-exposed passengers are oversampled (12/30)
 and corrected with weights in the metrics."""
 import json
+from pathlib import Path
+OUT = Path(__file__).resolve().parents[2] / "data" / "personas" / "clusters"   # outputs live with the data
 
 W = {"2026-11-03":1,"2026-11-04":1,"2026-11-06":1,"2026-11-10":2,"2026-11-11":2,"2026-11-12":2,"2026-11-17":3,"2026-11-18":3,"2026-11-20":3,
      "2026-11-25":4,"2026-11-29":4,"2026-12-01":5,"2026-12-02":5,"2026-12-08":6,"2026-12-09":6,"2026-12-10":6,"2026-12-11":6,
@@ -58,7 +61,7 @@ for row in P:
                     "holiday-after-strike" if any(l["week"] in (8, 9) for l in p["trips"]) else
                     "thanksgiving" if any(l["week"] == 4 for l in p["trips"]) else "other")
     out.append(p)
-with open("personas_skeleton.jsonl", "w", encoding="utf-8") as f:
+with open(OUT / "personas_skeleton.jsonl", "w", encoding="utf-8") as f:
     for p in out: f.write(json.dumps(p, ensure_ascii=False) + "\n")
 import collections
 print("personas", len(out), "| groups", dict(collections.Counter(p["group"] for p in out)))
