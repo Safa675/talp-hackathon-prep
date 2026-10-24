@@ -94,16 +94,11 @@ P = {"cancel": 0.012, "delay": 0.04, "short_delay": 0.17,
 # How we read a dashboard announcement: (extra cancel probability, extra 3h+ delay probability) on flights in scope
 EVENT_EFFECTS = {"none": (0, 0), "delays": (0, 0.15), "some cancellations": (0.05, 0.15),
                  "many cancellations": (0.15, 0.25)}
-STRIKE_NEWS = {
-    1: "News: the workers of Kestrel's ground handling contractor have announced a 48-hour strike at Orlando and "
-       "Philadelphia airports on Dec 22-23. Talks continue.",
-    4: "News: the Dec 22-23 ground handling strike at Orlando and Philadelphia is still on; talks continue.",
-    7: "News: the 48-hour ground handling strike at Orlando and Philadelphia on Dec 22-23 is going ahead next week. "
-       "The contractor will bring in replacement staff 'where it can'; the union says it 'may be extended'.",
-    8: "News: the 48-hour ground handling strike at Orlando and Philadelphia is on, Dec 22-23, in the busiest week "
-       "of the year. Turnarounds are slow; some flights are late or canceled.",
-    9: "News: the ground handling strike at Orlando and Philadelphia ended after 48 hours.",
-}
+# The known crisis reaches the personas as an event in its own week, like any dashboard announcement.
+STRIKE_EVENT = {"week": STRIKE_WEEK, "text": "The workers of Kestrel's ground handling contractor (baggage, cabin "
+                "cleaning, wheelchair assistance, fueling) are on a 48-hour strike at Orlando and Philadelphia on "
+                "Dec 22-23, the busiest week of the year. Replacement staff 'where it can'; some flights are late "
+                "or canceled. The union says the strike 'may be extended'."}
 # A decision's target: everyone, a group, persona ids, or one of these rules
 TARGET_RULES = {
     "strike-day passengers": lambda p: any(t["date"] in STRIKE_DATES and {t["from"], t["to"]} & BASES for t in p["trips"]),
@@ -173,6 +168,11 @@ def company_message(decisions, persona, week):
 
 def trips_in_week(persona, week):
     return [t for t in persona["trips"] if t["week"] == week]
+
+
+def news_until(surprises, week):
+    """Every event announced by this week, the strike included; nothing from later weeks."""
+    return sorted([e for e in [STRIKE_EVENT, *surprises] if e["week"] <= week], key=lambda e: e["week"])
 
 
 def events_in_force(surprises, week):
@@ -260,8 +260,6 @@ def week_facts(persona, week, rng, surprises, use_surprises, decisions=()):
     eff = effects(decisions, persona, week)
     events = events_in_force(surprises, week) if use_surprises else []
     lines, outcome, world = [], "none", {"strike_day": False, "within_24h": None, "flights": []}
-    if week in STRIKE_NEWS:
-        lines.append(STRIKE_NEWS[week])
     rank = {"none": 0, "on time": 1, "delayed": 2, "canceled": 3}
     for t in trips:
         o, text, fast, strike = leg_facts(persona, t, week, rng, eff, events)
@@ -273,10 +271,10 @@ def week_facts(persona, week, rng, surprises, use_surprises, decisions=()):
         outcome = max(outcome, o, key=rank.get)
     if not trips:
         lines.append("You have no flight this week.")
-    if use_surprises:
-        for s in surprises:
-            if s["week"] == week:
-                lines.append(f"Announcement: {s['text']}")
+    for s in news_until(surprises if use_surprises else [], week):  # known from its week on, then stays in the news
+        head = "Announcement" if s["week"] == week else f"Still in the news (since week {s['week']})"
+        reports = f" Reports say: {s['reading']}" if s.get("read_by") else ""
+        lines.append(f"{head}: {s['text']}{reports}")
     return bool(trips), outcome, lines, world
 
 

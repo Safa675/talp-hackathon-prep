@@ -62,7 +62,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
     <span class="small" id="runInfo"></span>
     <button class="p" id="play">Play</button>
     <button id="stop" class="hidden">Stop</button>
-    <a class="small" href="/advanced">advanced</a>
   </div>
   <div class="weeks" id="weeks"></div>
 </header>
@@ -87,7 +86,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
       <textarea id="evText" rows="2" placeholder="New event this week (paste the dashboard announcement)"></textarea>
       <div class="row" style="margin-top:6px">
         <select id="evEffect" title="How we read it: what it does to flights this week and next">
-          <option value="none">no effect on flights</option><option value="delays">some delays</option>
+          <option value="auto">effect: let the model read it</option><option value="none">no effect on flights</option><option value="delays">some delays</option>
           <option value="some cancellations">some cancellations</option><option value="many cancellations">many cancellations</option></select>
         <select id="evScope" title="Which flights"><option value="all">all flights</option><option value="bases">Orlando &amp; Philadelphia</option><option value="intl">Mexico &amp; Caribbean</option></select>
         <label class="small row"><input type="checkbox" id="evKestrel"> Kestrel's own fault</label></div>
@@ -111,6 +110,14 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
       <label class="f">Who<select id="askWho"></select></label>
       <textarea id="askQ" rows="3" placeholder="e.g. What have you heard about the strike, and what will you do?"></textarea>
       <div class="row" style="margin-top:6px"><button class="p" id="askGo">Ask</button><select id="askModel" title="Model for answers"></select><span class="small mute" id="askInfo"></span></div>
+    </div>
+    <div class="card">
+      <h2>Hand-in</h2>
+      <p class="small mute">The five runs (plan_1, plan_2, nodecision_1, nodecision_2, plan_nosurprises) use this simulation's events, decisions and personas and play with the calendar like this one. When they reach week 10, build the ZIP.</p>
+      <div class="row"><button id="offGo">Start the 5 hand-in runs</button></div>
+      <div class="small" id="offInfo" style="margin-top:6px"></div>
+      <div class="row" style="margin-top:8px"><input id="team" value="09" style="width:60px"><button id="zipGo">Build ZIP + check.py</button></div>
+      <pre id="zipOut" class="small hidden" style="white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
     </div>
   </aside>
   <section>
@@ -146,7 +153,14 @@ async function load(){
   const opts = sessions.map(r => `<option ${r.name===name?"selected":""}>${esc(r.name)}</option>`).join("") + `<option value="__new">+ new simulation</option>`;
   if ($("#sess")._o !== opts) { $("#sess").innerHTML = opts; $("#sess")._o = opts; }
   D = await api("/api/run?name=" + encodeURIComponent(name));
-  drawHeader(D); drawWeek();
+  drawHeader(D); drawWeek(); drawOfficial(); drawWho();
+}
+function drawWho(){
+  const key = D.personas.map(p => p.id).join();
+  if ($("#askWho")._k === key) return; $("#askWho")._k = key;
+  const groups = [...new Set(D.personas.map(p => p.group))];
+  $("#askWho").innerHTML = `<option value="all">all ${D.personas.length} personas</option>` + groups.map(g => `<option value="g:${esc(g)}">all ${esc(g)}</option>`).join("")
+    + D.personas.map(p => `<option value="p:${esc(p.id)}">${esc(p.name||p.id)} (${esc(p.id)})</option>`).join("");
 }
 function weekState(w){
   const i = D.info, v = D.validity?.valid_through ?? i.played;
@@ -165,7 +179,7 @@ function drawHeader(d){
   $("#play").textContent = d.validity?.stale_from ? `Replay from week ${d.validity.stale_from}` : `Play week ${next}`;
   $("#play").onclick = () => play(next);
   $("#runInfo").innerHTML = busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
-    : `<span class="mute">${esc(i.model)}${i.auto?" · auto":""}${i.social?" · social":""}</span>`;
+    : `<span class="mute">${d.personas.length} personas · ${esc(i.model)}${i.auto?" · auto":""}${i.social?" · social":""}</span>`;
 }
 function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); }
 
@@ -176,7 +190,7 @@ function drawWeek(){
   const evs = (D.surprises||[]).filter(s => s.week === w);
   const news = META.news?.[w];
   $("#events").innerHTML = (w === 8 ? `<div class="item">${STRIKE}</div>` : "") + (news ? `<div class="item small"><span class="mute">Every persona sees:</span> ${esc(news)}</div>` : "")
-    + (evs.map(s => `<div class="item">${esc(s.text)}<div class="small mute">${s.effect && s.effect!=="none" ? `${esc(s.effect)} on ${{all:"all flights",bases:"Orlando & Philadelphia flights",intl:"Mexico & Caribbean flights"}[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights"}${s.reading?` · read: ${esc(s.reading)}`:""}</div></div>`).join("") || (news ? "" : `<div class="item mute">No events this week.</div>`))
+    + (evs.map(s => `<div class="item">${esc(s.text)}<div class="small mute">${s.effect && s.effect!=="none" ? `${esc(s.effect)} on ${{all:"all flights",bases:"Orlando & Philadelphia flights",intl:"Mexico & Caribbean flights"}[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights"}${s.reading?`<br>read: ${esc(s.reading)}`:""}</div></div>`).join("") || (news ? "" : `<div class="item mute">No events this week.</div>`))
     + (D.info.type === "plan_nosurprises" ? `<div class="item small mute">This simulation ignores announcements (plan_nosurprises).</div>` : "");
   const decs = D.decisions || [];
   $("#decs").innerHTML = D.info.type === "nodecision" ? `<div class="mute small">No decisions in this simulation (business as usual).</div>` :
@@ -217,7 +231,9 @@ async function readFile(f){ try { return (await api("/api/file?name=" + encodeUR
 $("#evAdd").onclick = async () => {
   const text = $("#evText").value.trim(); if (!text) return;
   const file = D.config.surprises || "surprises.json";
-  const ev = {week: sel, text, effect: $("#evEffect").value, scope: $("#evScope").value, kestrel_caused: $("#evKestrel").checked, reading: $("#evReading").value.trim()};
+  const auto = $("#evEffect").value === "auto";
+  const ev = auto ? {week: sel, text, effect: "auto"} : {week: sel, text, effect: $("#evEffect").value, scope: $("#evScope").value, kestrel_caused: $("#evKestrel").checked, reading: $("#evReading").value.trim() || "set by hand"};
+  $("#evMsg").textContent = auto ? "the model is reading it…" : "";
   try { const list = await readFile(file); list.push(ev); list.sort((a,b) => a.week - b.week);
     await api("/api/file", {name: file, content: list, note: `event added for week ${sel}`});
     $("#evText").value = ""; $("#evReading").value = ""; $("#evMsg").innerHTML = `<span class="ok">Added.</span>`; load();
@@ -251,7 +267,7 @@ function askOne(id){ $("#askWho").value = "p:" + id; $("#askQ").focus(); }
 $("#askGo").onclick = async () => {
   const q = $("#askQ").value.trim(), who = $("#askWho").value; if (!q) return;
   const ids = who === "all" ? D.personas.map(p => p.id) : who.startsWith("g:") ? D.personas.filter(p => p.group === who.slice(2)).map(p => p.id) : [who.slice(2)];
-  const week = Math.min(sel, D.validity?.valid_through ?? D.info.played);
+  const week = sel;  // answers as of the end of the selected week; events up to it are known
   $("#askGo").disabled = true; $("#askInfo").textContent = `asking ${ids.length}…`;
   try { const recs = await api("/api/interview", {source: name, personas: ids, question: q, week, model: $("#askModel").value, asker: "a Kestrel board member"});
     $("#answers").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">“${esc(q)}”</h2><button onclick="$('#answers').innerHTML=''" style="padding:2px 8px">close</button></div>
@@ -262,6 +278,16 @@ $("#askGo").onclick = async () => {
   $("#askGo").disabled = false;
 };
 
+$("#offGo").onclick = async () => {
+  if (!confirm("Start the five hand-in runs with this simulation's events, decisions, personas and model?")) return;
+  try { const r = await api("/api/official", {from: name}); $("#offInfo").textContent = "Started: " + r.join(", "); load(); } catch(e){ $("#offInfo").textContent = e.message; }
+};
+$("#zipGo").onclick = async () => { $("#zipOut").classList.remove("hidden"); $("#zipOut").textContent = "building…";
+  try { const r = await api("/api/submission", {team: $("#team").value}); $("#zipOut").textContent = `${r.zip}\n${r.notes.map(n=>"! "+n).join("\n")}\n\n${r.check}`; } catch(e){ $("#zipOut").textContent = e.message; } };
+function drawOfficial(){
+  const off = S.runs.filter(r => S.official.includes(r.name));
+  $("#offInfo").innerHTML = off.length ? off.map(r => `${esc(r.name)}: ${r.played}/10 ${r.status==="done"?"✓":""}`).join(" · ") : "";
+}
 $("#nGo").onclick = async () => {
   try { await api("/api/session", {name: $("#nName").value.trim(), type: "plan", seed: 1, model: $("#nModel").value, probe: true,
       social: $("#nSocial").checked, auto: $("#nAuto").checked, surprises: "surprises.json"});
@@ -278,9 +304,7 @@ $("#nGo").onclick = async () => {
   $("#askModel").innerHTML = models.map(m => `<option ${m==="gemini-3.5-flash-lite"?"selected":""}>${m}</option>`).join("");
   $("#decActs").innerHTML = actRow(Object.keys(META.menu)[1]);
   $("#decTarget").innerHTML = `<option value="everyone">everyone</option>` + (META.targets||[]).map(t => `<option>${esc(t)}</option>`).join("") + META.groups.map(g => `<option>${esc(g)}</option>`).join("");
-  const ps = D?.personas || META.personas;
-  $("#askWho").innerHTML = `<option value="all">all personas</option>` + META.groups.map(g => `<option value="g:${esc(g)}">all ${esc(g)}</option>`).join("")
-    + ps.map(p => `<option value="p:${esc(p.id)}">${esc(p.name||p.id)} (${esc(p.id)})</option>`).join("");
+
   setInterval(load, 3000);
 })();
 </script>

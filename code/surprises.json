@@ -1,6 +1,32 @@
 [
   {
+    "week": 1,
+    "text": "a plane crash happened in. this week",
+    "effect": "many cancellations",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 2,
+    "reading": "A plane crash occurred this week, prompting widespread cancellations across all Kestrel routes as authorities initiate safety reviews.",
+    "read_by": "gemini-3.5-flash-lite"
+  },
+  {
+    "week": 1,
+    "text": "a plane rcash",
+    "effect": "some cancellations",
+    "scope": "bases",
+    "kestrel_caused": true,
+    "until_week": 1,
+    "reading": "Following reports of a plane crash involving Kestrel Air, the airline has implemented temporary cancellations affecting flights out of its primary Orlando and Philadelphia bases while initial safety reviews are conducted.",
+    "read_by": "gemini-3.5-flash-lite"
+  },
+  {
     "week": 2,
-    "text": "a plane crashes to the ocean 100 deaths"
+    "text": "a plane crashes to the ocean 100 deaths",
+    "effect": "many cancellations",
+    "scope": "all",
+    "kestrel_caused": true,
+    "until_week": 4,
+    "reading": "A Kestrel Air flight has crashed into the ocean resulting in one hundred deaths, prompting widespread grounding of flights and intense public scrutiny.",
+    "read_by": "gemini-3.5-flash-lite"
   }
 ]

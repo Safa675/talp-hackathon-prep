@@ -41,7 +41,7 @@ LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
 ENGINE_VERSION = 2
-DEFAULT_PERSONAS = "personas_skeleton.jsonl"  # talp-kestrel branch, 30 compact personas
+DEFAULT_PERSONAS = "personas_66.jsonl"  # talp-kestrel branch: 66 personas, each standing for real trips
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
          6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27, Christmas", 9: "Dec 28-Jan 3, New Year", 10: "Jan 4-10"}
@@ -182,7 +182,7 @@ def prompt_code_hash():
     parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message, sim.effects,
                                             sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
                                             sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
-    return h(parts, sim.P, sim.EVENT_EFFECTS, sim.STRIKE_NEWS, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
+    return h(parts, sim.P, sim.EVENT_EFFECTS, sim.STRIKE_EVENT, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -259,6 +259,39 @@ def call(model, prompt, schema, seed, level, validate, system=sim.SYSTEM):
         except Exception as e:  # malformed JSON, 429, timeout
             last = (last[0], repr(e), last[2])
     return None, last[0], last[1] or "invalid answer", last[2]
+
+
+# ---------------------------------------------------------------- reading an announcement
+READ_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "effect": {"type": "STRING", "enum": list(sim.EVENT_EFFECTS)},
+        "scope": {"type": "STRING", "enum": ["all", "bases", "intl"]},
+        "kestrel_caused": {"type": "BOOLEAN"},
+        "weeks": {"type": "INTEGER", "description": "how many weeks it acts on flights, 1 to 3"},
+        "reading": {"type": "STRING", "description": "one sentence: how big it is, who hears about it, what people do"},
+    },
+    "required": ["effect", "scope", "kestrel_caused", "weeks", "reading"],
+}
+
+
+def read_event(event, model="gemini-3.5-flash-lite"):
+    """The model reads a dashboard announcement once into its effect on Kestrel's flights; the reading is saved
+    in the surprises file, where the team can see and change it. Crises are serious but survivable."""
+    prompt = (f"You are the analyst of a simulation lab working for Kestrel Air, a US low-cost airline with bases in "
+              f"Orlando (MCO) and Philadelphia (PHL); 75% domestic, 25% Mexico and the Caribbean. This announcement "
+              f"arrived at the start of week {event['week']} of 10 (Nov 2 - Jan 10):\n\"{event['text']}\"\n"
+              f"Decide how it acts on Kestrel's flights: effect (none, delays, some cancellations, many cancellations), "
+              f"which flights (all, bases = Orlando and Philadelphia, intl = Mexico and the Caribbean), whether it is "
+              f"Kestrel's own doing, for how many weeks, and one sentence on how you read it, written as a neutral news "
+              f"report in the third person (passengers will read it). Crises are serious but survivable; do not "
+              f"exaggerate, and do not invent facts the text does not give.")
+    parsed, _, err, _ = call(model, prompt, READ_SCHEMA, 1, "LOW", lambda r: r.get("effect") in sim.EVENT_EFFECTS)
+    if not parsed:
+        return dict(event, effect="none", reading=f"(could not read automatically: {err})")
+    weeks = max(1, min(3, int(parsed["weeks"])))
+    return dict(event, effect=parsed["effect"], scope=parsed["scope"], kestrel_caused=parsed["kestrel_caused"],
+                until_week=min(10, event["week"] + weeks - 1), reading=parsed["reading"], read_by=model)
 
 
 # ---------------------------------------------------------------- inputs
@@ -817,25 +850,27 @@ def experience(entries, upto):
     return lines, memory
 
 
-def interview_prompt(persona, lines, memory, week, question, asker):
+def interview_prompt(persona, lines, memory, week, question, asker, news=()):
     when = "before week 1 (November 1)" if week == 0 else f"the end of week {week} ({DATES[week]})"
     exp = "\n".join(lines) or "Nothing has happened yet; your trips are booked."
+    heard = "\n".join(f"Week {e['week']}: {e['text']}" + (f" Reports say: {e['reading']}" if e.get("read_by") else "")
+                      for e in news) or "Nothing special."
     return (f"PERSONA: {json.dumps(shown(persona), ensure_ascii=False)}\n"
-            f"IT IS NOW {when}.\nYOUR EXPERIENCES SO FAR:\n{exp}\n"
+            f"IT IS NOW {when}.\nNEWS YOU HAVE HEARD SO FAR:\n{heard}\nYOUR EXPERIENCES SO FAR:\n{exp}\n"
             f"WHAT IS ON YOUR MIND: {memory}\n"
             f"QUESTION from {asker}: {question}\n"
             "Answer as this person.")
 
 
-def interview(timeline, source, persona_ids, question, model, seed=1, week=None, asker="an interviewer"):
+def interview(timeline, source, persona_ids, question, model, seed=1, week=None, asker="an interviewer", surprises=()):
     """Ask personas a free question about what they lived through up to `week`. Logged to logs/interviews.jsonl."""
     personas, valid, entries = timeline
-    week = valid if week is None else max(0, min(int(week), valid))
+    week = valid if week is None else max(0, min(int(week), 10))  # experiences reach `valid`, the news reaches `week`
     chosen = [p for p in personas if p["id"] in set(persona_ids)]
 
     def ask(p):
-        lines, memory = experience(entries.get(p["id"], []), week)
-        prompt = interview_prompt(p, lines, memory, week, question, asker)
+        lines, memory = experience(entries.get(p["id"], []), min(week, valid))
+        prompt = interview_prompt(p, lines, memory, week, question, asker, sim.news_until(surprises, week))
         answer, text, err, use = call(model, prompt, None, seed, "LOW", lambda a: bool(a), system=INTERVIEW_SYSTEM)
         rec = {"ts": now(), "id": h(source, p["id"], week, question, now(), random.random())[:12], "source": source,
                "persona": p["id"], "name": p.get("name"), "group": p.get("group"), "week": week, "asker": asker,
@@ -917,10 +952,11 @@ class Manager:
 
     def update_session(self, name, **changes):
         run = self._free(name)
-        for k in ("decisions", "surprises", "auto", "social"):
+        for k in ("decisions", "surprises", "auto", "social", "personas"):
             if k in changes:
                 run.config[k] = changes[k]
-                run.info[{"decisions": "decisions_file", "surprises": "surprises_file"}.get(k, k)] = changes[k]
+                run.info[{"decisions": "decisions_file", "surprises": "surprises_file",
+                          "personas": "personas_file"}.get(k, k)] = changes[k]
         run.save()
         log("session_updated", run=name, **changes)
         return run
