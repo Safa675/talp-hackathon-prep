@@ -792,7 +792,7 @@ def assemble(run, out):
         "company": "kestrel", "type": i["type"], "seed": i["seed"], "model": i["model"], "decisions": run.decisions,
     }, indent=2, ensure_ascii=False), encoding="utf-8")
     sim.write_metrics(out, run.personas)
-    i["metrics"] = add_metrics(out, run.personas, weekly, probes)
+    i["metrics"] = add_metrics(out, run, weekly, probes)
 
 
 def nps(rows, when):
@@ -800,20 +800,80 @@ def nps(rows, when):
     return round(100 * (sum(x == 5 for x in s) - sum(x <= 3 for x in s)) / len(s), 1) if s else None
 
 
-def add_metrics(out, personas, weekly, probes):
-    m = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
-    if probes:
-        m["goal_3b"] = nps(probes, "end")
-        m["nps_start"] = nps(probes, "start")
-        m["units"]["goal_3b"] = "NPS proxy at the end from check-in 3a (5 = promoter, 1-3 = detractor); start in nps_start"
-    weight = {p["id"]: p.get("represents_trips") for p in personas}
-    if all(weight.values()):  # persona files that carry how many real trips each persona stands for
-        flown = [r for r in weekly if r["had_flight_this_week"]]
-        tot = sum(weight[r["persona"]] for r in flown) or 1
-        lost = sum(weight[r["persona"]] for r in flown if r["status"] in ("moved to another airline", "canceled the trip"))
-        canc = sum(weight[r["persona"]] for r in flown if r["flight_outcome"] == "canceled")
-        m["weighted"] = {"goal_1": round(100 * (1 - canc / tot), 1), "goal_4": round(100 * (1 - lost / tot), 1),
-                         "unit": "same as goal_1 / goal_4, persona rows weighted by represents_trips"}
+# Dossier baseline, November 2: 210,000 passengers and ~1,355 flights a week, 2,500 complaints a month, NPS +12
+FLIGHTS_PER_WEEK, PAX_PER_WEEK, COMPLAINTS_PER_MONTH, NPS_BASE = 1355, 210_000, 2500, 12
+FARE = {"domestic": 120, "intl": 210}
+SCOPE_SHARE = {"all": 1.0, "bases": 0.6, "intl": 0.25}  # share of Kestrel flights an event touches
+
+
+def board_metrics(personas, weekly, decisions, surprises, probes=()):
+    """The board's goals in the board's units. Persona rows are weighted by represents_trips when the persona file
+    has it (each persona stands for that many real trips); otherwise every persona counts once."""
+    w = {p["id"]: p.get("represents_trips") or 1 for p in personas}
+    by_id = {p["id"]: p for p in personas}
+    weighted = all(p.get("represents_trips") for p in personas)
+    net = {"id": "", "group": "", "trips": []}  # network-wide actions reach every flight
+
+    # goal 1: network flights operated, from the world's cancel rates, strike days left out
+    planned = canceled = 0.0
+    for week in WEEKS:
+        eff = sim.effects(decisions, net, week)
+        lease = sim.P["lease_factor"] if "lease" in eff else 1
+        flights = FLIGHTS_PER_WEEK * (5 / 7 if week == sim.STRIKE_WEEK else 1)
+        rate = sim.P["cancel"] * lease
+        for e in sim.events_in_force(surprises, week):
+            rate += sim.EVENT_EFFECTS.get(e.get("effect", "none"), (0, 0))[0] * SCOPE_SHARE.get(e.get("scope", "all"), 1) * lease
+        c = flights * rate
+        if week == sim.STRIKE_WEEK and "backup" not in eff:  # Dec 24 knock-on at the bases
+            c += FLIGHTS_PER_WEEK / 7 * SCOPE_SHARE["bases"] * sim.P["knock_on_cancel"]
+        if "merge" in eff and week not in (8, 9):
+            c += flights * sim.P["merge"]
+        planned, canceled = planned + flights, canceled + c
+
+    # goal 2: affected passengers rebooked within 24h or refunded
+    hit = [r for r in weekly if r["flight_outcome"] in ("canceled", "delayed")]
+    ok = [r for r in hit if r.get("within_24h") or r["status"] == "canceled the trip"]
+
+    # goal 3: complaints a month, the dossier's 2,500 scaled by the complaint rate against this run's quiet weeks
+    rate = lambda rows: sum(w[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(w[r["persona"]] for r in rows), 1)
+    busy = {e["week"] for e in surprises} | {sim.STRIKE_WEEK, sim.STRIKE_WEEK + 1}
+    quiet = [r for r in weekly if r["week"] not in busy]
+    base = max(rate(quiet), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
+    complaints = COMPLAINTS_PER_MONTH * rate(weekly) / base if weekly else None
+
+    # goal 3b: NPS moved from +12 by the change in check-in 3a
+    s, e = nps(probes, "start"), nps(probes, "end")
+    nps_now = round(NPS_BASE + e - s, 1) if s is not None and e is not None else None
+
+    # goal 4: revenue weeks 5-10 as % of plan; lost trips x fare, minus the fare cap's lost revenue
+    def fare(r):
+        legs = [t for t in by_id[r["persona"]]["trips"] if t["week"] == r["week"]]
+        return FARE["intl"] if any({t["from"], t["to"]} & sim.INTL for t in legs) else FARE["domestic"]
+    late = [r for r in weekly if r["week"] >= 5 and r["had_flight_this_week"]]
+    plan = sum(w[r["persona"]] * fare(r) for r in late)
+    lost = sum(w[r["persona"]] * fare(r) for r in late if r["status"] in ("moved to another airline", "canceled the trip"))
+    cap = 0.5e6 if any(sim.action_key(a["action"]) == "fare_cap" for d in decisions for a in d["actions"]) else 0
+    scale = PAX_PER_WEEK * 6 * 140 / plan if plan and not weighted else 1  # unweighted: scale to a ~$176M plan
+    return {
+        "goal_1": round(100 * (1 - canceled / planned), 2),
+        "goal_2": round(100 * sum(w[r["persona"]] for r in ok) / max(sum(w[r["persona"]] for r in hit), 1), 1) if hit else 100.0,
+        "goal_3": round(complaints) if complaints is not None else None,
+        "goal_3b": nps_now,
+        "goal_4": round(100 * (1 - (lost * scale + cap) / (plan * scale)), 2) if plan else 100.0,
+        "revenue_lost_usd": round(lost * scale + cap),
+        "units": {
+            "goal_1": "% of planned Kestrel flights operated over weeks 1-10, strike days left out (network, ~1,355 flights a week)",
+            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded"
+                      + (", weighted by represents_trips" if weighted else ", unweighted"),
+            "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
+            "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
+            "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M",
+        },
+    }
+
+
+def add_metrics(out, run, weekly, probes):
+    m = board_metrics(run.personas, weekly, run.decisions, run.surprises, probes)
     (out / "metrics.json").write_text(json.dumps(m, indent=2, ensure_ascii=False), encoding="utf-8")
     return m
 

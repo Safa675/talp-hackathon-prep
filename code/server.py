@@ -88,7 +88,8 @@ def detail(name):
     val = run.validity()
     return {"info": run.info, "config": run.config, "personas": b["personas"], "weekly": rows,
             "validity": {k: v for k, v in val.items() if k in ("valid_through", "stale_from", "error")},
-            "decisions": b["decisions"], "surprises": b["surprises"]}
+            "decisions": b["decisions"], "surprises": b["surprises"],
+            "goals": engine.board_metrics(b["personas"], rows, b["decisions"], b["surprises"]) if rows else None}
 
 
 def state():
