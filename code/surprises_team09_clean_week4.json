@@ -1,0 +1,20 @@
+[
+  {
+    "week": 3,
+    "text": "**The engine inspection.** The FAA and the engine maker have told airlines to inspect a part on one engine type. Some of Kestrel's aircraft use it. A passenger's video of mechanics working on an engine at the gate is going round on TikTok.\n\nKnown: the inspections are a precaution and start this week; no Kestrel aircraft has had a problem with this part.\nNot known: how many aircraft; how long each check takes; whether any part must be replaced.",
+    "effect": "some cancellations",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 3,
+    "reading": "Precautionary engine inspections begin this week; they may cause delays or some cancellations. No Kestrel aircraft has a confirmed problem with the part."
+  },
+  {
+    "week": 4,
+    "text": "The inspections found worn parts on three Kestrel aircraft. They will stay on the ground for about two weeks while new parts arrive. All other aircraft have been cleared to fly. Kestrel will have to cancel or merge some flights in the next two weeks, Thanksgiving week included.",
+    "effect": "many cancellations",
+    "scope": "all",
+    "kestrel_caused": false,
+    "until_week": 5,
+    "reading": "Worn parts on three Kestrel aircraft ground them for about two weeks. Cancellations or merged flights affect Thanksgiving week and may continue into week 5."
+  }
+]

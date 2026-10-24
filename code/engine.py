@@ -27,6 +27,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -153,6 +154,13 @@ def read_jsonl(path):
 def append_jsonl(path, rec):
     with _lock, open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def write_json_atomic(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(path)
 
 
 def log(event, **kw):
@@ -465,11 +473,47 @@ class Run:
             "weeks": {str(w): "pending" for w in WEEKS}, "week_source": {}, "played": 0, "target": 0,
             "calls_done": 0, "calls_total": 0, "errors": 0, "tokens": {"in": 0, "out": 0, "think": 0},
             "resumed_from": 0, "created": now(), "started": None, "finished": None, "error": None, "metrics": None,
+            "log_id": uuid.uuid4().hex,
         }
 
     @property
     def name(self):
         return self.config["name"]
+
+    @property
+    def log_dir(self):
+        return LOGS / "runs" / self.name / self.info["log_id"]
+
+    def audit(self, event, **kw):
+        rec = {"ts": now(), "event": event, "run": self.name, "log_id": self.info["log_id"], **kw}
+        log(event, run=self.name, log_id=self.info["log_id"], **kw)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        append_jsonl(self.log_dir / "events.jsonl", rec)
+
+    def save_week_log(self, w, ck):
+        """Keep this run's complete weekly record even if its checkpoint is shared or the session is deleted."""
+        write_json_atomic(self.log_dir / f"week-{w:02d}.json", {
+            "run": self.name, "log_id": self.info["log_id"], "week": w, "checkpoint": ck["fp"],
+            "checkpoint_origin": ck.get("origin_run"), "created": ck.get("created"),
+            "model": self.config["model"], "seed": self.config["seed"],
+            "decisions_known": [d for d in self.decisions if d["week"] <= w],
+            "events_known": [s for s in self.surprises if s["week"] <= w],
+            "entries": ck["entries"],
+        })
+
+    def backfill_logs(self):
+        """Give older live sessions their own records from the checkpoint chain on disk."""
+        self.save()
+        missing = [w for w in range(1, self.info["played"] + 1)
+                   if not (self.log_dir / f"week-{w:02d}.json").exists()]
+        if not missing:
+            return
+        self.prepare()
+        for w in missing:
+            ck = load_ckpt(self.info["chain"][w])
+            if ck:
+                self.save_week_log(w, ck)
+        self.audit("logs_backfilled", weeks=missing)
 
     def cancel(self):
         self.cancel_flag.set()
@@ -479,6 +523,7 @@ class Run:
 
     # -------------------------------------------- state on disk
     def save(self):
+        write_json_atomic(self.log_dir / "state.json", {"config": self.config, "info": self.info})
         if self.config["session"]:
             SESSIONS.mkdir(exist_ok=True)
             (SESSIONS / f"{self.name}.json").write_text(
@@ -493,6 +538,7 @@ class Run:
         d = json.loads(Path(path).read_text(encoding="utf-8"))
         run = cls(**dict({"social": False}, **d["config"]))  # sessions saved before the social layer had none
         run.info.update(d["info"])
+        run.info.setdefault("log_id", uuid.uuid4().hex)
         if run.info["status"] in ("running", "queued"):
             run.info.update(status="paused", phase="server restarted mid-week; play again to resume")
         return run
@@ -575,7 +621,7 @@ class Run:
             i["resumed_from"] = start
             i["played"] = start
             i["calls_total"] = n * (until - start) + (n * (1 + (until == 10)) if c["probe"] else 0)
-            log("run_started", run=self.name, session=c["session"], type=c["type"], seed=c["seed"], model=c["model"],
+            self.audit("run_started", session=c["session"], type=c["type"], seed=c["seed"], model=c["model"],
                 resumed_from_week=start, until=until, decisions=len(self.decisions), surprises=len(self.surprises))
             if not c["session"]:
                 archive(RUNS / self.name)
@@ -595,18 +641,18 @@ class Run:
                     out.mkdir(parents=True, exist_ok=True)
                 assemble(self, out)
                 i.update(status="done", phase="done: hand-in files written")
-                log("run_finished", run=self.name, metrics=i["metrics"], resumed_from_week=start,
+                self.audit("run_finished", metrics=i["metrics"], resumed_from_week=start,
                     seconds=round(time.time() - t0), tokens=i["tokens"])
             else:
                 i.update(status="paused", phase=f"played through week {until}")
-                log("weeks_played", run=self.name, through=until, resumed_from_week=start,
+                self.audit("weeks_played", through=until, resumed_from_week=start,
                     seconds=round(time.time() - t0), tokens=i["tokens"])
         except Canceled:
             i.update(status="canceled" if not c["session"] else "paused", phase="stopped; finished calls are kept")
-            log("run_canceled", run=self.name, played=i["played"])
+            self.audit("run_canceled", played=i["played"])
         except Exception as e:
             i.update(status="failed", phase="failed", error=f"{type(e).__name__}: {e}")
-            log("run_failed", run=self.name, error=i["error"])
+            self.audit("run_failed", error=i["error"])
         i["finished"] = now()
         self.save()
         return self
@@ -625,7 +671,7 @@ class Run:
             ck = load_ckpt(fp)
             if ck:
                 self.mark_reused(w, ck)
-                log("week_reused", run=self.name, week=w, fp=fp, origin_run=ck.get("origin_run"))
+                self.audit("week_reused", week=w, fp=fp, origin_run=ck.get("origin_run"))
                 i["calls_done"] += len(self.personas)
             else:
                 i["weeks"][str(w)] = "running"
@@ -637,10 +683,11 @@ class Run:
                 save_ckpt(fp, ck)
                 i["weeks"][str(w)] = "computed"
                 i["week_source"][str(w)] = {"fp": fp, "origin_run": self.name, "created": ck["created"]}
-                log("week_done", run=self.name, week=w, fp=fp, seconds=ck["seconds"],
+                self.audit("week_done", week=w, fp=fp, seconds=ck["seconds"],
                     statuses=dict(Counter(e["status"] for e in entries)),
                     complaints=sum(bool(e.get("complaint")) for e in entries),
                     posts=sum(bool(e.get("post")) for e in entries))
+        self.save_week_log(w, ck)
         self.carry(ck["entries"])
         i["played"] = w
         i["chain"] = self.fps[:w + 1]
@@ -718,7 +765,7 @@ class Run:
                 entries = self.compute(key, ask)
                 save_ckpt(key, {"fp": key, "when": when, "origin_run": self.name, "created": now(),
                                 "model": i["model"], "entries": entries})
-                log("probe_done", run=self.name, when=when)
+                self.audit("probe_done", when=when)
 
     def count(self, err, use):
         with _lock:
@@ -833,7 +880,7 @@ FARE = {"domestic": 120, "intl": 210}
 SCOPE_SHARE = {"all": 1.0, "bases": 0.6, "intl": 0.25}  # share of Kestrel flights an event touches
 
 
-def board_metrics(personas, weekly, decisions, surprises, probes=()):
+def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_weeks=None, baseline_weekly=None):
     """The board's goals in the board's units. Persona rows are weighted by represents_trips when the persona file
     has it (each persona stands for that many real trips); otherwise every persona counts once."""
     w = {p["id"]: p.get("represents_trips") or 1 for p in personas}
@@ -843,7 +890,9 @@ def board_metrics(personas, weekly, decisions, surprises, probes=()):
 
     # goal 1: network flights operated, from the world's cancel rates, strike days left out
     planned = canceled = 0.0
-    for week in WEEKS:
+    played_through = max((r["week"] for r in weekly), default=0)
+    metric_weeks = list(metric_weeks) if metric_weeks is not None else list(range(1, played_through + 1))
+    for week in metric_weeks:
         eff = sim.effects(decisions, net, week)
         lease = sim.P["lease_factor"] if "lease" in eff else 1
         flights = FLIGHTS_PER_WEEK * (5 / 7 if week == sim.STRIKE_WEEK else 1)
@@ -851,7 +900,7 @@ def board_metrics(personas, weekly, decisions, surprises, probes=()):
         for e in sim.events_in_force(surprises, week):
             rate += sim.EVENT_EFFECTS.get(e.get("effect", "none"), (0, 0))[0] * SCOPE_SHARE.get(e.get("scope", "all"), 1) * lease
         c = flights * rate
-        if week == sim.STRIKE_WEEK and "backup" not in eff and sim.strike_announced(surprises):  # Dec 24 knock-on
+        if week == sim.STRIKE_WEEK and "backup" not in eff and sim.strike_announced(surprises, week):  # Dec 24 knock-on
             c += FLIGHTS_PER_WEEK / 7 * SCOPE_SHARE["bases"] * sim.P["knock_on_cancel"]
         if "merge" in eff and week not in (8, 9):
             c += flights * sim.P["merge"]
@@ -864,7 +913,7 @@ def board_metrics(personas, weekly, decisions, surprises, probes=()):
     # goal 3: complaints a month, the dossier's 2,500 scaled by the complaint rate against this run's quiet weeks
     rate = lambda rows: sum(w[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(w[r["persona"]] for r in rows), 1)
     busy = {w for e in surprises for w in range(e["week"], e.get("until_week", e["week"] + 1) + 1)}
-    quiet = [r for r in weekly if r["week"] not in busy]
+    quiet = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] not in busy]
     base = max(rate(quiet), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
     complaints = COMPLAINTS_PER_MONTH * rate(weekly) / base if weekly else None
 
@@ -879,17 +928,19 @@ def board_metrics(personas, weekly, decisions, surprises, probes=()):
     late = [r for r in weekly if r["week"] >= 5 and r["had_flight_this_week"]]
     plan = sum(w[r["persona"]] * fare(r) for r in late)
     lost = sum(w[r["persona"]] * fare(r) for r in late if r["status"] in ("moved to another airline", "canceled the trip"))
-    cap = 0.5e6 if any(sim.action_key(a["action"]) == "fare_cap" for d in decisions for a in d["actions"]) else 0
-    scale = PAX_PER_WEEK * 6 * 140 / plan if plan and not weighted else 1  # unweighted: scale to a ~$176M plan
+    cap = 0.5e6 if any(d["week"] <= week <= d["week"] + 1 and sim.action_key(a["action"]) == "fare_cap"
+                       for week in metric_weeks if week >= 5 for d in decisions for a in d["actions"]) else 0
+    revenue_weeks = sum(week >= 5 for week in metric_weeks)
+    scale = PAX_PER_WEEK * revenue_weeks * 140 / plan if plan and not weighted else 1
     return {
-        "goal_1": round(100 * (1 - canceled / planned), 2),
-        "goal_2": round(100 * sum(w[r["persona"]] for r in ok) / max(sum(w[r["persona"]] for r in hit), 1), 1) if hit else 100.0,
+        "goal_1": round(100 * (1 - canceled / planned), 2) if planned else None,
+        "goal_2": round(100 * sum(w[r["persona"]] for r in ok) / sum(w[r["persona"]] for r in hit), 1) if hit else None,
         "goal_3": round(complaints) if complaints is not None else None,
         "goal_3b": nps_now,
-        "goal_4": round(100 * (1 - (lost * scale + cap) / (plan * scale)), 2) if plan else 100.0,
-        "revenue_lost_usd": round(lost * scale + cap),
+        "goal_4": round(100 * (1 - (lost * scale + cap) / (plan * scale)), 2) if plan else None,
+        "revenue_lost_usd": round(lost * scale + cap) if plan else None,
         "units": {
-            "goal_1": "% of planned Kestrel flights operated over weeks 1-10, strike days left out (network, ~1,355 flights a week)",
+            "goal_1": f"% of planned Kestrel flights operated in week(s) {', '.join(map(str, metric_weeks))}, strike days left out (network, ~1,355 flights a week)",
             "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h or refunded"
                       + (", weighted by represents_trips" if weighted else ", unweighted"),
             "goal_3": "complaints a month: 2,500 baseline scaled by the complaint rate against this run's quiet weeks",
@@ -949,7 +1000,8 @@ def interview_prompt(persona, lines, memory, week, question, asker, news=()):
             "Answer as this person.")
 
 
-def interview(timeline, source, persona_ids, question, model, seed=1, week=None, asker="an interviewer", surprises=()):
+def interview(timeline, source, persona_ids, question, model, seed=1, week=None, asker="an interviewer",
+              surprises=(), run_log_dir=None):
     """Ask personas a free question about what they lived through up to `week`. Logged to logs/interviews.jsonl."""
     personas, valid, entries = timeline
     week = valid if week is None else max(0, min(int(week), valid))  # only weeks the persona has lived through
@@ -970,6 +1022,10 @@ def interview(timeline, source, persona_ids, question, model, seed=1, week=None,
 
     with ThreadPoolExecutor(max(1, len(chosen))) as pool:
         recs = list(pool.map(ask, chosen))
+    if run_log_dir is not None:
+        Path(run_log_dir).mkdir(parents=True, exist_ok=True)
+        for rec in recs:
+            append_jsonl(Path(run_log_dir) / "interviews.jsonl", rec)
     log("interview", run=source, week=week, personas=len(recs), question=question[:200], model=model,
         errors=sum(bool(r["error"]) for r in recs))
     return recs
@@ -999,6 +1055,10 @@ class Manager:
             try:
                 run = Run.load(f)
                 self.runs[run.name] = run
+                try:
+                    run.backfill_logs()
+                except Exception as e:
+                    log("session_log_backfill_failed", run=run.name, error=repr(e))
             except Exception as e:
                 log("session_load_failed", file=f.name, error=repr(e))
 
@@ -1015,7 +1075,7 @@ class Manager:
             raise ValueError(f"{cfg['name']} is a live session; play it, or delete the session first")
         run = Run(**cfg)
         self.runs[run.name] = run
-        log("run_queued", run=run.name, **{k: v for k, v in run.config.items() if k != "name"})
+        run.audit("run_queued", **{k: v for k, v in run.config.items() if k != "name"})
         threading.Thread(target=run.execute, daemon=True, name=f"run-{run.name}").start()
         return run
 
@@ -1026,7 +1086,7 @@ class Manager:
         run = Run(session=True, **cfg)
         self.runs[run.name] = run
         run.save()
-        log("session_created", run=run.name, **{k: v for k, v in run.config.items() if k != "name"})
+        run.audit("session_created", **{k: v for k, v in run.config.items() if k != "name"})
         return run
 
     def play(self, name, until):
@@ -1048,7 +1108,7 @@ class Manager:
                 run.info[{"decisions": "decisions_file", "surprises": "surprises_file",
                           "personas": "personas_file"}.get(k, k)] = changes[k]
         run.save()
-        log("session_updated", run=name, **changes)
+        run.audit("session_updated", **changes)
         return run
 
     def delete_session(self, name):
@@ -1057,7 +1117,7 @@ class Manager:
             raise ValueError(f"no session {name}")
         (SESSIONS / f"{name}.json").unlink(missing_ok=True)
         del self.runs[name]
-        log("session_deleted", run=name, note="checkpoints are kept")
+        run.audit("session_deleted", note="the audit log and checkpoints are kept")
 
     def official(self, decisions, surprises=None, model=DEFAULT_MODEL, personas=None, seeds=(1, 2), live=False,
                  social=True):

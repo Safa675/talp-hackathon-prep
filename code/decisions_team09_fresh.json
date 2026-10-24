@@ -1,0 +1,28 @@
+[
+  {
+    "week": 4,
+    "target": "everyone",
+    "actions": [
+      {
+        "action": "Free changes and cancellations for bookings in a 2-week window",
+        "level": "on"
+      },
+      {
+        "action": "Lease an aircraft with crew for 2 weeks",
+        "level": "1 aircraft"
+      },
+      {
+        "action": "Extra airport and call-center staff for 2 weeks",
+        "level": "on"
+      }
+    ],
+    "message": "Kestrel Air update on the FAA engine inspections: the checks are a precaution ordered for one engine type, and no Kestrel aircraft has had a problem with this part. We have leased a spare aircraft with crew to keep your flights running and added staff at the airports and on the phones. If you would rather change or cancel a trip between Nov 23 and Dec 6, you can do it at no cost in the app.",
+    "channels": [
+      "in-app",
+      "email",
+      "sms",
+      "social"
+    ],
+    "why": "The inspections take aircraft out of service in Thanksgiving week.\nA leased spare protects the 98% flights goal and rebooking.\nA calm, factual message answers the TikTok video and free changes cut anxiety."
+  }
+]

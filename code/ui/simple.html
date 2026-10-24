@@ -57,6 +57,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
   <div class="top">
     <h1>Kestrel simulation</h1>
     <select id="sess" title="Simulation"></select>
+    <a id="logs" target="_blank" rel="noopener" class="small">logs</a>
     <button id="del" title="Delete this simulation" style="padding:3px 8px" class="small">delete</button>
     <span class="small mute" id="calNow"></span>
     <span class="spacer"></span>
@@ -70,7 +71,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
 <div id="empty" class="hidden" style="max-width:520px;margin:40px auto;padding:0 16px">
   <div class="card">
     <h2>Start a simulation</h2>
-    <p class="small mute">30 personas live through the ten weeks with you, one week at a time. Each week you add the events from the dashboard and your decisions, play the week, read what every persona did, and ask them anything.</p>
+    <p class="small mute">Personas live through the ten weeks with you, one week at a time. Each week you add the events from the dashboard and your decisions, play the week, read what every persona did, and ask them anything.</p>
     <label class="f">Name<input id="nName" value="main"></label>
     <label class="f">Model<select id="nModel"></select></label>
     <label class="row small"><input type="checkbox" id="nSocial" checked> personas see each other's posts</label>
@@ -137,7 +138,8 @@ const api = async (path, body) => { const r = await fetch(path, body ? {method:"
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
 const store = {get(k,d){try{return localStorage.getItem(k) ?? d}catch{return d}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 const DATES = ["Nov 2–8","Nov 9–15","Nov 16–22","Nov 23–29","Nov 30–Dec 6","Dec 7–13","Dec 14–20","Dec 21–27","Dec 28–Jan 3","Jan 4–10"];
-const TAGS = {4:"Thanksgiving",8:"Christmas · strike",9:"New Year"};
+const TAGS = {4:"Thanksgiving",8:"Christmas",9:"New Year"};
+const weekTag = w => w === 8 && (D?.surprises || []).some(e => e.week === 8 && e.known_crisis) ? "Christmas · strike" : TAGS[w];
 const COL = {"flies as planned":"var(--fly)","rebooked":"var(--reb)","moved to another airline":"var(--moved)","canceled the trip":"var(--cancel)"};
 const FLIGHT = {canceled:"✕ flight canceled", delayed:"◐ flight delayed", "on time":"✈ flew on time"};
 const EFFECT = {"Lease":"halves cancellations for 2 weeks; canceled passengers get a seat the next morning","Backup ground":"strike days: cancellations 30%→7%, 3h+ delays 45%→15%, fewer lost bags","Free changes":"target can change or cancel bookings for free for 2 weeks","Goodwill":"disrupted passengers in the target get the credit or cash","partner airline":"canceled passengers in the target get a partner seat the same day","Hotel rooms":"stranded passengers in the target get a hotel","Extra airport":"phone wait on disruption days 120→20 min","Fare cap":"target sees capped fares","Fare sale":"target sees a fare sale","Double loyalty":"disrupted passengers in the target get double points","Merge low-load":"3% of ordinary-week flights are moved a few hours (saves $0.25M)"};
@@ -161,6 +163,7 @@ async function load(){
   if (!sessions.length) { $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); drawHeader(null); return; }
   $("#empty").classList.add("hidden"); $("#app").classList.remove("hidden");
   if (!sessions.find(r => r.name === name)) name = sessions[0].name;
+  $("#logs").href = "/api/logs?name=" + encodeURIComponent(name);
   const opts = sessions.map(r => `<option ${r.name===name?"selected":""}>${esc(r.name)}</option>`).join("") + `<option value="__new">+ new simulation</option>`;
   if ($("#sess")._o !== opts) { $("#sess").innerHTML = opts; $("#sess")._o = opts; }
   D = await api("/api/run?name=" + encodeURIComponent(name));
@@ -184,7 +187,7 @@ function drawHeader(d){
   if (!d) { $("#weeks").innerHTML = ""; $("#play").classList.add("hidden"); return; }
   const i = d.info, busy = ["running","queued"].includes(i.status), v = d.validity?.valid_through ?? i.played;
   $("#weeks").innerHTML = DATES.map((dt,k) => { const w = k+1;
-    return `<button class="${weekState(w)} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})"><b>Week ${w}</b>${dt}${TAGS[w]?`<br><span class="mute">${TAGS[w]}</span>`:""}</button>`; }).join("");
+    return `<button class="${weekState(w)} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})"><b>Week ${w}</b>${dt}${weekTag(w)?`<br><span class="mute">${weekTag(w)}</span>`:""}</button>`; }).join("");
   const next = Math.min(10, v + 1);
   $("#play").classList.toggle("hidden", busy || v >= 10); $("#stop").classList.toggle("hidden", !busy);
   $("#play").textContent = d.validity?.stale_from ? `Replay from week ${d.validity.stale_from}` : `Play week ${next}`;
@@ -196,24 +199,24 @@ async function setModel(m){
   if (!confirm(`Switch "${name}" to ${m}? Its history starts again from week 1 (flash-lite plays a 66-persona week in ~4 s, 3.7-flash in ~50 s).`)) { load(); return; }
   try { await api("/api/session/update", {name, model: m}); } catch(e){ alert(e.message); } load();
 }
-function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); }
+function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); drawGoals(); }
 
 /* ---------- the selected week ---------- */
 function drawWeek(){
   const w = sel, st = weekState(w);
-  $("#wkTitle").innerHTML = `Week ${w} · ${DATES[w-1]}${TAGS[w]?` · <span class="warn">${TAGS[w]}</span>`:""}`;
+  $("#wkTitle").innerHTML = `Week ${w} · ${DATES[w-1]}${weekTag(w)?` · <span class="warn">${weekTag(w)}</span>`:""}`;
   const all = D.surprises || [], evs = all.filter(s => s.week === w), older = all.filter(s => s.week < w);
   const hasStrike = all.some(s => s.known_crisis);
   $("#events").innerHTML = (evs.map(s => evLine(s, true)).join("") || `<div class="item mute">No events this week. Add the dashboard's announcements here.</div>`)
     + (w === 8 && !hasStrike ? `<div class="item"><button onclick="addStrike()">Add the dossier's strike (Dec 22–23)</button></div>` : "")
     + older.map(s => evLine(s, false)).join("")
     + (D.info.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : "");
-  const decs = D.decisions || [];
+  const decs = D.decisions || [], knownDecs = decs.map((d,i) => ({d,i})).filter(x => x.d.week <= w);
   $("#decs").innerHTML = D.info.type === "nodecision" ? `<div class="mute small">No decisions in this simulation (business as usual).</div>` :
-    decs.length ? decs.map((d,i) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · from week ${d.week}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
+    knownDecs.length ? knownDecs.map(({d,i}) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · from week ${d.week}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
       ${d.actions.map(a=>`<div class="small">${esc(a.action+(a.level!=="on"?` (${a.level})`:""))}<br><span class="mute">→ ${esc(effectOf(a.action))}</span></div>`).join("")}“${esc(d.message)}”
-      <div class="row" style="margin-top:4px"><button class="small" style="padding:2px 8px" onclick="delDecision(${i})">remove</button></div></div>`).join("") + budgetLine(decs)
-    : `<div class="mute small">No decisions yet. You can make two, in any weeks.</div>`;
+      <div class="row" style="margin-top:4px"><button class="small" style="padding:2px 8px" onclick="delDecision(${i})">remove</button></div></div>`).join("") + budgetLine(knownDecs.map(x => x.d))
+    : `<div class="mute small">No decision has started by this week.</div>`;
   $("#decForm").classList.toggle("hidden", D.info.type === "nodecision" || decs.length >= 2);
   const rows = (D.weekly||[]).filter(r => r.week === w);
   $("#banner").innerHTML = st === "stale" ? `<div class="banner">The events or decisions for this week changed after it was played. Press <b>Replay</b> to update it${D.info.auto?" (auto mode does this within 15 seconds)":""}.</div>` : "";
@@ -236,13 +239,13 @@ function drawWeek(){
       ${r.post?`<div class="post">posted: ${esc(r.post)}</div>`:""}</div>`; }).join("");
 }
 function drawGoals(){
-  const g = D.goals; if (!g) { $("#goals").innerHTML = ""; return; }
-  const v = D.validity?.valid_through ?? D.info.played;
+  const g = D.goals_by_week?.[sel]; if (!g) { $("#goals").innerHTML = ""; return; }
+  const v = sel;
   const items = [["Flights operated", g.goal_1, x => `${x}%`, x => x >= 98, "≥ 98%"], ["Affected passengers solved in 24h", g.goal_2, x => `${x}%`, x => x >= 90, "≥ 90%"],
     ["Complaints a month", g.goal_3, x => `~${x.toLocaleString()}`, x => x <= 2500, "≤ 2,500"], ["NPS", g.goal_3b, x => (x > 0 ? "+" : "") + x, x => x >= 12, "≥ +12"],
     ["Revenue weeks 5–10", g.goal_4, x => `${x}%`, x => x >= 96, "≥ 96% of plan"],
-    ["Trust now", trustOf((D.weekly||[]).filter(r => r.week === v)), x => `${x.toFixed(1)}/5`, x => x >= 3.5, "personas, 1–5"]];
-  $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Board goals</h2><span class="small mute">weeks 1–${v} played${g.revenue_lost_usd?` · revenue lost ~$${(g.revenue_lost_usd/1e6).toFixed(2)}M`:""}</span></div>
+    ["Trust now", trustOf((D.weekly||[]).filter(r => r.week === sel)), x => `${x.toFixed(1)}/5`, x => x >= 3.5, "personas, 1–5"]];
+  $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Board goals · week ${sel}</h2><span class="small mute">${g.revenue_lost_usd?`revenue lost ~$${(g.revenue_lost_usd/1e6).toFixed(2)}M`:"weekly results"}</span></div>
     <div class="row" style="margin-top:8px;gap:14px">${items.map(([label, x, f, good, target]) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650" class="${x == null ? "mute" : good(x) ? "ok" : "bad"}">${x == null ? "–" : f(x)}</div><div class="small mute">target ${target}</div></div>`).join("")}</div>
     <div class="small" style="margin-top:8px">${Array.from({length: v}, (_, k) => { const r = (D.weekly||[]).filter(x => x.week === k+1), t = trustOf(r);
       return `<span class="pill" style="margin:2px">W${k+1}: trust ${t == null ? "–" : t.toFixed(1)} · book again ${r.length ? Math.round(100*r.filter(x => x.would_book_again === "yes").length/r.length) : 0}%</span>`; }).join("")}</div>
@@ -336,7 +339,7 @@ $("#offGo").onclick = async () => {
 $("#zipGo").onclick = async () => { $("#zipOut").classList.remove("hidden"); $("#zipOut").textContent = "building…";
   try { const r = await api("/api/submission", {team: $("#team").value}); $("#zipOut").textContent = `${r.zip}\n${r.notes.map(n=>"! "+n).join("\n")}\n\n${r.check}`; } catch(e){ $("#zipOut").textContent = e.message; } };
 function drawOfficial(){
-  const off = S.runs.filter(r => S.official.includes(r.name));
+  const off = S.runs.filter(r => S.official.includes(r.name) && r.session);
   $("#offInfo").innerHTML = off.length ? off.map(r => `${esc(r.name)}: ${r.played}/10 ${r.status==="done"?"✓":""}`).join(" · ") : "";
 }
 $("#nGo").onclick = async () => {

@@ -76,6 +76,11 @@ def save_input(name, content, note=""):
     issues = engine.validate_decisions(content)[0] if name.startswith("decisions") else []
     (HERE / name).write_text(json.dumps(content, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     engine.log("input_saved", file=name, note=note, items=len(content), issues=issues)
+    for run in MGR.runs.values():
+        if name in (run.config.get("decisions"), run.config.get("surprises")):
+            fingerprint = engine.h(content)
+            engine.write_json_atomic(run.log_dir / "inputs" / f"{name}.{fingerprint}.json", content)
+            run.audit("input_saved", file=name, note=note, items=len(content), fingerprint=fingerprint)
     return {"saved": True, "content": content, "issues": issues}
 
 
@@ -86,10 +91,15 @@ def detail(name):
         return None
     b, rows = run.rows()
     val = run.validity()
+    weekly_goals = {str(w): engine.board_metrics(b["personas"], [r for r in rows if r["week"] == w],
+                                                b["decisions"], b["surprises"], metric_weeks=[w],
+                                                baseline_weekly=[r for r in rows if r["week"] <= w])
+                    for w in sorted({r["week"] for r in rows})}
     return {"info": run.info, "config": run.config, "personas": b["personas"], "weekly": rows,
             "validity": {k: v for k, v in val.items() if k in ("valid_through", "stale_from", "error")},
             "decisions": b["decisions"], "surprises": b["surprises"],
-            "goals": engine.board_metrics(b["personas"], rows, b["decisions"], b["surprises"]) if rows else None}
+            "goals": engine.board_metrics(b["personas"], rows, b["decisions"], b["surprises"]) if rows else None,
+            "goals_by_week": weekly_goals}
 
 
 def state():
@@ -128,6 +138,20 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/run":
                 r = detail(q["name"])
                 return self.send(r) if r else self.send({"error": "no such simulation"}, 404)
+            if u.path == "/api/logs":
+                run = MGR.runs.get(q.get("name"))
+                if not run:
+                    return self.send({"error": "no such simulation"}, 404)
+                if "week" in q:
+                    week = int(q["week"])
+                    if not 1 <= week <= 10:
+                        return self.send({"error": "week must be 1-10"}, 400)
+                    path = run.log_dir / f"week-{week:02d}.json"
+                    return self.send(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else self.send({"error": "week not logged"}, 404)
+                return self.send({"run": run.name, "log_id": run.info["log_id"], "path": str(run.log_dir),
+                                  "state": json.loads((run.log_dir / "state.json").read_text(encoding="utf-8")),
+                                  "events": engine.read_jsonl(run.log_dir / "events.jsonl"),
+                                  "weeks": sorted(int(p.stem.split("-")[1]) for p in run.log_dir.glob("week-*.json"))})
             if u.path == "/api/file":
                 if not SAFE.match(q["name"]):
                     return self.send({"error": "bad name"}, 400)
@@ -163,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(engine.interview(run.timeline(), run.name, body["personas"], body["question"].strip(),
                                                   body.get("model") or run.config["model"], run.config["seed"], week,
                                                   body.get("asker") or "an interviewer",
-                                                  engine.inputs(run.config)["surprises"]))
+                                                  engine.inputs(run.config)["surprises"], run_log_dir=run.log_dir))
             if u.path == "/api/file":
                 return self.send(save_input(body["name"], body["content"], body.get("note", "")))
             if u.path == "/api/official":  # the five hand-in runs as auto simulations, with this one's inputs

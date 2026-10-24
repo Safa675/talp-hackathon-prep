@@ -142,7 +142,8 @@ def effects(decisions, persona, week):
     for d in decisions:
         for a in d["actions"]:
             key = action_key(a["action"])
-            on = d["week"] <= STRIKE_WEEK if key == "backup" else d["week"] <= week <= d["week"] + 1
+            on = d["week"] <= week and (week == STRIKE_WEEK if key == "backup"
+                                       else week <= d["week"] + 1)
             if key and on and (key in NETWORK or targeted(persona, d["target"])):
                 eff[key] = a["level"]
     return eff
@@ -171,9 +172,9 @@ def news_until(surprises, week):
     return sorted([e for e in surprises if e["week"] <= week], key=lambda e: e["week"])
 
 
-def strike_announced(surprises):
+def strike_announced(surprises, week):
     """The strike acts on flights only once the team has entered it as an event (marked known_crisis)."""
-    return any(e.get("known_crisis") for e in surprises)
+    return any(e.get("known_crisis") and e["week"] <= week for e in surprises)
 
 
 def events_in_force(surprises, week):
@@ -262,7 +263,7 @@ def week_facts(persona, week, rng, surprises, use_surprises, decisions=()):
     if not use_surprises:  # plan_nosurprises: every surprise off, the known crisis stays
         surprises = [e for e in surprises if e.get("known_crisis")]
     events = events_in_force(surprises, week)
-    strike_on = strike_announced(surprises)
+    strike_on = strike_announced(surprises, week)
     lines, outcome, world = [], "none", {"strike_day": False, "within_24h": None, "flights": []}
     rank = {"none": 0, "on time": 1, "delayed": 2, "canceled": 3}
     for t in trips:
