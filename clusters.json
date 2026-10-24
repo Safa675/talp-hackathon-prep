@@ -1,0 +1,605 @@
+{
+ "total_trips_10_weeks": 2166860,
+ "windows": {
+  "strike": 40605,
+  "holiday": 426255,
+  "thanksgiving": 230000,
+  "ordinary": 1470000
+ },
+ "clusters": [
+  {
+   "cluster": "V-park:strike",
+   "group": "vacationers",
+   "segment": "V-park",
+   "segment_description": "Northeast/Midwest families on a Florida theme-park trip",
+   "window": "strike",
+   "share_pct": 0.183,
+   "represents_trips": 3968
+  },
+  {
+   "cluster": "V-park:holiday",
+   "group": "vacationers",
+   "segment": "V-park",
+   "segment_description": "Northeast/Midwest families on a Florida theme-park trip",
+   "window": "holiday",
+   "share_pct": 2.773,
+   "represents_trips": 60083
+  },
+  {
+   "cluster": "V-park:thanksgiving",
+   "group": "vacationers",
+   "segment": "V-park",
+   "segment_description": "Northeast/Midwest families on a Florida theme-park trip",
+   "window": "thanksgiving",
+   "share_pct": 1.211,
+   "represents_trips": 26243
+  },
+  {
+   "cluster": "V-park:ordinary",
+   "group": "vacationers",
+   "segment": "V-park",
+   "segment_description": "Northeast/Midwest families on a Florida theme-park trip",
+   "window": "ordinary",
+   "share_pct": 10.833,
+   "represents_trips": 234735
+  },
+  {
+   "cluster": "V-beach:strike",
+   "group": "vacationers",
+   "segment": "V-beach",
+   "segment_description": "couples/friends to Mexico & Caribbean beaches (international)",
+   "window": "strike",
+   "share_pct": 0.091,
+   "represents_trips": 1966
+  },
+  {
+   "cluster": "V-beach:holiday",
+   "group": "vacationers",
+   "segment": "V-beach",
+   "segment_description": "couples/friends to Mexico & Caribbean beaches (international)",
+   "window": "holiday",
+   "share_pct": 1.374,
+   "represents_trips": 29769
+  },
+  {
+   "cluster": "V-beach:thanksgiving",
+   "group": "vacationers",
+   "segment": "V-beach",
+   "segment_description": "couples/friends to Mexico & Caribbean beaches (international)",
+   "window": "thanksgiving",
+   "share_pct": 0.8,
+   "represents_trips": 17337
+  },
+  {
+   "cluster": "V-beach:ordinary",
+   "group": "vacationers",
+   "segment": "V-beach",
+   "segment_description": "couples/friends to Mexico & Caribbean beaches (international)",
+   "window": "ordinary",
+   "share_pct": 7.735,
+   "represents_trips": 167614
+  },
+  {
+   "cluster": "V-snowbird:strike",
+   "group": "vacationers",
+   "segment": "V-snowbird",
+   "segment_description": "retirees escaping winter to Florida, long stays",
+   "window": "strike",
+   "share_pct": 0.047,
+   "represents_trips": 1026
+  },
+  {
+   "cluster": "V-snowbird:holiday",
+   "group": "vacationers",
+   "segment": "V-snowbird",
+   "segment_description": "retirees escaping winter to Florida, long stays",
+   "window": "holiday",
+   "share_pct": 0.717,
+   "represents_trips": 15540
+  },
+  {
+   "cluster": "V-snowbird:thanksgiving",
+   "group": "vacationers",
+   "segment": "V-snowbird",
+   "segment_description": "retirees escaping winter to Florida, long stays",
+   "window": "thanksgiving",
+   "share_pct": 0.313,
+   "represents_trips": 6788
+  },
+  {
+   "cluster": "V-snowbird:ordinary",
+   "group": "vacationers",
+   "segment": "V-snowbird",
+   "segment_description": "retirees escaping winter to Florida, long stays",
+   "window": "ordinary",
+   "share_pct": 6.922,
+   "represents_trips": 149995
+  },
+  {
+   "cluster": "V-budget:strike",
+   "group": "vacationers",
+   "segment": "V-budget",
+   "segment_description": "young deal-hunters on short trips",
+   "window": "strike",
+   "share_pct": 0.042,
+   "represents_trips": 905
+  },
+  {
+   "cluster": "V-budget:holiday",
+   "group": "vacationers",
+   "segment": "V-budget",
+   "segment_description": "young deal-hunters on short trips",
+   "window": "holiday",
+   "share_pct": 0.632,
+   "represents_trips": 13699
+  },
+  {
+   "cluster": "V-budget:thanksgiving",
+   "group": "vacationers",
+   "segment": "V-budget",
+   "segment_description": "young deal-hunters on short trips",
+   "window": "thanksgiving",
+   "share_pct": 0.442,
+   "represents_trips": 9574
+  },
+  {
+   "cluster": "V-budget:ordinary",
+   "group": "vacationers",
+   "segment": "V-budget",
+   "segment_description": "young deal-hunters on short trips",
+   "window": "ordinary",
+   "share_pct": 5.884,
+   "represents_trips": 127503
+  },
+  {
+   "cluster": "F-grandkids:strike",
+   "group": "families visiting relatives",
+   "segment": "F-grandkids",
+   "segment_description": "parents with young children visiting grandparents",
+   "window": "strike",
+   "share_pct": 0.387,
+   "represents_trips": 8377
+  },
+  {
+   "cluster": "F-grandkids:holiday",
+   "group": "families visiting relatives",
+   "segment": "F-grandkids",
+   "segment_description": "parents with young children visiting grandparents",
+   "window": "holiday",
+   "share_pct": 3.513,
+   "represents_trips": 76119
+  },
+  {
+   "cluster": "F-grandkids:thanksgiving",
+   "group": "families visiting relatives",
+   "segment": "F-grandkids",
+   "segment_description": "parents with young children visiting grandparents",
+   "window": "thanksgiving",
+   "share_pct": 2.046,
+   "represents_trips": 44329
+  },
+  {
+   "cluster": "F-grandkids:ordinary",
+   "group": "families visiting relatives",
+   "segment": "F-grandkids",
+   "segment_description": "parents with young children visiting grandparents",
+   "window": "ordinary",
+   "share_pct": 6.055,
+   "represents_trips": 131198
+  },
+  {
+   "cluster": "F-adultkids:strike",
+   "group": "families visiting relatives",
+   "segment": "F-adultkids",
+   "segment_description": "adults flying alone or as a couple to see parents",
+   "window": "strike",
+   "share_pct": 0.32,
+   "represents_trips": 6931
+  },
+  {
+   "cluster": "F-adultkids:holiday",
+   "group": "families visiting relatives",
+   "segment": "F-adultkids",
+   "segment_description": "adults flying alone or as a couple to see parents",
+   "window": "holiday",
+   "share_pct": 2.422,
+   "represents_trips": 52478
+  },
+  {
+   "cluster": "F-adultkids:thanksgiving",
+   "group": "families visiting relatives",
+   "segment": "F-adultkids",
+   "segment_description": "adults flying alone or as a couple to see parents",
+   "window": "thanksgiving",
+   "share_pct": 1.693,
+   "represents_trips": 36674
+  },
+  {
+   "cluster": "F-adultkids:ordinary",
+   "group": "families visiting relatives",
+   "segment": "F-adultkids",
+   "segment_description": "adults flying alone or as a couple to see parents",
+   "window": "ordinary",
+   "share_pct": 5.566,
+   "represents_trips": 120603
+  },
+  {
+   "cluster": "F-multigen:strike",
+   "group": "families visiting relatives",
+   "segment": "F-multigen",
+   "segment_description": "multi-generation trips with an elderly parent who needs airport help",
+   "window": "strike",
+   "share_pct": 0.161,
+   "represents_trips": 3491
+  },
+  {
+   "cluster": "F-multigen:holiday",
+   "group": "families visiting relatives",
+   "segment": "F-multigen",
+   "segment_description": "multi-generation trips with an elderly parent who needs airport help",
+   "window": "holiday",
+   "share_pct": 1.464,
+   "represents_trips": 31716
+  },
+  {
+   "cluster": "F-multigen:thanksgiving",
+   "group": "families visiting relatives",
+   "segment": "F-multigen",
+   "segment_description": "multi-generation trips with an elderly parent who needs airport help",
+   "window": "thanksgiving",
+   "share_pct": 0.852,
+   "represents_trips": 18471
+  },
+  {
+   "cluster": "F-multigen:ordinary",
+   "group": "families visiting relatives",
+   "segment": "F-multigen",
+   "segment_description": "multi-generation trips with an elderly parent who needs airport help",
+   "window": "ordinary",
+   "share_pct": 2.523,
+   "represents_trips": 54666
+  },
+  {
+   "cluster": "F-diaspora:strike",
+   "group": "families visiting relatives",
+   "segment": "F-diaspora",
+   "segment_description": "families visiting relatives in Mexico/Caribbean (international)",
+   "window": "strike",
+   "share_pct": 0.151,
+   "represents_trips": 3271
+  },
+  {
+   "cluster": "F-diaspora:holiday",
+   "group": "families visiting relatives",
+   "segment": "F-diaspora",
+   "segment_description": "families visiting relatives in Mexico/Caribbean (international)",
+   "window": "holiday",
+   "share_pct": 2.0,
+   "represents_trips": 43346
+  },
+  {
+   "cluster": "F-diaspora:thanksgiving",
+   "group": "families visiting relatives",
+   "segment": "F-diaspora",
+   "segment_description": "families visiting relatives in Mexico/Caribbean (international)",
+   "window": "thanksgiving",
+   "share_pct": 0.499,
+   "represents_trips": 10819
+  },
+  {
+   "cluster": "F-diaspora:ordinary",
+   "group": "families visiting relatives",
+   "segment": "F-diaspora",
+   "segment_description": "families visiting relatives in Mexico/Caribbean (international)",
+   "window": "ordinary",
+   "share_pct": 3.349,
+   "represents_trips": 72576
+  },
+  {
+   "cluster": "F-minor:strike",
+   "group": "families visiting relatives",
+   "segment": "F-minor",
+   "segment_description": "children flying alone between separated parents",
+   "window": "strike",
+   "share_pct": 0.078,
+   "represents_trips": 1696
+  },
+  {
+   "cluster": "F-minor:holiday",
+   "group": "families visiting relatives",
+   "segment": "F-minor",
+   "segment_description": "children flying alone between separated parents",
+   "window": "holiday",
+   "share_pct": 0.691,
+   "represents_trips": 14981
+  },
+  {
+   "cluster": "F-minor:thanksgiving",
+   "group": "families visiting relatives",
+   "segment": "F-minor",
+   "segment_description": "children flying alone between separated parents",
+   "window": "thanksgiving",
+   "share_pct": 0.345,
+   "represents_trips": 7478
+  },
+  {
+   "cluster": "F-minor:ordinary",
+   "group": "families visiting relatives",
+   "segment": "F-minor",
+   "segment_description": "children flying alone between separated parents",
+   "window": "ordinary",
+   "share_pct": 0.885,
+   "represents_trips": 19182
+  },
+  {
+   "cluster": "S-home:strike",
+   "group": "students",
+   "segment": "S-home",
+   "segment_description": "college students flying home for the holidays",
+   "window": "strike",
+   "share_pct": 0.277,
+   "represents_trips": 6011
+  },
+  {
+   "cluster": "S-home:holiday",
+   "group": "students",
+   "segment": "S-home",
+   "segment_description": "college students flying home for the holidays",
+   "window": "holiday",
+   "share_pct": 1.75,
+   "represents_trips": 37927
+  },
+  {
+   "cluster": "S-home:thanksgiving",
+   "group": "students",
+   "segment": "S-home",
+   "segment_description": "college students flying home for the holidays",
+   "window": "thanksgiving",
+   "share_pct": 1.835,
+   "represents_trips": 39757
+  },
+  {
+   "cluster": "S-home:ordinary",
+   "group": "students",
+   "segment": "S-home",
+   "segment_description": "college students flying home for the holidays",
+   "window": "ordinary",
+   "share_pct": 3.138,
+   "represents_trips": 67985
+  },
+  {
+   "cluster": "S-trip:strike",
+   "group": "students",
+   "segment": "S-trip",
+   "segment_description": "students on group trips abroad",
+   "window": "strike",
+   "share_pct": 0.037,
+   "represents_trips": 805
+  },
+  {
+   "cluster": "S-trip:holiday",
+   "group": "students",
+   "segment": "S-trip",
+   "segment_description": "students on group trips abroad",
+   "window": "holiday",
+   "share_pct": 1.126,
+   "represents_trips": 24395
+  },
+  {
+   "cluster": "S-trip:thanksgiving",
+   "group": "students",
+   "segment": "S-trip",
+   "segment_description": "students on group trips abroad",
+   "window": "thanksgiving",
+   "share_pct": 0.123,
+   "represents_trips": 2664
+  },
+  {
+   "cluster": "S-trip:ordinary",
+   "group": "students",
+   "segment": "S-trip",
+   "segment_description": "students on group trips abroad",
+   "window": "ordinary",
+   "share_pct": 1.714,
+   "represents_trips": 37142
+  },
+  {
+   "cluster": "B-corp:strike",
+   "group": "business travelers",
+   "segment": "B-corp",
+   "segment_description": "corporate road warriors, employer pays",
+   "window": "strike",
+   "share_pct": 0.012,
+   "represents_trips": 251
+  },
+  {
+   "cluster": "B-corp:holiday",
+   "group": "business travelers",
+   "segment": "B-corp",
+   "segment_description": "corporate road warriors, employer pays",
+   "window": "holiday",
+   "share_pct": 0.105,
+   "represents_trips": 2282
+  },
+  {
+   "cluster": "B-corp:thanksgiving",
+   "group": "business travelers",
+   "segment": "B-corp",
+   "segment_description": "corporate road warriors, employer pays",
+   "window": "thanksgiving",
+   "share_pct": 0.031,
+   "represents_trips": 665
+  },
+  {
+   "cluster": "B-corp:ordinary",
+   "group": "business travelers",
+   "segment": "B-corp",
+   "segment_description": "corporate road warriors, employer pays",
+   "window": "ordinary",
+   "share_pct": 3.852,
+   "represents_trips": 83477
+  },
+  {
+   "cluster": "B-smb:strike",
+   "group": "business travelers",
+   "segment": "B-smb",
+   "segment_description": "small-business owners paying their own way",
+   "window": "strike",
+   "share_pct": 0.012,
+   "represents_trips": 252
+  },
+  {
+   "cluster": "B-smb:holiday",
+   "group": "business travelers",
+   "segment": "B-smb",
+   "segment_description": "small-business owners paying their own way",
+   "window": "holiday",
+   "share_pct": 0.176,
+   "represents_trips": 3823
+  },
+  {
+   "cluster": "B-smb:thanksgiving",
+   "group": "business travelers",
+   "segment": "B-smb",
+   "segment_description": "small-business owners paying their own way",
+   "window": "thanksgiving",
+   "share_pct": 0.062,
+   "represents_trips": 1336
+  },
+  {
+   "cluster": "B-smb:ordinary",
+   "group": "business travelers",
+   "segment": "B-smb",
+   "segment_description": "small-business owners paying their own way",
+   "window": "ordinary",
+   "share_pct": 3.75,
+   "represents_trips": 81263
+  },
+  {
+   "cluster": "B-contract:strike",
+   "group": "business travelers",
+   "segment": "B-contract",
+   "segment_description": "contract/shift workers relocating (travel nurses, construction)",
+   "window": "strike",
+   "share_pct": 0.012,
+   "represents_trips": 257
+  },
+  {
+   "cluster": "B-contract:holiday",
+   "group": "business travelers",
+   "segment": "B-contract",
+   "segment_description": "contract/shift workers relocating (travel nurses, construction)",
+   "window": "holiday",
+   "share_pct": 0.179,
+   "represents_trips": 3885
+  },
+  {
+   "cluster": "B-contract:thanksgiving",
+   "group": "business travelers",
+   "segment": "B-contract",
+   "segment_description": "contract/shift workers relocating (travel nurses, construction)",
+   "window": "thanksgiving",
+   "share_pct": 0.078,
+   "represents_trips": 1697
+  },
+  {
+   "cluster": "B-contract:ordinary",
+   "group": "business travelers",
+   "segment": "B-contract",
+   "segment_description": "contract/shift workers relocating (travel nurses, construction)",
+   "window": "ordinary",
+   "share_pct": 1.731,
+   "represents_trips": 37499
+  },
+  {
+   "cluster": "A-senior:strike",
+   "group": "travel agencies",
+   "segment": "A-senior",
+   "segment_description": "agencies booking senior leisure groups",
+   "window": "strike",
+   "share_pct": 0.037,
+   "represents_trips": 797
+  },
+  {
+   "cluster": "A-senior:holiday",
+   "group": "travel agencies",
+   "segment": "A-senior",
+   "segment_description": "agencies booking senior leisure groups",
+   "window": "holiday",
+   "share_pct": 0.371,
+   "represents_trips": 8047
+  },
+  {
+   "cluster": "A-senior:thanksgiving",
+   "group": "travel agencies",
+   "segment": "A-senior",
+   "segment_description": "agencies booking senior leisure groups",
+   "window": "thanksgiving",
+   "share_pct": 0.162,
+   "represents_trips": 3515
+  },
+  {
+   "cluster": "A-senior:ordinary",
+   "group": "travel agencies",
+   "segment": "A-senior",
+   "segment_description": "agencies booking senior leisure groups",
+   "window": "ordinary",
+   "share_pct": 1.43,
+   "represents_trips": 30978
+  },
+  {
+   "cluster": "A-event:strike",
+   "group": "travel agencies",
+   "segment": "A-event",
+   "segment_description": "agencies booking wedding/event groups abroad",
+   "window": "strike",
+   "share_pct": 0.028,
+   "represents_trips": 602
+  },
+  {
+   "cluster": "A-event:holiday",
+   "group": "travel agencies",
+   "segment": "A-event",
+   "segment_description": "agencies booking wedding/event groups abroad",
+   "window": "holiday",
+   "share_pct": 0.351,
+   "represents_trips": 7597
+  },
+  {
+   "cluster": "A-event:thanksgiving",
+   "group": "travel agencies",
+   "segment": "A-event",
+   "segment_description": "agencies booking wedding/event groups abroad",
+   "window": "thanksgiving",
+   "share_pct": 0.123,
+   "represents_trips": 2655
+  },
+  {
+   "cluster": "A-event:ordinary",
+   "group": "travel agencies",
+   "segment": "A-event",
+   "segment_description": "agencies booking wedding/event groups abroad",
+   "window": "ordinary",
+   "share_pct": 0.999,
+   "represents_trips": 21649
+  },
+  {
+   "cluster": "A-corp:holiday",
+   "group": "travel agencies",
+   "segment": "A-corp",
+   "segment_description": "agencies booking corporate/conference groups",
+   "window": "holiday",
+   "share_pct": 0.026,
+   "represents_trips": 567
+  },
+  {
+   "cluster": "A-corp:ordinary",
+   "group": "travel agencies",
+   "segment": "A-corp",
+   "segment_description": "agencies booking corporate/conference groups",
+   "window": "ordinary",
+   "share_pct": 1.474,
+   "represents_trips": 31936
+  }
+ ]
+}
