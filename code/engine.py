@@ -131,7 +131,7 @@ class Limiter:
             self.cv.notify_all()
 
 
-LIMIT = Limiter(30)
+LIMIT = Limiter(80)  # all personas of a week in one wave
 
 
 # ---------------------------------------------------------------- small helpers
@@ -682,7 +682,7 @@ class Run:
             facts = facts + ["Social media and people you know, last week: " + " | ".join(feed)]
         prompt = sim.week_prompt(shown(p), self.memory[p["id"]], w, facts,
                                  sim.option_lines(self.decisions, p, w), sim.company_message(self.decisions, p, w))
-        level = "MEDIUM" if w in sim.CRISIS_WEEKS else "LOW"
+        level = "LOW"  # MEDIUM in crisis weeks doubled the wait; LOW keeps a week under ~15 s
         schema = SOCIAL_SCHEMA if self.config["social"] else sim.SCHEMA
         parsed, text, err, use = call(i["model"], prompt, schema, i["seed"], level, sim.valid_week)
         self.count(err, use)
@@ -1150,7 +1150,7 @@ def main():
     ap.add_argument("--probe", action="store_true")
     ap.add_argument("--until", type=int, default=10, help="play weeks 1..until only")
     ap.add_argument("--replicate", type=int, default=0, help="a new number gives a fresh sample, ignoring checkpoints")
-    ap.add_argument("--workers", type=int, default=30, help="LLM calls in flight across all runs")
+    ap.add_argument("--workers", type=int, default=80, help="LLM calls in flight across all runs")
     a = ap.parse_args()
     load_env()
     LIMIT.set(a.workers)
