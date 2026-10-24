@@ -41,7 +41,7 @@ CKPT = HERE / "checkpoints"
 LOGS = HERE / "logs"
 SESSIONS = HERE / "sessions"
 CHECK_PY = HERE.parent / "yeni-case-5-sirket" / "check.py"
-ENGINE_VERSION = 2
+ENGINE_VERSION = 3  # 3: status meanings in the week prompt, keyword action names
 DEFAULT_PERSONAS = "personas_66.jsonl"  # talp-kestrel branch: 66 personas, each standing for real trips
 WEEKS = range(1, 11)
 DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29, Thanksgiving", 5: "Nov 30-Dec 6",
@@ -90,7 +90,9 @@ MENU = {
     "Merge low-load flights, announced at least 7 days ahead (passengers moved to other flights)": {"on": -0.25},
 }
 BUDGET = 3.0
-GROUPS = ["vacationers", "families visiting relatives", "students", "business travelers", "travel agencies"]
+MENU_BY_KEY = {sim.action_key(name): name for name in MENU}  # the dashboard's wording finds its menu row by keyword
+ON_WORDS = {"on", "enable", "enabled", "yes", "true"}  # the dashboard writes "Enable" for an action with no levels
+GROUPS =["vacationers", "families visiting relatives", "students", "business travelers", "travel agencies"]
 CHANNELS = ["app", "email", "text", "social media"]
 
 INTERVIEW_SYSTEM = (
@@ -188,10 +190,11 @@ def resolve(path):
 @functools.lru_cache(maxsize=1)
 def prompt_code_hash():
     """Anything in sim.py that shapes a prompt or the world; editing it invalidates checkpoints."""
-    parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message, sim.effects,
-                                            sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
+    parts = [inspect.getsource(f) for f in (sim.targeted, sim.action_key, sim.option_lines, sim.company_message,
+                                            sim.effects, sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
                                             sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
     return h(parts, sim.P, sim.EVENT_EFFECTS, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
+             sim.STATUS_MEANING, sim.ACTIONS, sorted(sim.NETWORK),
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -350,6 +353,16 @@ def social_graph(personas):
             "influencers": [p["id"] for p in personas if p["influencer"]]}
 
 
+def menu_level(levels, level):
+    """The menu level a decision's level stands for: the same words, 'Enable' for 'on', or the label with its cost
+    added ('1 aircraft: $0.7M') or with words left out ('$75 travel credit'). None if no single level fits."""
+    lv = str(level or "").strip().lower()
+    hits = [n for n in levels if lv == n.lower() or (n == "on" and lv in ON_WORDS) or (lv and n.lower() in lv)]
+    if not hits:
+        hits = [n for n in levels if lv and lv in n.lower()]
+    return hits[0] if len(hits) == 1 else None
+
+
 def validate_decisions(decs):
     """Board rules from the challenge and dossier. Returns (issues, budget in $M)."""
     issues, cost = [], 0.0
@@ -371,13 +384,14 @@ def validate_decisions(decs):
         if not 1 <= len(acts) <= 3:
             issues.append(f"decision {i}: needs 1-3 actions")
         for a in acts:
-            levels = MENU.get(a.get("action"))
+            levels = MENU.get(MENU_BY_KEY.get(sim.action_key(a.get("action"))))
+            level = menu_level(levels, a.get("level")) if levels else None
             if levels is None:
                 issues.append(f"decision {i}: '{a.get('action')}' is not on the menu")
-            elif a.get("level") not in levels:
+            elif level is None:
                 issues.append(f"decision {i}: level '{a.get('level')}' not in {list(levels)}")
             else:
-                cost += levels[a["level"]]
+                cost += levels[level]
         msg = d.get("message") or ""
         if not msg.strip() or msg.startswith("REPLACE WITH"):
             issues.append(f"decision {i}: message is empty or still the placeholder")
@@ -398,7 +412,8 @@ def inputs(cfg):
     add_social_graph(personas)
     decisions = [] if cfg["type"] == "nodecision" or not cfg["decisions"] else \
         json.loads(resolve(cfg["decisions"]).read_text(encoding="utf-8"))
-    surprises = json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
+    sim.check_actions(decisions)
+    surprises =json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
     if cfg["type"] == "plan_nosurprises":  # every surprise off; the known crisis stays
         surprises = [e for e in surprises if e.get("known_crisis")]
     code = prompt_code_hash()

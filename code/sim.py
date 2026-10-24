@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import random
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -24,6 +25,13 @@ HERE = Path(__file__).parent
 MODEL = "gemini-3.7-flash"
 COMPANY = "Kestrel Air"
 STATUSES = ["flies as planned", "rebooked", "moved to another airline", "canceled the trip"]
+# A partner-airline seat Kestrel arranges is a rebooking, not a move to a rival (goal 4 counts a move as lost revenue)
+STATUS_MEANING = (
+    "Statuses: 'flies as planned' = you travel on your booked Kestrel flight, even if it leaves late; "
+    "'rebooked' = Kestrel moved you to another flight, including a seat on a partner airline that Kestrel "
+    "arranged for you; 'moved to another airline' = you left Kestrel and booked another airline yourself; "
+    "'canceled the trip' = you are not making the trip."
+)
 STRIKE_WEEK = 8
 STRIKE_DATES = ("2026-12-22", "2026-12-23")
 HIDDEN_FIELDS = ("stratum", "strike_exposed", "touches_base")  # simulation labels, not known to the customer
@@ -101,11 +109,13 @@ TARGET_RULES = {
     "holiday passengers (weeks 8-9)": lambda p: any(t["week"] in (8, 9) for t in p["trips"]),
     "Orlando and Philadelphia passengers": lambda p: any({t["from"], t["to"]} & BASES for t in p["trips"]),
 }
-# Menu action -> effect key. Network actions touch every flight; the rest reach only the decision's target.
-ACTIONS = [("lease", "Lease an aircraft"), ("backup", "Backup ground handling"), ("free_changes", "Free changes"),
-           ("goodwill", "Goodwill"), ("partner", "partner airline"), ("hotel", "Hotel rooms"),
-           ("staff", "Extra airport and call-center staff"), ("fare_cap", "Fare cap"), ("fare_sale", "Fare sale"),
-           ("points", "Double loyalty points"), ("merge", "Merge low-load flights")]
+# Menu action -> effect key, by keywords, so the dossier's wording and the dashboard's ("Lease aircraft with crew")
+# both match. First match wins, so the specific keys come before the generic "staff". Network actions touch every
+# flight; the rest reach only the decision's target.
+ACTIONS = [("lease", r"\blease"), ("backup", r"\bback-?up\b|ground handling"), ("free_changes", r"\bfree (change|cancel)"),
+           ("goodwill", r"goodwill|travel credit"), ("partner", r"\bpartner"), ("hotel", r"\bhotel"),
+           ("fare_cap", r"\bcap(ped|s)?\b"), ("fare_sale", r"\bsale\b|\bdiscount"),
+           ("points", r"loyalty|\bpoints\b|\bmiles\b"), ("merge", r"\bmerg|consolidat"), ("staff", r"\bstaff")]
 NETWORK = {"lease", "backup", "staff", "merge"}
 # What a passenger can actually see of an action (backup crews and merges show up in the flights themselves)
 CUSTOMER_TEXT = {
@@ -132,7 +142,16 @@ def targeted(persona, target):
 
 
 def action_key(name):
-    return next((k for k, words in ACTIONS if words.lower() in name.lower()), None)
+    text = str(name or "").lower()
+    return next((k for k, pattern in ACTIONS if re.search(pattern, text)), None)
+
+
+def check_actions(decisions):
+    """Stop before any call when an action matches nothing on the menu; it would otherwise do nothing, silently."""
+    bad = [f"decision {i}: '{a.get('action')}'" for i, d in enumerate(decisions, 1)
+           for a in d.get("actions") or [] if not action_key(a.get("action"))]
+    if bad:
+        raise ValueError("actions that match no menu action: " + "; ".join(bad))
 
 
 def effects(decisions, persona, week):
@@ -346,6 +365,7 @@ def week_prompt(persona, memory, week, facts, options, message):
     parts.append(
         "TASK: Decide what this person says and does now. Use only the known options. Report travel status "
         f"(one of: {', '.join(STATUSES)}) and whether they would book Kestrel again (yes, maybe, no). "
+        f"{STATUS_MEANING} "
         "If there is no flight this week, report the status of your upcoming booking. Keep the reason brief."
     )
     return "\n".join(parts)
@@ -365,6 +385,7 @@ def run(args):
         f.unlink()
     personas = [json.loads(l) for l in open(HERE / "personas.jsonl", encoding="utf-8")]
     decisions = json.load(open(args.decisions)) if args.decisions and args.type != "nodecision" else []
+    check_actions(decisions)
     use_surprises = args.type != "plan_nosurprises"
     surprises = json.load(open(args.surprises))
     client = make_client()
