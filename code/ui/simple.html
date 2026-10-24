@@ -563,7 +563,7 @@ function drawGoals(){
     return `<div class="stat"><div class="l">${label}</div><div class="v ${ok ? "" : "na"}">${value ?? "Not measured"}</div>${bar}<div class="d">${detail}</div></div>`; };
   const flights = metric("Itineraries operated", percent(g.operated, g.scheduled) ?? "No scheduled trips",
     `${g.operated}/${g.scheduled} scheduled traveler itineraries · ${g.canceled} canceled, ${g.delayed} delayed`, !!g.scheduled);
-  const solved = metric("Affected travelers resolved in 24h", percent(g.resolved_24h, g.affected) ?? "No affected trips",
+  const solved = metric("Confirmed rebooked in 24h", percent(g.resolved_24h, g.affected) ?? "No affected trips",
     g.affected ? `${g.resolved_24h}/${g.affected} affected · ${g.unresolved_24h} unresolved${g.unknown_24h ? ` · ${g.unknown_24h} unknown` : ""}` : "No canceled or 3h+ delayed itineraries this week", !!g.affected);
   const complaints = metric("Complaints recorded", g.complaints, `of ${g.personas} simulated travelers this week`);
   const nps = metric("NPS survey", g.nps == null ? "Not yet surveyed" : `${g.nps > 0 ? "+" : ""}${g.nps}`,
@@ -584,7 +584,7 @@ function drawGoals(){
   setHTML($("#goals"), `<div class="card"><h2>Results <span class="count">recorded from ${g.personas} personas</span></h2>
     <div class="stats">${flights}${solved}${complaints}${bookAgain}${trust}${bookings}${nps}</div>
     ${history}
-    <div class="note">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals and actual revenue need operational data, so this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
+    <div class="note">These values come from this week's persona records. A timely rebooking offer alone is not counted as a completed recovery; refund completion time is not recorded. Network-wide flight rates, monthly complaint totals and actual revenue need operational data, so this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
 }
 function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
 function budgetLine(decs){  // the engine's check when the server sent it, else the menu prices
