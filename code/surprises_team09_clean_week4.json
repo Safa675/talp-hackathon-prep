@@ -16,5 +16,15 @@
     "kestrel_caused": false,
     "until_week": 5,
     "reading": "Worn parts on three Kestrel aircraft ground them for about two weeks. Cancellations or merged flights affect Thanksgiving week and may continue into week 5."
+  },
+  {
+    "week": 8,
+    "text": "The workers of Kestrel's ground handling contractor (baggage, cabin cleaning, wheelchair assistance, fueling) are on a 48-hour strike at Orlando and Philadelphia on Dec 22–23, the busiest week of the year. The contractor will bring in replacement staff where it can; some flights may be late or canceled. The union says the strike may be extended.",
+    "known_crisis": true,
+    "effect": "none",
+    "scope": "bases",
+    "kestrel_caused": false,
+    "until_week": 8,
+    "reading": "Known 48-hour ground handling strike at both bases on December 22–23; replacement staffing may be incomplete and extension is possible."
   }
 ]

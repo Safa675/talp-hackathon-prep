@@ -503,17 +503,20 @@ class Run:
 
     def backfill_logs(self):
         """Give older live sessions their own records from the checkpoint chain on disk."""
-        self.save()
+        self.prepare()
+        self.info["chain"] = self.fps[:self.info["played"] + 1]
+        self.info["people"] = self.people
         missing = [w for w in range(1, self.info["played"] + 1)
                    if not (self.log_dir / f"week-{w:02d}.json").exists()]
         if not missing:
+            self.save()
             return
-        self.prepare()
         for w in missing:
-            ck = load_ckpt(self.info["chain"][w])
+            ck = load_ckpt(self.fps[w])
             if ck:
                 self.save_week_log(w, ck)
         self.audit("logs_backfilled", weeks=missing)
+        self.save()
 
     def cancel(self):
         self.cancel_flag.set()
@@ -616,7 +619,11 @@ class Run:
             if start:
                 self.carry(load_ckpt(self.fps[start])["entries"])
                 for w in range(1, start + 1):
-                    self.mark_reused(w, load_ckpt(self.fps[w]))
+                    ck = load_ckpt(self.fps[w])
+                    self.mark_reused(w, ck)
+                    self.save_week_log(w, ck)
+                i["chain"] = self.fps[:start + 1]
+                i["people"] = self.people
             n = len(self.personas)
             i["resumed_from"] = start
             i["played"] = start
