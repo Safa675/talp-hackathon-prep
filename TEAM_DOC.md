@@ -78,14 +78,15 @@ A check-in with the eight questions runs before week 1 and after week 10, and th
 
 ## 3. How we read each crisis
 
-The engine's reader (gemini-3.5-flash-lite) turns each announcement into an effect on flights (none / delays / some cancellations / many cancellations), which flights it touches, for how many weeks, whether Kestrel caused it, and a neutral one-sentence report. The reading is saved in the events file (`code/surprises_team09_week7.json`), where we can see it and change it. Personas read the original text and the report from the event's week on.
+The engine's reader (gemini-3.5-flash-lite) turns each announcement into an effect on flights (none / delays / some cancellations / many cancellations), which flights it touches, for how many weeks, whether Kestrel caused it, and a neutral one-sentence report. The reading is saved in the events file (`code/surprises_team09_week8.json`), where we can see it and change it. Personas read the original text and the report from the event's week on.
 
 | Week | Announcement | Our reading | Doubts |
 |---|---|---|---|
 | 3 | FAA and the engine maker order inspections of one engine part; TikTok video of mechanics at a gate | some cancellations, all flights, not Kestrel's doing, week 3 | The checks take aircraft out of service, but nobody knows for how long. |
 | 4 | Worn parts on three aircraft; grounded about two weeks; some flights canceled or merged, Thanksgiving included | many cancellations, all flights, not Kestrel's doing, weeks 4–5 | Three of 36 aircraft is 8.3% of capacity. With our leased aircraft, two remain out (5.6%). In the engine, "many" with the lease means +7.5 points of cancellation, and "some" means +2.5; capacity arithmetic lies between. Goal 1 hangs on this reading (section 6). We treated the grounding as not Kestrel's own because the FAA ordered the checks. A DOT-style reading would count maintenance as the airline's own, which brings meals and hotels under business as usual. |
-| 7 | Government shutdown; air traffic controllers and TSA officers work unpaid; longer security lines at some airports | delays, the two bases, not Kestrel's doing, weeks 7–8 (the reader gave this answer 3 times out of 3) | Probably too strong at the start. In the 2025 shutdown (from Oct 1), the FAA ordered flight cuts at 40 airports only on Nov 7, five weeks in (4%, rising to 10%). If this one lasts past Jan 10, cuts are the risk. |
-| 8 | Known crisis: 48-hour ground handling strike at both bases, Dec 22–23; "may be extended" | the strike rules in section 2, on Dec 22–23 at the bases | We did not simulate an extension. |
+| 7 | Government shutdown; air traffic controllers and TSA officers work unpaid; longer security lines at some airports | delays, the two bases, not Kestrel's doing, week 7 (the reader gave this answer 3 times out of 3) | Probably too strong at the start. In the 2025 shutdown (from Oct 1), the FAA ordered flight cuts at 40 airports only on Nov 7, five weeks in (4%, rising to 10%). |
+| 8 | Shutdown update: the Senate passed a short-term bill; the House votes after Christmas; the Dec 30 paycheck may be missed; the FAA may slow traffic at busy airports if more controllers call in sick | delays, the two bases, not Kestrel's doing, weeks 8–9 (2 of 2 readings agree) | We treat the update as the same shutdown going on, so its delays replace the week-7 ones instead of adding to them; otherwise strike week would count the shutdown twice. In past shutdowns sick calls rose once paychecks were missed, so week 9 (Dec 30) is the risk. |
+| 8 | Known crisis: 48-hour ground handling strike at both bases, Dec 22–23; "may be extended" (the dashboard's text, in every run including `plan_nosurprises`) | the strike rules in section 2, on Dec 22–23 at the bases | We did not simulate an extension. |
 
 ## 4. Our two decisions (as locked)
 
@@ -143,24 +144,24 @@ The two models rank the third action in opposite orders, so we read it as noise.
 
 The 98% goal is met only under the mildest reading. The plan lands between 96.9% (our reading) and 98.4% (the mildest). Delays do not count against Goal 1, so the shutdown reading does not change these figures.
 
-**E4. The plan against no decision, with every announcement so far** (gemini-3.5-flash-lite, events through the week-7 shutdown, engine version 3):
+**E4. The plan against no decision, with every announcement so far** (gemini-3.5-flash-lite, events through the week-8 shutdown update, engine version 3):
 
 | | Plan, seed 1 | Plan, seed 2 | No decision, seed 1 | No decision, seed 2 | Plan, surprises off |
 |---|---:|---:|---:|---:|---:|
 | Goal 1: flights operated (target ≥98%) | 96.86% | 96.86% | 95.14% | 95.14% | 98.92% |
-| Goal 2: resolved within 24h (≥90%) | 100% | 100% | 94.8% | 99.1% | 100% |
-| Goal 3: complaints a month (direction only) | 3,970 | 3,270 | 5,426 | 4,263 | 695 |
-| Complaint flags (of 660 persona-weeks) | 16 | 17 | 33 | 37 | 4 |
-| Goal 3b: NPS (+12 basis) | +9.0 | +19.6 | −13.7 | −9.2 | +56.0 |
-| Raw check-in NPS, start → end | −25.8 → −28.8 | −27.3 → −19.7 | −25.8 → −51.5 | −27.3 → −48.5 | −25.8 → +18.2 |
-| Goal 4: revenue weeks 5–10 (≥96%) | 98.03% | 100% | 93.95% | 100% | 100% |
-| Trust in week 10 (1–5, all 66 answered) | 3.53 | 3.58 | 2.95 | 3.24 | 4.27 |
-| "Would book again: yes", week 10 (weighted) | 66% | 74% | 33% | 64% | 97% |
+| Goal 2: resolved within 24h (≥90%) | 100% | 100% | 95.0% | 99.8% | 100% |
+| Goal 3: complaints a month (direction only) | 4,409 | 3,414 | 5,792 | 4,852 | 819 |
+| Complaint flags (of 660 persona-weeks) | 20 | 21 | 29 | 43 | 6 |
+| Goal 3b: NPS (+12 basis) | +7.5 | +13.5 | −19.8 | −7.7 | +48.4 |
+| Raw check-in NPS, start → end | −25.8 → −30.3 | −27.3 → −25.8 | −25.8 → −57.6 | −27.3 → −47.0 | −25.8 → +10.6 |
+| Goal 4: revenue weeks 5–10 (≥96%) | 98.03% | 100% | 93.95% | 99.74% | 100% |
+| Trust in week 10 (1–5, all 66 answered) | 3.48 | 3.68 | 2.94 | 3.14 | 4.30 |
+| "Would book again: yes", week 10 (weighted) | 59% | 69% | 34% | 62% | 97% |
 | Strike-day flights (16): canceled / 3h+ late | 0 / 3 | 1 / 1 | 3 / 8 | 3 / 8 | 0 / 3 |
 
-Runs `doc_plan_s1`, `doc_plan_s2`, `doc_nd_s1`, `doc_nd_s2`, `doc_nos_s1`. Both messages reached all 66 personas word for word from their weeks (0 before). In both seeds the plan beats no decision on every measure the personas drive: about half the complaint flags, higher trust, an NPS that ends near where it started instead of falling 21–26 points, and more people who would book again.
+Runs `doc8_plan_s1`, `doc8_plan_s2`, `doc8_nd_s1`, `doc8_nd_s2`, `doc8_nos_s1`. Both messages reached all 66 personas word for word from their weeks (0 before). In both seeds the plan beats no decision on every measure the personas drive: a third to a half fewer complaint flags, higher trust, an NPS that ends near where it started instead of falling 20–32 points, and more people who would book again. The week-8 shutdown update cost both scenarios a little in weeks 8–10, and the plan's lead held.
 
-The two plan runs lose revenue only through real switches. In seed 1 a persona offered a same-day partner seat "booked a last-minute ticket on a rival airline" instead. No-decision revenue swings between seeds (93.95% against 100%), so one seed proves little. With the surprises off, the plan lifts raw NPS from −26 to +18. Real customers would hardly reward a strike week that much, so we treat NPS gains as an upper bound.
+The plan's revenue loss in seed 1 comes from one real switch: a persona offered a same-day partner seat "booked a last-minute ticket on a rival airline" instead. Without decisions, strike-day travelers canceled their trips: the family with an elderly parent in both seeds, plus a family with young children and a student group in seed 1. No-decision revenue swings between seeds (93.95% against 99.74%), so one seed proves little. With the surprises off, the plan lifts raw NPS from −26 to +11. Real customers would hardly reward a strike week that much, so we treat NPS gains as an upper bound.
 
 **E5. Placebo (an earlier version of the world, before the inspection events).** Two friendly holiday greetings with no actions did not raise the NPS goal against no decision (−42.4 vs −36.4 with seed 1, −37.9 vs −42.4 with seed 2). A plan with real actions did (−22.7 in both seeds). The personas react to what happens to them, not to any message.
 
@@ -171,12 +172,12 @@ The two plan runs lose revenue only through real switches. In seed 1 a persona o
 - **A partner-airline rebooking was reported as "moved to another airline"**, which Goal 4 counted as lost revenue. In one run, a persona that said "Kestrel successfully rebooked us onto a partner airline the same day" was booked as a lost customer. We now define each status in the prompt. The same persona now reports "rebooked", and that run's Goal 4 went from 98.03% to 100%.
 - **The dashboard names the actions differently** ("Lease aircraft with crew", level "Enable"). The engine now matches actions by keyword and stops before any call if an action matches nothing, so no action can silently do nothing.
 - **Survey answers bunch at 4.** At the start, 45 of 66 personas answer 4 to "would you recommend", and only 2 answer 5. Raw NPS is therefore −26 with flash-lite, but +6 with 3.7-flash for the same personas. We report the change from the start, never the level. One persona is worth 1.5 NPS points.
-- **Complaints are rare, which makes Goal 3 fragile.** In weeks without events the personas almost never complain. In 4 of the 5 runs in E4, that rate sits below the 1% floor in the formula, so Goal 3 rests on 16–37 complaint flags in 660 persona-weeks. No decision gives 5,426 with seed 1 and 4,263 with seed 2. We read it as a direction only.
+- **Complaints are rare, which makes Goal 3 fragile.** In weeks without events the personas almost never complain. In all 5 runs in E4 that rate sits below the 1% floor in the formula, so Goal 3 rests on 20–43 complaint flags in 660 persona-weeks. No decision gives 5,792 with seed 1 and 4,852 with seed 2. We read it as a direction only.
 
 ## 8. What the simulation cannot tell yet, and what we would do with more time
 
-- **Sizes.** LLM personas get the direction of an effect right more often than its size, and their answers are less spread than real people's. Without surprises the plan pushes NPS to +56, which no real airline would see in a strike week. We report directions and ranges.
+- **Sizes.** LLM personas get the direction of an effect right more often than its size, and their answers are less spread than real people's. Without surprises the plan pushes NPS to +48, which no real airline would see in a strike week. We report directions and ranges.
 - **Goals 1 and 2 are our assumptions.** The strike, backup, lease and partner probabilities are our estimates, not data. The partner airline always has a seat in the engine, in a week that is 97% booked. One leased aircraft and two have the same effect.
 - **Real complaint rates.** In December 2022 about 0.4% of stranded passengers filed a DOT complaint (Southwest's meltdown: 8,729 DOT complaints for about 2 million stranded). With Kestrel's complaint data we would calibrate the complaint flag instead of using the floor.
-- **A strike extension or a long shutdown** are not in the runs. We would run them as scenarios.
+- **A strike extension, or controllers calling in sick after the missed Dec 30 paycheck,** are not in the runs. We would run them as scenarios.
 - **With more time:** more seeds per decision; each crisis reading run as its own scenario instead of one choice; personas checked against Kestrel's real survey spread; the social network built from data instead of three links each.
