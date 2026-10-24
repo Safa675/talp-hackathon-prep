@@ -1,0 +1,54 @@
+[
+  {
+    "week": 4,
+    "target": "everyone",
+    "actions": [
+      {
+        "action": "Free changes and cancellations for bookings in a 2-week window",
+        "level": "on"
+      },
+      {
+        "action": "Lease an aircraft with crew for 2 weeks",
+        "level": "1 aircraft"
+      },
+      {
+        "action": "Extra airport and call-center staff for 2 weeks",
+        "level": "on"
+      }
+    ],
+    "message": "Kestrel Air update on the FAA engine inspections: the checks are a precaution ordered for one engine type, and no Kestrel aircraft has had a problem with this part. We have leased a spare aircraft with crew to keep your flights running and added staff at the airports and on the phones. If you would rather change or cancel a trip between Nov 23 and Dec 6, you can do it at no cost in the app.",
+    "channels": [
+      "in-app",
+      "email",
+      "sms",
+      "social"
+    ],
+    "why": "The inspections take aircraft out of service in Thanksgiving week.\nA leased spare protects the 98% flights goal and rebooking.\nA calm, factual message answers the TikTok video and free changes cut anxiety."
+  },
+  {
+    "week": 7,
+    "target": "everyone",
+    "actions": [
+      {
+        "action": "Backup ground handling contract at both bases for the strike days",
+        "level": "on"
+      },
+      {
+        "action": "Rebooking deal with a partner airline for 2 disrupted weeks",
+        "level": "on"
+      },
+      {
+        "action": "Double loyalty points for affected passengers",
+        "level": "on"
+      }
+    ],
+    "message": "A ground handling strike is planned at Orlando and Philadelphia on December 22-23. We have arranged the following: backup ground handling is contracted for the December 22-23 strike; canceled travelers can take an available partner-airline seat at no extra charge; disrupted travelers receive double loyalty points. Please check flight status in the app. If your flight is canceled, you may also choose the refund required by law.",
+    "channels": [
+      "app",
+      "email",
+      "text",
+      "social media"
+    ],
+    "why": "The announced ground handling strike threatens flights at both bases.\nThe contracted capacity or passenger options reduce disruption and its impact.\nThe package fits the remaining $1M second-decision limit."
+  }
+]
