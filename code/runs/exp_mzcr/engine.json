@@ -1,0 +1,111 @@
+{
+  "name": "exp_mzcr",
+  "type": "plan",
+  "seed": 1,
+  "model": "gemini-3.5-flash-lite",
+  "probe": false,
+  "decisions_file": null,
+  "surprises_file": "surprises.json",
+  "personas_file": "personas.jsonl",
+  "replicate": 0,
+  "status": "done",
+  "phase": "done",
+  "weeks": {
+    "1": "reused",
+    "2": "reused",
+    "3": "reused",
+    "4": "reused",
+    "5": "reused",
+    "6": "reused",
+    "7": "reused",
+    "8": "reused",
+    "9": "reused",
+    "10": "reused"
+  },
+  "week_source": {
+    "1": {
+      "fp": "a3f1757f8b327e4474b3",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:40:05"
+    },
+    "2": {
+      "fp": "8070d33c375b74e5bd5f",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:40:07"
+    },
+    "3": {
+      "fp": "4bbecfda1d574413f99c",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:40:52"
+    },
+    "4": {
+      "fp": "7daa67dc9f8d9169b994",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:40:55"
+    },
+    "5": {
+      "fp": "e8aee00a556093901673",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:40:57"
+    },
+    "6": {
+      "fp": "b4668a94b5b94688f18d",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:40:59"
+    },
+    "7": {
+      "fp": "17cf7f808515fdc3f400",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:41:01"
+    },
+    "8": {
+      "fp": "803b038d87049bb39d85",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:41:03"
+    },
+    "9": {
+      "fp": "0e95e29bbc41c7c27855",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:41:04"
+    },
+    "10": {
+      "fp": "9fe54f0614882603f80a",
+      "origin_run": "exp_lite_smoke",
+      "created": "2026-10-24T12:41:06"
+    }
+  },
+  "calls_done": 0,
+  "calls_total": 0,
+  "errors": 0,
+  "resumed_from": 10,
+  "queued": "2026-10-24T12:45:09",
+  "started": "2026-10-24T12:45:09",
+  "finished": "2026-10-24T12:45:09",
+  "error": null,
+  "metrics": {
+    "goal_1": 96.5,
+    "goal_2": 91.7,
+    "goal_3": 13,
+    "goal_3b": null,
+    "goal_4": 96.5,
+    "units": {
+      "goal_1": "% of persona flights not canceled (proxy for planned flights operated)",
+      "goal_2": "% of disrupted persona flights ending rebooked/flying (proxy for 24h resolution)",
+      "goal_3": "number of persona-weeks with a complaint",
+      "goal_4": "% of persona flights kept on Kestrel (revenue proxy)"
+    }
+  },
+  "fps": [
+    "94fac3d10cfacb6b1a86",
+    "a3f1757f8b327e4474b3",
+    "8070d33c375b74e5bd5f",
+    "4bbecfda1d574413f99c",
+    "7daa67dc9f8d9169b994",
+    "e8aee00a556093901673",
+    "b4668a94b5b94688f18d",
+    "17cf7f808515fdc3f400",
+    "803b038d87049bb39d85",
+    "0e95e29bbc41c7c27855",
+    "9fe54f0614882603f80a"
+  ]
+}

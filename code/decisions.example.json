@@ -1,0 +1,10 @@
+[
+  {
+    "week": 8,
+    "target": "everyone",
+    "actions": [{"action": "Free changes and cancellations for bookings in a 2-week window", "level": "on"}],
+    "message": "REPLACE WITH THE EXACT LOCKED MESSAGE (max 600 characters).",
+    "channels": ["app", "email", "text"],
+    "why": "line 1\nline 2\nline 3"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "goal_1": 96.5,
+  "goal_2": 91.7,
+  "goal_3": 13,
+  "goal_3b": -53.3,
+  "goal_4": 96.5,
+  "units": {
+    "goal_1": "% of persona flights not canceled (proxy for planned flights operated)",
+    "goal_2": "% of disrupted persona flights ending rebooked/flying (proxy for 24h resolution)",
+    "goal_3": "number of persona-weeks with a complaint",
+    "goal_4": "% of persona flights kept on Kestrel (revenue proxy)",
+    "goal_3b": "NPS proxy at the end from check-in 3a (5 = promoter, 1-3 = detractor); start in nps_start"
+  },
+  "nps_start": -53.3
+}

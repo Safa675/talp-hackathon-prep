@@ -6,3 +6,7 @@ __pycache__/
 .DS_Store
 .~lock.*#
 .Rhistory
+
+# simulation engine caches and build outputs
+code/checkpoints/
+code/submission/
