@@ -93,10 +93,8 @@ def detail(name):
     val = run.validity()
     probe_path = engine.RUNS / name / "probe.jsonl"
     probes = engine.read_jsonl(probe_path) if run.info["played"] == 10 else []
-    weekly_goals = {str(w): engine.board_metrics(b["personas"], [r for r in rows if r["week"] == w],
-                                                b["decisions"], b["surprises"], probes if w == 10 else (),
-                                                metric_weeks=[w],
-                                                baseline_weekly=[r for r in rows if r["week"] <= w])
+    weekly_goals = {str(w): engine.observed_week_metrics([r for r in rows if r["week"] == w],
+                                                        probes if w == 10 else ())
                     for w in sorted({r["week"] for r in rows})}
     return {"info": run.info, "config": run.config, "personas": b["personas"], "weekly": rows,
             "validity": {k: v for k, v in val.items() if k in ("valid_through", "stale_from", "error")},

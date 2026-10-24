@@ -881,6 +881,34 @@ def nps(rows, when):
     return round(100 * (sum(x == 5 for x in s) - sum(x <= 3 for x in s)) / len(s), 1) if s else None
 
 
+def observed_week_metrics(rows, probes=()):
+    """Only observations recorded for one simulated week; no network or monthly extrapolation."""
+    scheduled = [r for r in rows if r.get("had_flight_this_week")]
+    affected = [r for r in scheduled if r.get("flight_outcome") in ("canceled", "delayed")]
+    resolved = [r for r in affected if r.get("within_24h") is True]
+    unresolved = [r for r in affected if r.get("within_24h") is False]
+    trust = [r["trust"] for r in rows if isinstance(r.get("trust"), (int, float))]
+    return {
+        "personas": len(rows),
+        "scheduled": len(scheduled),
+        "operated": sum(r.get("flight_outcome") != "canceled" for r in scheduled),
+        "canceled": sum(r.get("flight_outcome") == "canceled" for r in scheduled),
+        "delayed": sum(r.get("flight_outcome") == "delayed" for r in scheduled),
+        "affected": len(affected),
+        "resolved_24h": len(resolved),
+        "unresolved_24h": len(unresolved),
+        "unknown_24h": len(affected) - len(resolved) - len(unresolved),
+        "complaints": sum(bool(r.get("complaint")) for r in rows),
+        "book_again_yes": sum(r.get("would_book_again") == "yes" for r in rows),
+        "book_again_answered": sum(r.get("would_book_again") in ("yes", "no") for r in rows),
+        "trust_average": round(sum(trust) / len(trust), 2) if trust else None,
+        "trust_answered": len(trust),
+        "kept_kestrel": sum(r.get("status") not in ("moved to another airline", "canceled the trip") for r in scheduled),
+        "nps": nps(probes, "end") if probes else None,
+        "nps_respondents": sum(r.get("when") == "end" and r.get("question") == "3a" for r in probes),
+    }
+
+
 # Dossier baseline, November 2: 210,000 passengers and ~1,355 flights a week, 2,500 complaints a month, NPS +12
 FLIGHTS_PER_WEEK, PAX_PER_WEEK, COMPLAINTS_PER_MONTH, NPS_BASE = 1355, 210_000, 2500, 12
 FARE = {"domestic": 120, "intl": 210}

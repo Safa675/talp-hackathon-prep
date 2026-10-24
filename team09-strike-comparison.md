@@ -10,7 +10,7 @@ The original week 4 decision costs **$1.05M**. The recommended week 8 package co
 
 ## Results through week 10
 
-| Seed | Week 8 package | Flights operated¹ | 24h resolution | Monthly complaints estimate | NPS² | Revenue vs plan |
+| Seed | Week 8 package | Flights operated¹ | 24h resolution | Monthly complaints estimate | Adjusted NPS estimate² | Revenue vs plan |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | 1 | No added action | 96.81% | 93.0% | 4,429 | +12.0 | 99.27% |
 | 1 | Backup + partner + staff | 96.86% | 100.0% | 4,331 | +25.6 | 100.00% |
@@ -19,7 +19,7 @@ The original week 4 decision costs **$1.05M**. The recommended week 8 package co
 | 2 | Backup + partner + staff | 96.86% | 100.0% | 2,597 | +19.5 | 99.87% |
 | 2 | Backup + partner + points | 96.86% | 100.0% | 2,096 | +22.6 | 99.87% |
 
-¹ Network estimate for weeks 1–10, excluding strike-day flights by the scenario's board metric definition. The 98% board target remains unmet in all six runs, largely because the earlier inspection disruptions remain in the total. ² Start-to-end persona probe, translated onto the board's +12 NPS baseline.
+¹ Network estimate for weeks 1–10, excluding strike-day flights by the scenario's board metric definition. The 98% board target remains unmet in all six runs, largely because the earlier inspection disruptions remain in the total. ² This is the older board estimate: the change in persona probe NPS added to the dossier's +12 baseline. It is **not** the directly measured survey NPS. In the live UI, the direct end-of-simulation NPS is shown instead (−18.2 for both seed-1 packages); the start survey was −31.8. The UI also labels monthly complaints, network operations, and revenue as unmeasured when displaying weekly persona observations.
 
 For the **16 personas with strike-day flights in week 8**, the no-action scenario had 3 canceled, 8 delayed, and 5 on time in both seeds. The two backup packages had 0 canceled, 3 delayed, 13 on time in seed 1; and 1 canceled, 1 delayed, 14 on time in seed 2. These counts are observations for this persona sample, not network cancellation rates.
 

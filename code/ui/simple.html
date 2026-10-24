@@ -240,16 +240,29 @@ function drawWeek(){
 }
 function drawGoals(){
   const g = D.goals_by_week?.[sel]; if (!g) { $("#goals").innerHTML = ""; return; }
-  const v = sel;
-  const items = [["Flights operated", g.goal_1, x => `${x}%`, x => x >= 98, "≥ 98%"], ["Affected passengers solved in 24h", g.goal_2, x => `${x}%`, x => x >= 90, "≥ 90%"],
-    ["Complaints a month", g.goal_3, x => `~${x.toLocaleString()}`, x => x <= 2500, "≤ 2,500"], ["NPS", g.goal_3b, x => (x > 0 ? "+" : "") + x, x => x >= 12, "≥ +12"],
-    ["Revenue weeks 5–10", g.goal_4, x => `${x}%`, x => x >= 96, "≥ 96% of plan"],
-    ["Trust now", trustOf((D.weekly||[]).filter(r => r.week === sel)), x => `${x.toFixed(1)}/5`, x => x >= 3.5, "personas, 1–5"]];
-  $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Board goals · week ${sel}</h2><span class="small mute">${g.revenue_lost_usd?`revenue lost ~$${(g.revenue_lost_usd/1e6).toFixed(2)}M`:"weekly results"}</span></div>
-    <div class="row" style="margin-top:8px;gap:14px">${items.map(([label, x, f, good, target]) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650" class="${x == null ? "mute" : good(x) ? "ok" : "bad"}">${x == null ? "–" : f(x)}</div><div class="small mute">target ${target}</div></div>`).join("")}</div>
-    <div class="small" style="margin-top:8px">${Array.from({length: v}, (_, k) => { const r = (D.weekly||[]).filter(x => x.week === k+1), t = trustOf(r);
-      return `<span class="pill" style="margin:2px">W${k+1}: trust ${t == null ? "–" : t.toFixed(1)} · book again ${r.length ? Math.round(100*r.filter(x => x.would_book_again === "yes").length/r.length) : 0}%</span>`; }).join("")}</div>
-    <div class="small mute" style="margin-top:6px">NPS is measured only at the end (check-in before week 1 and after week 10).</div></div>`;
+  const percent = (a, n) => n ? `${(100*a/n).toFixed(1)}%` : null;
+  const metric = (label, value, detail) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650">${value ?? "Not measured"}</div><div class="small mute">${detail}</div></div>`;
+  const flights = metric("Itineraries operated", percent(g.operated, g.scheduled) ?? "No scheduled trips",
+    `${g.operated}/${g.scheduled} scheduled traveler itineraries · ${g.canceled} canceled, ${g.delayed} delayed`);
+  const solved = metric("Affected travelers resolved in 24h", percent(g.resolved_24h, g.affected) ?? "No affected trips",
+    g.affected ? `${g.resolved_24h}/${g.affected} affected · ${g.unresolved_24h} unresolved${g.unknown_24h ? ` · ${g.unknown_24h} unknown` : ""}` : "No canceled or 3h+ delayed itineraries this week");
+  const complaints = metric("Complaints recorded", g.complaints, `of ${g.personas} simulated travelers this week`);
+  const nps = metric("NPS survey", g.nps == null ? "Not yet surveyed" : `${g.nps > 0 ? "+" : ""}${g.nps}`,
+    g.nps == null ? "Survey only after week 10" : `${g.nps_respondents} end-of-simulation responses; direct survey score`);
+  const bookings = metric("Kept Kestrel booking", percent(g.kept_kestrel, g.scheduled) ?? "No scheduled trips",
+    `${g.kept_kestrel}/${g.scheduled} scheduled traveler itineraries · revenue was not measured`);
+  const trust = metric("Trust", g.trust_average == null ? null : `${g.trust_average.toFixed(1)}/5`,
+    `${g.trust_answered} persona responses`);
+  const bookAgain = metric("Would book again (yes)", percent(g.book_again_yes, g.personas),
+    `${g.book_again_yes}/${g.personas} simulated travelers · ${g.personas-g.book_again_answered} answered maybe or did not answer`);
+  const history = Object.keys(D.goals_by_week).map(Number).filter(w => w <= sel).sort((a,b) => a-b).map(w => {
+    const x = D.goals_by_week[w];
+    return `<span class="pill" style="margin:2px">W${w}: ${x.operated}/${x.scheduled} operated · ${x.complaints} complaint${x.complaints===1?"":"s"} · trust ${x.trust_average == null ? "not measured" : x.trust_average.toFixed(1)}/5</span>`;
+  }).join("");
+  $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Week ${sel} · recorded simulation results</h2><span class="small mute">${g.personas} personas</span></div>
+    <div class="row" style="margin-top:8px;gap:14px">${flights}${solved}${complaints}${nps}${bookings}${trust}${bookAgain}</div>
+    <div class="small" style="margin-top:8px">${history}</div>
+    <div class="small mute" style="margin-top:6px">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals, and actual revenue need operational data; this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`;
 }
 function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
 function budgetLine(decs){
