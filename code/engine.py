@@ -182,7 +182,7 @@ def prompt_code_hash():
     parts = [inspect.getsource(f) for f in (sim.targeted, sim.option_lines, sim.company_message, sim.effects,
                                             sim.trips_in_week, sim.week_facts, sim.leg_facts, sim.visible,
                                             sim.week_prompt, sim.probe_prompt, add_social_graph, Run.feed)]
-    return h(parts, sim.P, sim.EVENT_EFFECTS, sim.STRIKE_EVENT, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
+    return h(parts, sim.P, sim.EVENT_EFFECTS, sim.CUSTOMER_TEXT, sim.SYSTEM, sim.KESTREL_FACTS, sim.SCHEMA, SOCIAL_SCHEMA, sim.PROBE_QUESTIONS, sim.STATUSES,
              sim.STRIKE_WEEK, sim.STRIKE_DATES, sorted(sim.HIDDEN_FIELDS), sorted(sim.CRISIS_WEEKS),
              sorted(ENGINE_HIDDEN), ENGINE_VERSION)
 
@@ -390,14 +390,20 @@ def inputs(cfg):
     decisions = [] if cfg["type"] == "nodecision" or not cfg["decisions"] else \
         json.loads(resolve(cfg["decisions"]).read_text(encoding="utf-8"))
     surprises = json.loads(resolve(cfg["surprises"] or "surprises.json").read_text(encoding="utf-8"))
-    if cfg["type"] == "plan_nosurprises":
-        surprises = []
-    fps = [h(prompt_code_hash(), personas_text, cfg["model"], cfg["seed"], cfg["replicate"],
-             social_graph(personas) if cfg.get("social") else None)]
+    if cfg["type"] == "plan_nosurprises":  # every surprise off; the known crisis stays
+        surprises = [e for e in surprises if e.get("known_crisis")]
+    code = prompt_code_hash()
+    people = h(personas_text, cfg["model"], cfg["seed"], cfg["replicate"],
+               social_graph(personas) if cfg.get("social") else None)
+    fps = [h(code, people)]
     for w in WEEKS:
-        fps.append(h(fps[-1], w, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] <= w]))
+        fps.append(week_fp(fps[-1], w, code, decisions, surprises))
     return {"personas_text": personas_text, "personas": personas, "decisions": decisions,
-            "surprises": surprises, "fps": fps}
+            "surprises": surprises, "fps": fps, "code": code, "people": people}
+
+
+def week_fp(prev, w, code, decisions, surprises):
+    return h(prev, w, code, [d for d in decisions if d["week"] <= w], [s for s in surprises if s["week"] <= w])
 
 
 # ---------------------------------------------------------------- checkpoints
@@ -495,12 +501,15 @@ class Run:
         for a played week does not replay it; it acts from the next week played on."""
         b = inputs(self.config)
         kept = self.info.get("chain") or []
-        if not self.config["session"] or not kept or kept[0] != b["fps"][0]:
-            return b  # a new persona file, model or seed starts the history again
-        fps = [kept[0]] + [fp for fp in kept[1:self.info["played"] + 1] if ckpt_path(fp).exists()]
-        for w in range(len(fps), 11):
-            fps.append(h(fps[-1], w, [d for d in b["decisions"] if d["week"] <= w],
-                         [s for s in b["surprises"] if s["week"] <= w]))
+        if not self.config["session"] or not kept or self.info.get("people", b["people"]) != b["people"]:
+            return b  # new personas, model, seed or social setting: the history starts again
+        fps = [kept[0]]
+        for fp in kept[1:self.info["played"] + 1]:
+            if not ckpt_path(fp).exists():
+                break
+            fps.append(fp)
+        for w in range(len(fps), 11):  # weeks still to play follow today's code and inputs
+            fps.append(week_fp(fps[-1], w, b["code"], b["decisions"], b["surprises"]))
         return dict(b, fps=fps)
 
     def validity(self):
@@ -517,6 +526,7 @@ class Run:
     # -------------------------------------------- execution
     def prepare(self):
         b = self.inputs_now()
+        self.people = b["people"]
         self.personas_text, self.personas = b["personas_text"], b["personas"]
         self.decisions, self.surprises, self.fps = b["decisions"], b["surprises"], b["fps"]
         self.by_id = {p["id"]: p for p in self.personas}
@@ -633,6 +643,7 @@ class Run:
         self.carry(ck["entries"])
         i["played"] = w
         i["chain"] = self.fps[:w + 1]
+        i["people"] = self.people
         self.save()
 
     def compute(self, fp, step):
@@ -839,7 +850,7 @@ def board_metrics(personas, weekly, decisions, surprises, probes=()):
         for e in sim.events_in_force(surprises, week):
             rate += sim.EVENT_EFFECTS.get(e.get("effect", "none"), (0, 0))[0] * SCOPE_SHARE.get(e.get("scope", "all"), 1) * lease
         c = flights * rate
-        if week == sim.STRIKE_WEEK and "backup" not in eff:  # Dec 24 knock-on at the bases
+        if week == sim.STRIKE_WEEK and "backup" not in eff and sim.strike_announced(surprises):  # Dec 24 knock-on
             c += FLIGHTS_PER_WEEK / 7 * SCOPE_SHARE["bases"] * sim.P["knock_on_cancel"]
         if "merge" in eff and week not in (8, 9):
             c += flights * sim.P["merge"]
@@ -851,7 +862,7 @@ def board_metrics(personas, weekly, decisions, surprises, probes=()):
 
     # goal 3: complaints a month, the dossier's 2,500 scaled by the complaint rate against this run's quiet weeks
     rate = lambda rows: sum(w[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(w[r["persona"]] for r in rows), 1)
-    busy = {e["week"] for e in surprises} | {sim.STRIKE_WEEK, sim.STRIKE_WEEK + 1}
+    busy = {w for e in surprises for w in range(e["week"], e.get("until_week", e["week"] + 1) + 1)}
     quiet = [r for r in weekly if r["week"] not in busy]
     base = max(rate(quiet), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
     complaints = COMPLAINTS_PER_MONTH * rate(weekly) / base if weekly else None
@@ -940,12 +951,13 @@ def interview_prompt(persona, lines, memory, week, question, asker, news=()):
 def interview(timeline, source, persona_ids, question, model, seed=1, week=None, asker="an interviewer", surprises=()):
     """Ask personas a free question about what they lived through up to `week`. Logged to logs/interviews.jsonl."""
     personas, valid, entries = timeline
-    week = valid if week is None else max(0, min(int(week), 10))  # experiences reach `valid`, the news reaches `week`
+    week = valid if week is None else max(0, min(int(week), valid))  # only weeks the persona has lived through
     chosen = [p for p in personas if p["id"] in set(persona_ids)]
 
     def ask(p):
         lines, memory = experience(entries.get(p["id"], []), min(week, valid))
-        prompt = interview_prompt(p, lines, memory, week, question, asker, sim.news_until(surprises, week))
+        news = [e for e in sim.news_until(surprises, week) if e.get("known_from", e["week"]) <= week]
+        prompt = interview_prompt(p, lines, memory, week, question, asker, news)
         answer, text, err, use = call(model, prompt, None, seed, "LOW", lambda a: bool(a), system=INTERVIEW_SYSTEM)
         rec = {"ts": now(), "id": h(source, p["id"], week, question, now(), random.random())[:12], "source": source,
                "persona": p["id"], "name": p.get("name"), "group": p.get("group"), "week": week, "asker": asker,

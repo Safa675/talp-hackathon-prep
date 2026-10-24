@@ -38,5 +38,15 @@
     "until_week": 5,
     "reading": "A severe operational disruption has resulted in the cancellation of half of all Kestrel flights, impacting passengers across the entire network as travelers scramble to find alternative arrangements.",
     "read_by": "gemini-3.5-flash-lite"
+  },
+  {
+    "week": 3,
+    "text": "half price discounts and get a quality certificate from international operrations, apologized and fixed and upgrade all planes",
+    "effect": "none",
+    "scope": "intl",
+    "kestrel_caused": true,
+    "until_week": 3,
+    "reading": "Kestrel Air announced half-price international discounts and issued a quality certificate following operational improvements, with passengers receiving apologies and upgraded aircraft.",
+    "read_by": "gemini-3.5-flash-lite"
   }
 ]

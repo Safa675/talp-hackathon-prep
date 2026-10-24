@@ -71,8 +71,8 @@ def save_input(name, content, note=""):
     if not SAFE.match(name):
         raise ValueError("file name must start with decisions, surprises or personas")
     if name.startswith("surprises"):
-        content = [engine.read_event(e) if e.get("effect", "auto") == "auto" or not e.get("reading") else e
-                   for e in content]
+        content = [engine.read_event(e) if not e.get("known_crisis") and (e.get("effect", "auto") == "auto" or not e.get("reading"))
+                   else e for e in content]
     issues = engine.validate_decisions(content)[0] if name.startswith("decisions") else []
     (HERE / name).write_text(json.dumps(content, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     engine.log("input_saved", file=name, note=note, items=len(content), issues=issues)

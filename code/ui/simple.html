@@ -142,7 +142,16 @@ const COL = {"flies as planned":"var(--fly)","rebooked":"var(--reb)","moved to a
 const FLIGHT = {canceled:"✕ flight canceled", delayed:"◐ flight delayed", "on time":"✈ flew on time"};
 const EFFECT = {"Lease":"halves cancellations for 2 weeks; canceled passengers get a seat the next morning","Backup ground":"strike days: cancellations 30%→7%, 3h+ delays 45%→15%, fewer lost bags","Free changes":"target can change or cancel bookings for free for 2 weeks","Goodwill":"disrupted passengers in the target get the credit or cash","partner airline":"canceled passengers in the target get a partner seat the same day","Hotel rooms":"stranded passengers in the target get a hotel","Extra airport":"phone wait on disruption days 120→20 min","Fare cap":"target sees capped fares","Fare sale":"target sees a fare sale","Double loyalty":"disrupted passengers in the target get double points","Merge low-load":"3% of ordinary-week flights are moved a few hours (saves $0.25M)"};
 const effectOf = a => Object.entries(EFFECT).find(([k]) => a.includes(k))?.[1] || "";
-const STRIKE = "Known crisis: 48-hour ground handling strike at Orlando and Philadelphia on Dec 22–23 (busiest week of the year). Personas hear about it in week 7.";
+const STRIKE = "The workers of Kestrel's ground handling contractor (baggage, cabin cleaning, wheelchair assistance, fueling) are on a 48-hour strike at Orlando and Philadelphia on Dec 22-23, the busiest week of the year. The contractor will bring in replacement staff 'where it can'; some flights may be late or canceled. The union says the strike 'may be extended'.";
+const SCOPE = {all:"all flights", bases:"Orlando & Philadelphia flights", intl:"Mexico & Caribbean flights"};
+function evLine(s, now){
+  const late = s.known_from && s.known_from > s.week;
+  const what = s.known_crisis ? "known crisis: strike-day flights at the bases follow the strike rates; stays in plan_nosurprises"
+    : s.effect && s.effect !== "none" ? `${s.effect} on ${SCOPE[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights";
+  return `<div class="item ${now?"":"mute"}">${now?"":`<span class="small">week ${s.week} · still in the news</span><br>`}${esc(s.text)}
+    <div class="small mute">${what}${late?` · added after week ${s.known_from-1} was played: personas know it from week ${s.known_from}`:""}${s.reading && !s.known_crisis?`<br>read: ${esc(s.reading)}`:""}</div>
+    ${now?`<button class="small" style="padding:2px 8px;margin-top:4px" onclick='delEvent(${JSON.stringify(s.week)}, ${JSON.stringify(s.text).replace(/'/g,"&#39;")})'>remove</button>`:""}</div>`;
+}
 let S, META, D, sel = +store.get("week", 1), name = store.get("sess", "");
 
 /* ---------- data ---------- */
@@ -189,11 +198,12 @@ function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); }
 function drawWeek(){
   const w = sel, st = weekState(w);
   $("#wkTitle").innerHTML = `Week ${w} · ${DATES[w-1]}${TAGS[w]?` · <span class="warn">${TAGS[w]}</span>`:""}`;
-  const evs = (D.surprises||[]).filter(s => s.week === w);
-  const news = META.news?.[w];
-  $("#events").innerHTML = (w === 8 ? `<div class="item">${STRIKE}</div>` : "") + (news ? `<div class="item small"><span class="mute">Every persona sees:</span> ${esc(news)}</div>` : "")
-    + (evs.map(s => `<div class="item">${esc(s.text)}<div class="small mute">${s.effect && s.effect!=="none" ? `${esc(s.effect)} on ${{all:"all flights",bases:"Orlando & Philadelphia flights",intl:"Mexico & Caribbean flights"}[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights"}${s.reading?`<br>read: ${esc(s.reading)}`:""}</div></div>`).join("") || (news ? "" : `<div class="item mute">No events this week.</div>`))
-    + (D.info.type === "plan_nosurprises" ? `<div class="item small mute">This simulation ignores announcements (plan_nosurprises).</div>` : "");
+  const all = D.surprises || [], evs = all.filter(s => s.week === w), older = all.filter(s => s.week < w);
+  const hasStrike = all.some(s => s.known_crisis);
+  $("#events").innerHTML = (evs.map(s => evLine(s, true)).join("") || `<div class="item mute">No events this week. Add the dashboard's announcements here.</div>`)
+    + (w === 8 && !hasStrike ? `<div class="item"><button onclick="addStrike()">Add the dossier's strike (Dec 22–23)</button></div>` : "")
+    + older.map(s => evLine(s, false)).join("")
+    + (D.info.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : "");
   const decs = D.decisions || [];
   $("#decs").innerHTML = D.info.type === "nodecision" ? `<div class="mute small">No decisions in this simulation (business as usual).</div>` :
     decs.length ? decs.map((d,i) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · from week ${d.week}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
@@ -230,6 +240,8 @@ function drawGoals(){
     ["Trust now", trustOf((D.weekly||[]).filter(r => r.week === v)), x => `${x.toFixed(1)}/5`, x => x >= 3.5, "personas, 1–5"]];
   $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Board goals</h2><span class="small mute">weeks 1–${v} played${g.revenue_lost_usd?` · revenue lost ~$${(g.revenue_lost_usd/1e6).toFixed(2)}M`:""}</span></div>
     <div class="row" style="margin-top:8px;gap:14px">${items.map(([label, x, f, good, target]) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650" class="${x == null ? "mute" : good(x) ? "ok" : "bad"}">${x == null ? "–" : f(x)}</div><div class="small mute">target ${target}</div></div>`).join("")}</div>
+    <div class="small" style="margin-top:8px">${Array.from({length: v}, (_, k) => { const r = (D.weekly||[]).filter(x => x.week === k+1), t = trustOf(r);
+      return `<span class="pill" style="margin:2px">W${k+1}: trust ${t == null ? "–" : t.toFixed(1)} · book again ${r.length ? Math.round(100*r.filter(x => x.would_book_again === "yes").length/r.length) : 0}%</span>`; }).join("")}</div>
     <div class="small mute" style="margin-top:6px">NPS is measured only at the end (check-in before week 1 and after week 10).</div></div>`;
 }
 function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
@@ -253,6 +265,7 @@ $("#evAdd").onclick = async () => {
   const file = D.config.surprises || "surprises.json";
   const auto = $("#evEffect").value === "auto";
   const ev = auto ? {week: sel, text, effect: "auto"} : {week: sel, text, effect: $("#evEffect").value, scope: $("#evScope").value, kestrel_caused: $("#evKestrel").checked, reading: $("#evReading").value.trim() || "set by hand"};
+  if (sel <= D.info.played) ev.known_from = D.info.played + 1;  // played weeks are history; personas learn it next week
   $("#evMsg").textContent = auto ? "the model is reading it…" : "";
   try { const list = await readFile(file); list.push(ev); list.sort((a,b) => a.week - b.week);
     await api("/api/file", {name: file, content: list, note: `event added for week ${sel}`});
@@ -262,6 +275,18 @@ $("#evAdd").onclick = async () => {
   } catch(e){ $("#evMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
 };
 
+async function saveEvents(list, note){ const file = D.config.surprises || "surprises.json"; list.sort((a,b) => a.week - b.week); await api("/api/file", {name: file, content: list, note}); load(); }
+async function delEvent(week, text){
+  if (!confirm("Remove this event?")) return;
+  const list = (await readFile(D.config.surprises || "surprises.json")).filter(e => !(e.week === week && e.text === text));
+  await saveEvents(list, `event removed from week ${week}`);
+}
+async function addStrike(){
+  const list = await readFile(D.config.surprises || "surprises.json");
+  const ev = {week: 8, text: STRIKE, known_crisis: true, effect: "none", scope: "bases", reading: "The dossier's known crisis."};
+  if (8 <= D.info.played) ev.known_from = D.info.played + 1;
+  list.push(ev); await saveEvents(list, "the dossier's strike added for week 8");
+}
 function actRow(a){ const acts = Object.keys(META.menu);
   return `<div class="row act" style="margin-bottom:4px"><select class="aName" style="flex:1;min-width:0" onchange="this.nextElementSibling.innerHTML=levels(this.value)">${acts.map(x=>`<option ${x===a?"selected":""}>${esc(x)}</option>`).join("")}</select><select class="aLevel">${levels(a)}</select></div>`; }
 function levels(a){ return Object.entries(META.menu[a]).map(([l,c]) => `<option value="${esc(l)}">${esc(l)} · $${c}M</option>`).join(""); }
@@ -289,7 +314,7 @@ function askOne(id){ $("#askWho").value = "p:" + id; $("#askQ").focus(); }
 $("#askGo").onclick = async () => {
   const q = $("#askQ").value.trim(), who = $("#askWho").value; if (!q) return;
   const ids = who === "all" ? D.personas.map(p => p.id) : who.startsWith("g:") ? D.personas.filter(p => p.group === who.slice(2)).map(p => p.id) : [who.slice(2)];
-  const week = sel;  // answers as of the end of the selected week; events up to it are known
+  const week = Math.min(sel, D.validity?.valid_through ?? D.info.played);  // only weeks the personas have lived
   $("#askGo").disabled = true; $("#askInfo").textContent = `asking ${ids.length}…`;
   try { const recs = await api("/api/interview", {source: name, personas: ids, question: q, week, model: $("#askModel").value, asker: "a Kestrel board member"});
     $("#answers").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">“${esc(q)}”</h2><button onclick="$('#answers').innerHTML=''" style="padding:2px 8px">close</button></div>
