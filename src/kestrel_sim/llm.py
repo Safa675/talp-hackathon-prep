@@ -95,7 +95,10 @@ class Gemini:
     def generate_json(self, prompt, persona=None, week=0, schema=None):
         """Like generate, but parse the reply as JSON (None if it does not parse)."""
         text, call_id = self.generate(prompt, persona, week, as_json=True, schema=schema)
-        return parse_json(text), text, call_id
+        parsed = parse_json(text)
+        if isinstance(parsed, list):  # the model sometimes wraps the object in a list
+            parsed = next((x for x in parsed if isinstance(x, dict)), None)
+        return (parsed if isinstance(parsed, dict) else None), text, call_id
 
     def map(self, fn, items, workers=config.MAX_WORKERS):
         """Run fn over items in parallel threads, preserving order."""

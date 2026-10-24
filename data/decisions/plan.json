@@ -1,0 +1,36 @@
+[
+ {
+  "week": 7,
+  "target": "Passengers booked on Kestrel flights departing or arriving in Orlando or Philadelphia between December 21 and January 3",
+  "target_rule": {"weeks": [8, 9]},
+  "actions": [
+   {"action": "Backup ground handling at both bases for strike days", "level": "on"},
+   {"action": "Free changes and cancellations in a 2-week window", "level": "on"},
+   {"action": "Partner airline rebooking for 2 disrupted weeks", "level": "on"}
+  ],
+  "message": "Kestrel Air update: workers at our ground handling contractor plan a 48-hour strike at Orlando and Philadelphia on Dec 22-23. We have hired backup ground crews at both airports, but some flights may still be delayed or canceled. If you are booked Dec 21-Jan 3, you can change or cancel your flight for free in the app. If your flight is canceled, we will rebook you on Kestrel or a partner airline, or refund you. We will text you as soon as anything changes.",
+  "channels": ["app", "email", "text"],
+  "why": [
+   "The strike hits the busiest week of the year and week 8 is 97% booked, so there are no spare Kestrel seats.",
+   "Backup crews keep flights running; free changes move flexible travelers off Dec 22-23 before it starts.",
+   "Partner rebooking is the only way to rebook 90% of affected passengers within 24 hours."
+  ]
+ },
+ {
+  "week": 8,
+  "target": "Passengers whose Kestrel flight is canceled or delayed more than 3 hours from December 21",
+  "target_rule": {"disrupted": true},
+  "actions": [
+   {"action": "Hotel rooms held for stranded passengers, whatever the cause", "level": "on"},
+   {"action": "Extra airport and call-center staff for 2 weeks", "level": "on"},
+   {"action": "Goodwill for up to 10,000 affected passengers", "level": "$75 travel credit"}
+  ],
+  "message": "Kestrel Air: we are sorry your trip was disrupted. If you are stranded overnight, for any reason, we have a hotel room held for you - show this message at the Kestrel desk. Extra staff are at the Orlando and Philadelphia airports and on our phone lines. You will also receive a $75 Kestrel travel credit. You can rebook or request a refund in the app; your refund rights under DOT rules are unchanged.",
+  "channels": ["app", "email", "text"],
+  "why": [
+   "Passengers remember how they were treated more than the delay itself.",
+   "Hotels for any cause and extra staff cut wait times and complaints on the worst days.",
+   "A $75 credit is cheap because most are used on empty seats, and it brings travelers back."
+  ]
+ }
+]

@@ -34,7 +34,31 @@ def load_personas(source=config.DEFAULT_PERSONA_SET):
     if source not in config.PERSONA_SETS:
         raise ValueError(f"unknown persona set {source!r}; choose from {', '.join(config.PERSONA_SETS)}")
     loader = {"clusters": _load_clusters, "curated": _load_curated}[source]
-    return loader(config.PERSONA_SETS[source])
+    personas = loader(config.PERSONA_SETS[source])
+    _add_social_graph(personas)
+    return personas
+
+
+def _add_social_graph(personas, k=3, seed=2026):
+    """Who hears whom. Curated personas keep their hand-written connections. Cluster personas get a fixed
+    graph (same in every run): two links to people with the same home area or group, one random link.
+    Influencers (high social-media activity, or creators in the curated set) also reach everyone as
+    'trending' posts; see engine."""
+    import random
+    rng = random.Random(seed)
+    ids = [p["id"] for p in personas]
+    for p in personas:
+        role = str(p.get("attributes", {}).get("social_role", "")).lower()
+        p["influencer"] = (p.get("social_media_activity") == "high" or "opinion leader" in p.get("tags", [])
+                           or "creator" in role or "followers" in role)
+        if p.get("connections"):
+            continue
+        near = [q["id"] for q in personas if q["id"] != p["id"]
+                and (q.get("home") == p.get("home") or q["group"] == p["group"])]
+        picks = rng.sample(near, min(k - 1, len(near)))
+        rest = [i for i in ids if i != p["id"] and i not in picks]
+        picks += rng.sample(rest, 1)
+        p["connections"] = picks
 
 
 def export_jsonl(personas, path):

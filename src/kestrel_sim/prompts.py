@@ -86,6 +86,61 @@ def scenario_prompt(p, scenario, message=None):
   "status_line": "Status: <one of: {statuses}>"}}"""
 
 
+STATUS_MEANINGS = """- flies as planned: you travel (or will travel) on your original Kestrel booking, late or not.
+- rebooked: Kestrel moved you to another flight, including a seat on a partner airline that Kestrel arranged, or you changed your date with Kestrel.
+- moved to another airline: you gave up on Kestrel for this trip and bought a ticket on a rival airline yourself.
+- canceled the trip: you are not travelling at all (refund or not)."""
+
+WEEK_DATES = {1: "Nov 2-8", 2: "Nov 9-15", 3: "Nov 16-22", 4: "Nov 23-29 (Thanksgiving, Black Friday)",
+              5: "Nov 30-Dec 6", 6: "Dec 7-13", 7: "Dec 14-20", 8: "Dec 21-27 (Christmas)",
+              9: "Dec 28-Jan 3 (New Year)", 10: "Jan 4-10"}
+
+
+def week_prompt(p, week, ctx):
+    """The weekly prompt. ctx: memory, last_status, events, upcoming, news, messages, feed, change_offer."""
+    sec = lambda title, lines: f"\n=== {title} ===\n" + ("\n".join(f"- {x}" for x in lines) if lines else "- nothing")
+    change = ""
+    if ctx.get("change_offer"):
+        change = ("\n=== FREE CHANGES ===\nKestrel currently lets you change or cancel these bookings for free: "
+                  + "; ".join(ctx["change_offer"]) + ". Decide whether you use this.")
+    msgs = "".join(f"\n\"{m}\"\n" for m in ctx["messages"])
+    return f"""{_head(p)}
+
+=== THIS WEEK ===
+Week {week} of 10: {WEEK_DATES[week]}.
+Your status last week: {ctx['last_status'] or 'none yet (start of the period)'}.
+{sec('WHAT YOU REMEMBER FROM EARLIER WEEKS', ctx['memory'])}
+{sec('WHAT HAPPENED TO YOUR KESTREL FLIGHTS THIS WEEK', ctx['events'])}
+{sec('YOUR UPCOMING KESTREL FLIGHTS', ctx['upcoming'])}
+{sec('NEWS YOU SAW THIS WEEK', ctx['news'])}
+{sec('WHAT PEOPLE YOU FOLLOW OR KNOW POSTED LAST WEEK', ctx['feed'])}
+
+=== MESSAGES FROM {config.COMPANY.upper()} TO YOU ==={msgs if msgs else chr(10) + '- none'}{change}
+
+=== STATUS MEANINGS ===
+{STATUS_MEANINGS}
+
+=== RESPOND IN JSON ===
+Decide as yourself, realistically. Most weeks nothing special happens and you simply keep your plans.
+{{"thoughts": "2-3 sentences in your own voice about this week",
+  "actions": ["what you actually did this week, e.g. nothing, read the news, called support, rebooked in the app, asked for a refund, bought a ticket on another airline, posted online, told friends, filed a complaint with Kestrel, filed a DOT complaint"],
+  "contacted_support": true/false,
+  "complained": true/false (a formal complaint to Kestrel, the DOT or the BBB this week),
+  "post": "what you posted publicly this week, or null",
+  "change_flight": "keep" | "move earlier" | "move later" | "cancel for free" (only if FREE CHANGES applies to you, else "keep"),
+  "trust_1to5": n,
+  "nps_0to10": how likely you are to recommend Kestrel to a friend, 0-10,
+  "book_again": "yes" | "maybe" | "no",
+  "memory": "one sentence you will remember about this week",
+  "status_line": "Status: <flies as planned | rebooked | moved to another airline | canceled the trip>"}}"""
+
+
+def end_probe_context(memory, last_status):
+    lines = "\n".join(f"- {m}" for m in memory) or "- nothing special happened"
+    return (f"It is January 11, after the ten weeks from November 2 to January 10. What you remember:\n{lines}\n"
+            f"Your final status with your Kestrel booking: {last_status}.")
+
+
 TEST_PLAN_MESSAGE = (
     "Kestrel Air: we are sorry your trip was disrupted. If you are stranded overnight, for any reason, "
     "we have a hotel room held for you - show this message at the Kestrel desk. Extra staff are at the "

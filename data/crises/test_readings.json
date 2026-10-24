@@ -1,0 +1,42 @@
+{
+ "test-storm": {
+  "is_crisis": true,
+  "title": "Winter storm watch",
+  "week": 6,
+  "until_week": 6,
+  "scope": "PHL",
+  "extra_cancel": 0.08,
+  "extra_delay": 0.15,
+  "kestrel_caused": false,
+  "news": "A severe winter storm watch has been issued for the US Northeast, threatening major travel hubs from Washington to Boston with heavy snowfall starting mid-week. Airlines are advising passengers to monitor flight statuses closely as meteorologists track the storm's path and potential accumulation. Ground stops and widespread scheduling disruptions are anticipated across the region as airports prepare for adverse weather conditions.",
+  "reading": "We assess this as a localized weather event centered on our Philadelphia base, affecting Northeast operations for the duration of the storm. Passengers in the affected corridor will experience disruptions, while the exact duration and total flight impact remain dependent on the storm's final track.",
+  "source": "model",
+  "call": "c00001",
+  "announcement": {
+   "id": "test-storm",
+   "title": "Winter storm watch",
+   "body": "Forecasters expect a winter storm across the US Northeast from Wednesday. Airports from Washington to Boston may see heavy snow. It is not yet known how long it will last or how many flights will be affected.",
+   "week": 6
+  }
+ },
+ "test-it": {
+  "is_crisis": true,
+  "title": "App and website trouble",
+  "week": 4,
+  "until_week": 4,
+  "scope": "all",
+  "extra_cancel": 0.02,
+  "extra_delay": 0.05,
+  "kestrel_caused": true,
+  "news": "Kestrel Air passengers experienced widespread disruptions this past Friday after the airline's mobile application and official website went offline for several hours. The unexpected digital outage prevented some travelers from accessing their boarding passes and managing reservations. Kestrel representatives stated that the technical team is actively investigating the root cause of the system failure.",
+  "reading": "This is a minor IT disruption affecting digital channels for a few hours, likely causing booking friction and minor airport queue delays rather than widespread flight cancellations. Passengers trying to book or check in during the outage hear about it directly, while the exact impact on total booking revenue remains unknown pending further internal audit.",
+  "source": "model",
+  "call": "c00002",
+  "announcement": {
+   "id": "test-it",
+   "title": "App and website trouble",
+   "body": "Some Kestrel customers report that the app and website were unavailable for several hours on Friday. Kestrel says the cause is being investigated. It is not known whether bookings were affected.",
+   "week": 4
+  }
+ }
+}

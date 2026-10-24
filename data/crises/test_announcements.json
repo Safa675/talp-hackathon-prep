@@ -1,0 +1,9 @@
+{
+ "note": "TEST ONLY: invented surprises to exercise the engine before real announcements arrive. Never use for the hand-in runs.",
+ "announcements": [
+  {"id": "test-storm", "week": 6, "title": "Winter storm watch",
+   "body": "Forecasters expect a winter storm across the US Northeast from Wednesday. Airports from Washington to Boston may see heavy snow. It is not yet known how long it will last or how many flights will be affected."},
+  {"id": "test-it", "week": 4, "title": "App and website trouble",
+   "body": "Some Kestrel customers report that the app and website were unavailable for several hours on Friday. Kestrel says the cause is being investigated. It is not known whether bookings were affected."}
+ ]
+}
