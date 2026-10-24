@@ -14,6 +14,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import engine
@@ -85,10 +86,92 @@ def save_input(name, content, note=""):
 
 
 # ---------------------------------------------------------------- runs
+_disk = {}
+
+
+def budget(decisions):
+    """(issues, cost in $M) by the engine's own board rules, so the page and the hand-in check agree."""
+    try:
+        return engine.validate_decisions(decisions)
+    except Exception as e:
+        return [f"could not check the decisions: {type(e).__name__}: {e}"], None
+
+
+def outdated_from(eng):
+    """First week whose inputs (code, personas, model, decisions, events) changed since the run was made;
+    0 means from the start, None means it still matches today's files."""
+    try:
+        now_fps = engine.inputs({"type": eng["type"], "seed": eng["seed"], "decisions": eng.get("decisions_file"),
+                                 "surprises": eng.get("surprises_file"), "model": eng["model"],
+                                 "personas": eng.get("personas_file"), "replicate": eng.get("replicate", 0),
+                                 "social": eng.get("social")})["fps"]
+    except Exception:
+        return None
+    old = eng.get("fps") or []
+    return next((w for w in range(11) if w >= len(old) or old[w] != now_fps[w]), None)
+
+
+def disk_detail(name):
+    """A finished run as it was handed in (runs/<name>/), read-only: weeks, personas, check-ins, its log."""
+    d = engine.RUNS / name
+    if not re.fullmatch(r"[\w.-]+", name or "") or not (d / "run.json").exists():
+        return None
+    stamp = [(d / f).stat().st_mtime if (d / f).exists() else 0 for f in ("run.json", "weekly.jsonl", "engine.json")]
+    if name not in _disk or _disk[name][0] != stamp:
+        run = json.loads((d / "run.json").read_text(encoding="utf-8"))
+        eng = json.loads((d / "engine.json").read_text(encoding="utf-8")) if (d / "engine.json").exists() else {}
+        fps = eng.get("fps") or []
+        _, personas = engine.load_personas(d / "personas.jsonl")
+        flights = {}  # what happened to each flight is kept in the checkpoints, not in weekly.jsonl
+        for w in engine.WEEKS:
+            for e in ((engine.load_ckpt(fps[w]) or {}) if len(fps) > w else {}).get("entries", []):
+                flights[e["persona"], w] = e.get("flights", [])
+        rows = [dict(r, flights=flights.get((r["persona"], r["week"]), [])) for r in engine.read_jsonl(d / "weekly.jsonl")]
+        probes = engine.read_jsonl(d / "probe.jsonl")
+        log_dir = engine.LOGS / "runs" / name / str(eng.get("log_id"))
+        if (log_dir / "week-10.json").exists():  # the events this run actually knew
+            surprises = json.loads((log_dir / "week-10.json").read_text(encoding="utf-8"))["events_known"]
+        else:
+            try:
+                surprises = json.loads(engine.resolve(eng["surprises_file"]).read_text(encoding="utf-8"))
+                surprises = [e for e in surprises if e.get("known_crisis") or run["type"] != "plan_nosurprises"]
+            except Exception:
+                surprises = []
+        played = max((r["week"] for r in rows), default=0)
+        info = {k: v for k, v in eng.items() if k != "fps"}
+        info.update(name=name, type=run["type"], seed=run["seed"], model=run["model"], status="done", played=played,
+                    target=played, session=False, auto=False, phase="finished run", social=(d / "social.json").exists())
+        _disk[name] = (stamp, eng, {
+            "info": info, "config": {"session": False, "seed": run["seed"], "model": run["model"],
+                                     "decisions": eng.get("decisions_file"), "surprises": eng.get("surprises_file")},
+            "personas": personas, "weekly": rows, "validity": {"valid_through": played, "stale_from": None},
+            "decisions": run["decisions"], "surprises": surprises, "readonly": True,
+            "log_dir": str(log_dir) if log_dir.exists() else None,
+            "goals": json.loads((d / "metrics.json").read_text(encoding="utf-8")) if (d / "metrics.json").exists() else None,
+            "goals_by_week": {str(w): engine.observed_week_metrics([r for r in rows if r["week"] == w],
+                                                                   probes if w == 10 else ())
+                              for w in sorted({r["week"] for r in rows})}})
+    _, eng, out = _disk[name]
+    return dict(out, outdated_from=outdated_from(eng) if eng else None, budget=budget(out["decisions"]))
+
+
+def handin():
+    """For each finished hand-in run: the first week that no longer matches today's events and decisions."""
+    out = {}
+    for n, *_ in engine.OFFICIAL:
+        f, run = engine.RUNS / n / "engine.json", MGR.runs.get(n)
+        if (run and run.busy()) or not f.exists() or not (engine.RUNS / n / "run.json").exists():
+            continue
+        out[n] = outdated_from(json.loads(f.read_text(encoding="utf-8")))
+    return out
+
+
 def detail(name):
     run = MGR.runs.get(name)
-    if not run:
-        return None
+    if not run or not (run.config["session"] or run.busy()):
+        d = disk_detail(name)  # a finished batch run: exactly what was handed in
+        if d or not run:
+            return d
     b, rows = run.rows()
     val = run.validity()
     probe_path = engine.RUNS / name / "probe.jsonl"
@@ -98,7 +181,7 @@ def detail(name):
                     for w in sorted({r["week"] for r in rows})}
     return {"info": run.info, "config": run.config, "personas": b["personas"], "weekly": rows,
             "validity": {k: v for k, v in val.items() if k in ("valid_through", "stale_from", "error")},
-            "decisions": b["decisions"], "surprises": b["surprises"],
+            "decisions": b["decisions"], "surprises": b["surprises"], "budget": budget(b["decisions"]),
             "goals": engine.board_metrics(b["personas"], rows, b["decisions"], b["surprises"], probes) if rows else None,
             "goals_by_week": weekly_goals}
 
@@ -106,7 +189,16 @@ def detail(name):
 def state():
     runs = engine.list_runs(MGR)
     return {"runs": runs, "models": engine.MODELS, "default_model": engine.DEFAULT_MODEL, "calendar": calendar(),
-            "official": [n for n, *_ in engine.OFFICIAL], "key_set": bool(__import__("os").environ.get("TALP_KEY"))}
+            "official": [n for n, *_ in engine.OFFICIAL], "handin": handin(),
+            "key_set": bool(__import__("os").environ.get("TALP_KEY"))}
+
+
+def log_dir_of(name):
+    run = MGR.runs.get(name)
+    if run:
+        return run.log_dir, run.info["log_id"]
+    d = disk_detail(name)
+    return (Path(d["log_dir"]), d["info"].get("log_id")) if d and d["log_dir"] else (None, None)
 
 
 # ---------------------------------------------------------------- http
@@ -140,19 +232,20 @@ class Handler(BaseHTTPRequestHandler):
                 r = detail(q["name"])
                 return self.send(r) if r else self.send({"error": "no such simulation"}, 404)
             if u.path == "/api/logs":
-                run = MGR.runs.get(q.get("name"))
-                if not run:
+                log_dir, log_id = log_dir_of(q.get("name"))
+                if not log_dir:
                     return self.send({"error": "no such simulation"}, 404)
                 if "week" in q:
                     week = int(q["week"])
                     if not 1 <= week <= 10:
                         return self.send({"error": "week must be 1-10"}, 400)
-                    path = run.log_dir / f"week-{week:02d}.json"
+                    path = log_dir / f"week-{week:02d}.json"
                     return self.send(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else self.send({"error": "week not logged"}, 404)
-                return self.send({"run": run.name, "log_id": run.info["log_id"], "path": str(run.log_dir),
-                                  "state": json.loads((run.log_dir / "state.json").read_text(encoding="utf-8")),
-                                  "events": engine.read_jsonl(run.log_dir / "events.jsonl"),
-                                  "weeks": sorted(int(p.stem.split("-")[1]) for p in run.log_dir.glob("week-*.json"))})
+                state_file = log_dir / "state.json"
+                return self.send({"run": q["name"], "log_id": log_id, "path": str(log_dir),
+                                  "state": json.loads(state_file.read_text(encoding="utf-8")) if state_file.exists() else None,
+                                  "events": engine.read_jsonl(log_dir / "events.jsonl"),
+                                  "weeks": sorted(int(p.stem.split("-")[1]) for p in log_dir.glob("week-*.json"))})
             if u.path == "/api/file":
                 if not SAFE.match(q["name"]):
                     return self.send({"error": "bad name"}, 400)
@@ -183,19 +276,33 @@ class Handler(BaseHTTPRequestHandler):
                 MGR.runs[body["name"]].cancel()
                 return self.send({"ok": True})
             if u.path == "/api/interview":
-                run = MGR.runs[body["source"]]
-                week = body.get("week")  # the persona knows every event announced up to the week asked about
-                return self.send(engine.interview(run.timeline(), run.name, body["personas"], body["question"].strip(),
-                                                  body.get("model") or run.config["model"], run.config["seed"], week,
-                                                  body.get("asker") or "an interviewer",
-                                                  engine.inputs(run.config)["surprises"], run_log_dir=run.log_dir))
+                run, week = MGR.runs.get(body["source"]), body.get("week")  # the persona knows every event up to that week
+                if run and (run.config["session"] or run.busy()):
+                    timeline, cfg, news, log_dir = run.timeline(), run.config, engine.inputs(run.config)["surprises"], run.log_dir
+                else:  # a finished run: the personas live through the weeks it handed in
+                    d = disk_detail(body["source"])
+                    if not d:
+                        return self.send({"error": "no such simulation"}, 404)
+                    timeline, cfg, news, log_dir = engine.disk_timeline(body["source"]), d["config"], d["surprises"], d["log_dir"]
+                return self.send(engine.interview(timeline, body["source"], body["personas"], body["question"].strip(),
+                                                  body.get("model") or cfg["model"], cfg["seed"], week,
+                                                  body.get("asker") or "an interviewer", news, run_log_dir=log_dir))
             if u.path == "/api/file":
                 return self.send(save_input(body["name"], body["content"], body.get("note", "")))
-            if u.path == "/api/official":  # the five hand-in runs as auto simulations, with this one's inputs
+            if u.path == "/api/official":  # the five hand-in runs: weeks 1-10 now, with every event entered so far
                 src = MGR.runs[body["from"]].config
+                busy = [n for n, *_ in engine.OFFICIAL if n in MGR.runs and MGR.runs[n].busy()]
+                if busy:
+                    return self.send({"error": f"still running: {', '.join(busy)}; wait or stop them first"}, 409)
+                if src["type"] == "nodecision" or not src["decisions"]:
+                    return self.send({"error": f"{src['name']} has no decisions; add the two locked decisions first"}, 400)
+                issues = engine.validate_decisions(engine.inputs(src)["decisions"])[0]
+                for n, *_ in engine.OFFICIAL:  # hand-in sessions from the old live button give way to batch runs
+                    if n in MGR.runs and MGR.runs[n].config["session"]:
+                        MGR.delete_session(n)
                 runs = MGR.official(src["decisions"], src["surprises"], body.get("model") or src["model"],
-                                    src["personas"], live=True, social=src["social"])
-                return self.send([r.name for r in runs])
+                                    src["personas"], social=src["social"])
+                return self.send({"runs": [r.name for r in runs], "issues": issues})
             if u.path == "/api/submission":
                 return self.send(engine.build_submission(re.sub(r"\D", "", str(body.get("team", ""))).zfill(2)[:2]))
             self.send({"error": "not found"}, 404)

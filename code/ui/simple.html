@@ -32,9 +32,11 @@ textarea{width:100%;resize:vertical}
 .weeks .now::after{content:"now";display:block;font-size:10px;color:var(--acc);font-weight:700}
 @keyframes pulse{to{opacity:.5}}
 main{max-width:1280px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px}
+main>*{min-width:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
 .card h2{font-size:14px;margin:0 0 8px}
 .item{padding:7px 0;border-bottom:1px dashed var(--line)}.item:last-child{border:0}
+details.item>summary{cursor:pointer}
 .chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;color:#fff;white-space:nowrap}
 .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--panel2);color:var(--mute)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
@@ -43,20 +45,25 @@ main{max-width:1280px;margin:0 auto;padding:16px;display:grid;grid-template-colu
 .pc .said{margin-top:6px}
 .pc .post{margin-top:6px;font-size:12.5px;border-left:2px solid var(--acc);padding-left:8px;color:var(--mute)}
 .sum{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.flt{margin-bottom:12px}.flt button{padding:2px 10px;font-size:12px;border-radius:99px}
+.flt button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
 .ans{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
 .bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--mute);margin-bottom:6px}
 .banner{border:1px solid var(--moved);border-radius:8px;padding:8px 10px;margin-bottom:12px;background:color-mix(in srgb,var(--moved) 10%,var(--panel))}
+.ro{border:1px solid var(--acc);border-radius:8px;padding:8px 10px;margin-bottom:12px;background:color-mix(in srgb,var(--acc) 10%,var(--panel))}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+.tbl th,.tbl td{text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}.tbl th{color:var(--mute);font-weight:600}
 .hidden{display:none!important}
-@media (max-width:900px){main{grid-template-columns:1fr}.weeks{grid-template-columns:repeat(5,1fr)}}
+@media (max-width:900px){main{grid-template-columns:1fr}.weeks{grid-template-columns:repeat(5,1fr)}header{position:static}}
 </style>
 </head>
 <body>
 <header>
   <div class="top">
     <h1>Kestrel simulation</h1>
-    <select id="sess" title="Simulation"></select>
+    <select id="sess" title="Simulation, or a finished run to read and interview"></select>
     <a id="logs" target="_blank" rel="noopener" class="small">logs</a>
     <button id="del" title="Delete this simulation" style="padding:3px 8px" class="small">delete</button>
     <span class="small mute" id="calNow"></span>
@@ -71,12 +78,12 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
 <div id="empty" class="hidden" style="max-width:520px;margin:40px auto;padding:0 16px">
   <div class="card">
     <h2>Start a simulation</h2>
-    <p class="small mute">Personas live through the ten weeks with you, one week at a time. Each week you add the events from the dashboard and your decisions, play the week, read what every persona did, and ask them anything.</p>
+    <p class="small mute">Personas live through the ten weeks with you, one week at a time. Each week you add the events from the dashboard and your decisions, play the week, read what every persona did, and ask them anything. Finished runs (experiments and hand-in runs) are in the list at the top, to read and interview.</p>
     <label class="f">Name<input id="nName" value="main"></label>
     <label class="f">Model<select id="nModel"></select></label>
     <label class="row small"><input type="checkbox" id="nSocial" checked> personas see each other's posts</label>
     <label class="row small"><input type="checkbox" id="nAuto" checked> play each week automatically when the calendar reaches it</label>
-    <p><button class="p" id="nGo">Start</button> <span class="small bad" id="nMsg"></span></p>
+    <p><button class="p" id="nGo">Start</button> <button id="nBack" class="hidden">Back</button> <span class="small bad" id="nMsg"></span></p>
   </div>
 </div>
 
@@ -85,27 +92,32 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
     <div class="card">
       <h2 id="wkTitle">Week</h2>
       <div id="events"></div>
-      <textarea id="evText" rows="2" placeholder="New event this week (paste the dashboard announcement)"></textarea>
-      <div class="row" style="margin-top:6px">
-        <select id="evEffect" title="How we read it: what it does to flights this week and next">
-          <option value="auto">effect: let the model read it</option><option value="none">no effect on flights</option><option value="delays">some delays</option>
-          <option value="some cancellations">some cancellations</option><option value="many cancellations">many cancellations</option></select>
-        <select id="evScope" title="Which flights"><option value="all">all flights</option><option value="bases">Orlando &amp; Philadelphia</option><option value="intl">Mexico &amp; Caribbean</option></select>
-        <label class="small row"><input type="checkbox" id="evKestrel"> Kestrel's own fault</label></div>
-      <input id="evReading" placeholder="How we read it (one line, for TEAM_DOC)" style="width:100%;margin-top:6px">
-      <div class="row" style="margin-top:6px"><button id="evAdd">Add event</button><span class="small" id="evMsg"></span></div>
+      <div id="evForm">
+        <textarea id="evText" rows="2" placeholder="New event this week (paste the dashboard announcement)"></textarea>
+        <div class="row" style="margin-top:6px">
+          <select id="evEffect" title="How we read it: what it does to flights this week and next">
+            <option value="auto">effect: let the model read it</option><option value="none">no effect on flights</option><option value="delays">some delays</option>
+            <option value="some cancellations">some cancellations</option><option value="many cancellations">many cancellations</option></select>
+          <select id="evScope" title="Which flights"><option value="all">all flights</option><option value="bases">Orlando &amp; Philadelphia</option><option value="intl">Mexico &amp; Caribbean</option></select>
+          <label class="small row"><input type="checkbox" id="evKestrel"> Kestrel's own fault</label></div>
+        <input id="evReading" placeholder="How we read it (one line, for TEAM_DOC)" style="width:100%;margin-top:6px">
+        <div class="row" style="margin-top:6px"><button id="evAdd">Add event</button><span class="small" id="evMsg"></span></div>
+      </div>
     </div>
     <div class="card">
       <h2>Decisions</h2>
       <div id="decs"></div>
-      <details id="decForm" style="margin-top:8px"><summary class="small">Add a decision starting this week</summary>
+      <details id="decForm" style="margin-top:8px"><summary class="small">Add a decision</summary>
+        <label class="f" style="margin-top:8px">Starts in week<select id="decWeek"></select></label>
+        <div class="small" id="decWarn"></div>
         <div id="decActs" style="margin-top:8px"></div>
-        <button class="small" id="decActAdd" style="padding:3px 8px">+ action</button>
+        <div class="row"><button class="small" id="decActAdd" style="padding:3px 8px">+ action</button><span class="small mute" id="decCost"></span></div>
         <label class="f" style="margin-top:8px">Who gets it<select id="decTarget"></select></label>
         <label class="f">Message, word for word <span id="decLen">0/600</span><textarea id="decMsg" rows="4"></textarea></label>
         <label class="f">Why (three lines)<textarea id="decWhy" rows="3"></textarea></label>
-        <div class="row"><button class="p" id="decSave">Save decision</button><span class="small" id="decMsgOut"></span></div>
+        <div class="row"><button class="p" id="decSave">Save decision</button></div>
       </details>
+      <div class="small" id="decMsgOut" style="margin-top:6px"></div>
     </div>
     <div class="card">
       <h2>Ask the personas</h2>
@@ -115,18 +127,21 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
     </div>
     <div class="card">
       <h2>Hand-in</h2>
-      <p class="small mute">The five runs (plan_1, plan_2, nodecision_1, nodecision_2, plan_nosurprises) use this simulation's events, decisions and personas and play with the calendar like this one. When they reach week 10, build the ZIP.</p>
-      <div class="row"><button id="offGo">Start the 5 hand-in runs</button></div>
-      <div class="small" id="offInfo" style="margin-top:6px"></div>
+      <p class="small mute">The five runs (plan_1, plan_2, nodecision_1, nodecision_2, plan_nosurprises) play weeks 1–10 now with this simulation's events, decisions and personas. Weeks already computed with the same inputs are reused: after a new announcement, add it here, press Start again, then build the ZIP.</p>
+      <div class="row" id="offStart"><button id="offGo">Start the 5 hand-in runs</button><select id="offModel" title="Model for the hand-in runs"></select></div>
+      <div class="small" id="offMsg" style="margin-top:6px"></div>
+      <div class="small" id="offInfo"></div>
       <div class="row" style="margin-top:8px"><input id="team" value="09" style="width:60px"><button id="zipGo">Build ZIP + check.py</button></div>
       <pre id="zipOut" class="small hidden" style="white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
     </div>
   </aside>
   <section>
+    <div id="ro"></div>
     <div id="goals"></div>
     <div id="banner"></div>
     <div id="answers"></div>
     <div class="sum" id="sum"></div>
+    <div class="row flt" id="flt"></div>
     <div class="grid" id="people"></div>
   </section>
 </main>
@@ -134,43 +149,84 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");  // dashboard texts use **bold**
+const short = (s, n) => (s = String(s ?? "").replace(/\*\*/g, "")).length > n ? s.slice(0, n).trimEnd() + "…" : s;
 const api = async (path, body) => { const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
 const store = {get(k,d){try{return localStorage.getItem(k) ?? d}catch{return d}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+// The page reloads its data every 3 s; redraw a part only when its HTML changed, so clicks land and open details stay open.
+const setHTML = (el, html) => { if (el._h !== html) { el.innerHTML = html; el._h = html; } };
 const DATES = ["Nov 2–8","Nov 9–15","Nov 16–22","Nov 23–29","Nov 30–Dec 6","Dec 7–13","Dec 14–20","Dec 21–27","Dec 28–Jan 3","Jan 4–10"];
 const TAGS = {4:"Thanksgiving",8:"Christmas",9:"New Year"};
 const weekTag = w => w === 8 && (D?.surprises || []).some(e => e.week === 8 && e.known_crisis) ? "Christmas · strike" : TAGS[w];
 const COL = {"flies as planned":"var(--fly)","rebooked":"var(--reb)","moved to another airline":"var(--moved)","canceled the trip":"var(--cancel)"};
 const FLIGHT = {canceled:"✕ flight canceled", delayed:"◐ flight delayed", "on time":"✈ flew on time"};
 const EFFECT = {"Lease":"halves cancellations for 2 weeks; canceled passengers get a seat the next morning","Backup ground":"strike days: cancellations 30%→7%, 3h+ delays 45%→15%, fewer lost bags","Free changes":"target can change or cancel bookings for free for 2 weeks","Goodwill":"disrupted passengers in the target get the credit or cash","partner airline":"canceled passengers in the target get a partner seat the same day","Hotel rooms":"stranded passengers in the target get a hotel","Extra airport":"phone wait on disruption days 120→20 min","Fare cap":"target sees capped fares","Fare sale":"target sees a fare sale","Double loyalty":"disrupted passengers in the target get double points","Merge low-load":"3% of ordinary-week flights are moved a few hours (saves $0.25M)"};
-const effectOf = a => Object.entries(EFFECT).find(([k]) => a.includes(k))?.[1] || "";
+const effectKey = a => Object.keys(EFFECT).find(k => String(a).toLowerCase().includes(k.toLowerCase()));
+const effectOf = a => EFFECT[effectKey(a)] || "";
 const STRIKE = "The workers of Kestrel's ground handling contractor (baggage, cabin cleaning, wheelchair assistance, fueling) are on a 48-hour strike at Orlando and Philadelphia on Dec 22-23, the busiest week of the year. The contractor will bring in replacement staff 'where it can'; some flights may be late or canceled. The union says the strike 'may be extended'.";
 const SCOPE = {all:"all flights", bases:"Orlando & Philadelphia flights", intl:"Mexico & Caribbean flights"};
-function evLine(s, now){
+// Persona filters for the week view: [label, test(row, same persona last week)]
+const FILTERS = {all:["everyone", () => true], flew:["had a flight", r => r.had_flight_this_week], hit:["canceled or 3h+ delayed", r => ["canceled","delayed"].includes(r.flight_outcome)],
+  complaint:["complained", r => r.complaint], post:["posted", r => r.post], changed:["status changed", (r, b) => b && b.status !== r.status]};
+// Board goals as metrics.json reports them, with the dossier's target
+const GOALS = [["goal_1","flights",v => `${v}%`,v => v >= 98,"≥98% of planned flights"],["goal_2","24h",v => `${v}%`,v => v >= 90,"≥90% of affected passengers rebooked or refunded in 24h"],
+  ["goal_3","complaints",v => `${v.toLocaleString("en-US")}/mo`,v => v <= 2500,"no worse than last winter's ~2,500 a month"],["goal_3b","NPS",v => `${v > 0 ? "+" : ""}${v}`,v => v >= 12,"no worse than +12"],
+  ["goal_4","revenue",v => `${v}%`,v => v >= 96,"≥96% of plan, weeks 5–10"]];
+// An action's cost; the dashboard's wording ("Enable", "1 aircraft: $0.7M") finds its menu row and level too.
+function actionCost(a){
+  const row = META.menu[a.action] || META.menu[Object.keys(META.menu).find(n => effectKey(n) && effectKey(n) === effectKey(a.action))] || {};
+  const lv = String(a.level ?? "").trim().toLowerCase();
+  const level = lv in row ? lv : Object.keys(row).find(n => n.toLowerCase() === lv || n === "on" && ["on","enable","enabled","yes","true"].includes(lv) || lv && lv.includes(n.toLowerCase()));
+  return row[level] ?? row[a.level] ?? 0;
+}
+const cost = acts => acts.reduce((s, a) => s + actionCost(a), 0);
+function evLine(s, now, i){
   const late = s.known_from && s.known_from > s.week;
   const what = s.known_crisis ? "known crisis: strike-day flights at the bases follow the strike rates; stays in plan_nosurprises"
     : s.effect && s.effect !== "none" ? `${s.effect} on ${SCOPE[s.scope||"all"]}, weeks ${s.week}–${s.until_week||s.week+1}${s.kestrel_caused?" · Kestrel's fault":""}` : "no effect on flights";
-  return `<div class="item ${now?"":"mute"}">${now?"":`<span class="small">week ${s.week} · still in the news</span><br>`}${esc(s.text)}
-    <div class="small mute">${what}${late?` · added after week ${s.known_from-1} was played: personas know it from week ${s.known_from}`:""}${s.reading && !s.known_crisis?`<br>read: ${esc(s.reading)}`:""}</div>
-    ${now?`<button class="small" style="padding:2px 8px;margin-top:4px" onclick='delEvent(${JSON.stringify(s.week)}, ${JSON.stringify(s.text).replace(/'/g,"&#39;")})'>remove</button>`:""}</div>`;
+  const body = `${md(s.text)}
+    <div class="small mute">${what}${late?` · added after week ${s.known_from-1} was played: personas know it from week ${s.known_from}`:""}${s.reading && !s.known_crisis?`<br>read: ${esc(s.reading)}`:""}</div>`;
+  return now ? `<div class="item">${body}${RO?"":`<button class="small" style="padding:2px 8px;margin-top:4px" onclick="delEvent(${i})">remove</button>`}</div>`
+    : `<details class="item mute"><summary class="small">week ${s.week} · still in the news · ${esc(short(s.text, 60))}</summary>${body}</details>`;
 }
-let S, META, D, sel = +store.get("week", 1), name = store.get("sess", "");
+let S, META, D, RO = false, creating = false, loading = false, sel = 1, name = store.get("sess", ""), opened = "", flt = store.get("flt", "all");
 
 /* ---------- data ---------- */
 async function load(){
   S = await api("/api/state");
   const sessions = S.runs.filter(r => r.session);
-  if (!sessions.length) { $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); drawHeader(null); return; }
+  const finished = S.runs.filter(r => !r.session && (r.status === "done" || S.official.includes(r.name) && ["running","queued"].includes(r.status)));
+  if (!sessions.concat(finished).find(r => r.name === name)) name = sessions[0]?.name || "";
+  const opt = r => `<option value="${esc(r.name)}" ${r.name===name?"selected":""}>${esc(r.name)}</option>`;
+  const hand = S.official.map(n => finished.find(r => r.name === n)).filter(Boolean), rest = finished.filter(r => !S.official.includes(r.name));
+  setHTML($("#sess"), (name ? "" : `<option value="" selected>choose…</option>`)
+    + (sessions.length ? `<optgroup label="Simulations">${sessions.map(opt).join("")}</optgroup>` : "")
+    + (hand.length ? `<optgroup label="Hand-in runs (read-only)">${hand.map(opt).join("")}</optgroup>` : "")
+    + (rest.length ? `<optgroup label="Finished runs (read-only)">${rest.map(opt).join("")}</optgroup>` : "")
+    + `<option value="__new">+ new simulation</option>`);
+  if (creating || !name) {
+    $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); $("#nBack").classList.toggle("hidden", !name);
+    D = null; drawHeader(null); return;
+  }
   $("#empty").classList.add("hidden"); $("#app").classList.remove("hidden");
-  if (!sessions.find(r => r.name === name)) name = sessions[0].name;
   $("#logs").href = "/api/logs?name=" + encodeURIComponent(name);
-  const opts = sessions.map(r => `<option ${r.name===name?"selected":""}>${esc(r.name)}</option>`).join("") + `<option value="__new">+ new simulation</option>`;
-  if ($("#sess")._o !== opts) { $("#sess").innerHTML = opts; $("#sess")._o = opts; }
   D = await api("/api/run?name=" + encodeURIComponent(name));
+  RO = !D.config.session;
+  if (opened !== name) {  // a simulation just opened: show its latest played week (a new one: the calendar's week)
+    opened = name; const v = D.validity?.valid_through ?? D.info.played;
+    sel = v || Math.max(1, Math.min(10, S.calendar.week)); $("#decWeek").value = defaultDecWeek();
+    if ([...$("#offModel").options].some(o => o.value === D.info.model)) $("#offModel").value = D.info.model;
+  }
   drawHeader(D); drawWeek(); drawGoals(); drawOfficial(); drawWho();
 }
+async function tick(){
+  if (loading) return; loading = true;
+  try { await load(); } catch(e){ console.error(e); $("#calNow").textContent = e instanceof TypeError && /fetch/i.test(e.message) ? "server not responding…" : `page error: ${e.message}`; }
+  loading = false;
+}
 function drawWho(){
-  const key = D.personas.map(p => p.id).join();
+  const key = name + D.personas.map(p => p.id).join();
   if ($("#askWho")._k === key) return; $("#askWho")._k = key;
   const groups = [...new Set(D.personas.map(p => p.group))];
   $("#askWho").innerHTML = `<option value="all">all ${D.personas.length} personas</option>` + groups.map(g => `<option value="g:${esc(g)}">all ${esc(g)}</option>`).join("")
@@ -183,63 +239,82 @@ function weekState(w){
 }
 function drawHeader(d){
   const c = S.calendar, cw = c.week;
-  $("#calNow").textContent = cw === 0 ? `calendar starts ${c.starts[0].slice(11,16)}` : cw === 11 ? "calendar finished" : `now: week ${cw} · next week at ${c.starts[cw].slice(11,16)}`;
-  if (!d) { $("#weeks").innerHTML = ""; $("#play").classList.add("hidden"); return; }
+  $("#calNow").textContent = cw === 0 ? `calendar starts ${c.starts[0].slice(11,16)}` : cw === 11 ? "calendar finished"
+    : `now: week ${cw} · ${cw === 10 ? "ends" : "next week"} at ${c.starts[cw].slice(11,16)}`;
+  $("#logs").classList.toggle("hidden", !d); $("#del").classList.toggle("hidden", !d || RO);
+  if (!d) { setHTML($("#weeks"), ""); setHTML($("#runInfo"), ""); $("#play").classList.add("hidden"); $("#stop").classList.add("hidden"); return; }
   const i = d.info, busy = ["running","queued"].includes(i.status), v = d.validity?.valid_through ?? i.played;
-  $("#weeks").innerHTML = DATES.map((dt,k) => { const w = k+1;
-    return `<button class="${weekState(w)} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})"><b>Week ${w}</b>${dt}${weekTag(w)?`<br><span class="mute">${weekTag(w)}</span>`:""}</button>`; }).join("");
+  setHTML($("#weeks"), DATES.map((dt,k) => { const w = k+1;
+    return `<button class="${weekState(w)} ${w===sel?"sel":""} ${w===cw?"now":""}" onclick="pick(${w})"><b>Week ${w}</b>${dt}${weekTag(w)?`<br><span class="mute">${weekTag(w)}</span>`:""}</button>`; }).join(""));
   const next = Math.min(10, v + 1);
-  $("#play").classList.toggle("hidden", busy || v >= 10); $("#stop").classList.toggle("hidden", !busy);
+  $("#play").classList.toggle("hidden", RO || busy || v >= 10); $("#stop").classList.toggle("hidden", !busy);
   $("#play").textContent = d.validity?.stale_from ? `Replay from week ${d.validity.stale_from}` : `Play week ${next}`;
   $("#play").onclick = () => play(next);
-  if (document.activeElement?.id !== "modelSel") $("#runInfo").innerHTML = busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
-    : `<span class="mute">${d.personas.length} personas · <select id="modelSel" onchange="setModel(this.value)" title="Changing the model starts this simulation's history again">${Object.keys(S.models).filter(m => !S.models[m].offline).map(m => `<option ${m===i.model?"selected":""}>${m}</option>`).join("")}</select>${i.auto?" · auto":""}${i.social?" · social":""}</span>`;
+  const models = Object.keys(S.models).filter(m => !S.models[m].offline || m === i.model);  // an offline model shows as itself
+  if (document.activeElement?.id !== "modelSel") setHTML($("#runInfo"), busy ? `${esc(i.phase)} · ${i.calls_done}/${i.calls_total}<div class="bar" style="width:160px"><i style="width:${i.calls_total?100*i.calls_done/i.calls_total:0}%"></i></div>`
+    : RO ? `<span class="mute">${d.personas.length} personas · ${esc(i.type)} · seed ${esc(i.seed)} · ${esc(i.model)}${i.social?" · social":""}</span>`
+    : `<span class="mute">${d.personas.length} personas · <select id="modelSel" onchange="setModel(this.value)" title="Changing the model starts this simulation's history again">${models.map(m => `<option ${m===i.model?"selected":""}>${m}</option>`).join("")}</select>${i.auto?" · auto":""}${i.social?" · social":""}</span>`);
 }
 async function setModel(m){
-  if (!confirm(`Switch "${name}" to ${m}? Its history starts again from week 1 (flash-lite plays a 66-persona week in ~4 s, 3.7-flash in ~50 s).`)) { load(); return; }
+  if (!confirm(`Switch "${name}" to ${m}? Its history starts again from week 1 (flash-lite plays a 66-persona week in ~4 s, 3.7-flash in ~50 s).`)) { $("#runInfo")._h = null; load(); return; }
   try { await api("/api/session/update", {name, model: m}); } catch(e){ alert(e.message); } load();
 }
-function pick(w){ sel = w; store.set("week", w); drawHeader(D); drawWeek(); drawGoals(); }
+function pick(w){ sel = w; $("#decWeek").value = defaultDecWeek(); drawHeader(D); drawWeek(); drawGoals(); }
 
 /* ---------- the selected week ---------- */
 function drawWeek(){
-  const w = sel, st = weekState(w);
-  $("#wkTitle").innerHTML = `Week ${w} · ${DATES[w-1]}${weekTag(w)?` · <span class="warn">${weekTag(w)}</span>`:""}`;
-  const all = D.surprises || [], evs = all.filter(s => s.week === w), older = all.filter(s => s.week < w);
-  const hasStrike = all.some(s => s.known_crisis);
-  $("#events").innerHTML = (evs.map(s => evLine(s, true)).join("") || `<div class="item mute">No events this week. Add the dashboard's announcements here.</div>`)
-    + (w === 8 && !hasStrike ? `<div class="item"><button onclick="addStrike()">Add the dossier's strike (Dec 22–23)</button></div>` : "")
-    + older.map(s => evLine(s, false)).join("")
-    + (D.info.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : "");
-  const decs = D.decisions || [], knownDecs = decs.map((d,i) => ({d,i})).filter(x => x.d.week <= w);
-  $("#decs").innerHTML = D.info.type === "nodecision" ? `<div class="mute small">No decisions in this simulation (business as usual).</div>` :
-    knownDecs.length ? knownDecs.map(({d,i}) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · from week ${d.week}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
-      ${d.actions.map(a=>`<div class="small">${esc(a.action+(a.level!=="on"?` (${a.level})`:""))}<br><span class="mute">→ ${esc(effectOf(a.action))}</span></div>`).join("")}“${esc(d.message)}”
-      <div class="row" style="margin-top:4px"><button class="small" style="padding:2px 8px" onclick="delDecision(${i})">remove</button></div></div>`).join("") + budgetLine(knownDecs.map(x => x.d))
-    : `<div class="mute small">No decision has started by this week.</div>`;
-  $("#decForm").classList.toggle("hidden", D.info.type === "nodecision" || decs.length >= 2);
+  const w = sel, st = weekState(w), i = D.info;
+  setHTML($("#wkTitle"), `Week ${w} · ${DATES[w-1]}${weekTag(w)?` · <span class="warn">${weekTag(w)}</span>`:""}`);
+  const all = (D.surprises || []).map((s,k) => [s,k]), hasStrike = all.some(([s]) => s.known_crisis);
+  setHTML($("#events"), (all.filter(([s]) => s.week === w).map(([s,k]) => evLine(s, true, k)).join("") || `<div class="item mute">No events this week.${RO?"":" Add the dashboard's announcements here."}</div>`)
+    + (w === 8 && !hasStrike && !RO ? `<div class="item"><button onclick="addStrike()">Add the dossier's strike (Dec 22–23)</button></div>` : "")
+    + all.filter(([s]) => s.week < w).map(([s,k]) => evLine(s, false, k)).join("")
+    + (i.type === "plan_nosurprises" ? `<div class="item small mute">plan_nosurprises: only the known crisis is on.</div>` : ""));
+  $("#evForm").classList.toggle("hidden", RO);
+  drawDecisions(w);
+  setHTML($("#ro"), RO ? `<div class="ro small"><b>${esc(name)}</b> is a finished run (read-only): read its weeks and ask its personas. ${esc(i.type)} · seed ${esc(i.seed)} · ${esc(i.model)}${D.config.surprises?` · events: ${esc(D.config.surprises)}`:""}${D.config.decisions?` · decisions: ${esc(D.config.decisions)}`:""}
+    ${D.outdated_from != null ? `<br><span class="bad">Outdated: ${D.outdated_from ? `the events or decisions for week ${D.outdated_from} on` : "the personas, model or code"} changed after this run was made.</span>` : ""}</div>` : "");
+  $("#offStart").classList.toggle("hidden", RO);
   const rows = (D.weekly||[]).filter(r => r.week === w);
-  $("#banner").innerHTML = st === "stale" ? `<div class="banner">The events or decisions for this week changed after it was played. Press <b>Replay</b> to update it${D.info.auto?" (auto mode does this within 15 seconds)":""}.</div>` : "";
+  setHTML($("#banner"), st === "stale" ? `<div class="banner">The events or decisions for this week changed after it was played. Press <b>Replay</b> to update it${i.auto?" (auto mode does this within 15 seconds)":""}.</div>` : "");
   if (!rows.length) {
-    $("#sum").innerHTML = ""; $("#people").innerHTML = `<div class="card mute" style="grid-column:1/-1">${st==="running"?"Playing this week…":`Week ${w} has not been played yet.`}</div>`; return;
+    setHTML($("#sum"), ""); setHTML($("#flt"), "");
+    setHTML($("#people"), `<div class="card mute" style="grid-column:1/-1">${st==="running"?"Playing this week…":`Week ${w} has not been played yet.`}</div>`); return;
   }
   const prev = (D.weekly||[]).filter(r => r.week === w - 1), before = Object.fromEntries(prev.map(r => [r.persona, r]));
   const n = rows.length, cnt = s => rows.filter(r => r.status === s).length, yes = rows.filter(r => r.would_book_again === "yes").length;
-  $("#sum").innerHTML = Object.keys(COL).map(s => `<span class="chip" style="background:${COL[s]}">${s}: ${cnt(s)}</span>`).join("")
-    + (trustOf(rows) != null ? `<span class="pill">avg trust: <b>${trustOf(rows).toFixed(1)}</b>/5${trustOf(prev) != null ? ` (${(trustOf(rows)-trustOf(prev) >= 0 ? "+" : "")}${(trustOf(rows)-trustOf(prev)).toFixed(1)})` : ""}</span>` : "")
-    + `<span class="pill">would book again: ${Math.round(100*yes/n)}%</span><span class="pill">complaints: ${rows.filter(r=>r.complaint).length}</span><span class="pill">posts: ${rows.filter(r=>r.post).length}</span>`;
-  const by = Object.fromEntries(D.personas.map(p => [p.id, p]));
-  $("#people").innerHTML = rows.map(r => { const p = by[r.persona] || {};
+  const t = trustOf(rows), t0 = trustOf(prev);
+  setHTML($("#sum"), Object.keys(COL).map(s => `<span class="chip" style="background:${COL[s]}">${s}: ${cnt(s)}</span>`).join("")
+    + (t != null ? `<span class="pill">avg trust: <b>${t.toFixed(1)}</b>/5${t0 != null ? ` (${t-t0 >= 0 ? "+" : ""}${(t-t0).toFixed(1)})` : ""}</span>` : "")
+    + `<span class="pill">would book again: ${Math.round(100*yes/n)}%</span><span class="pill">complaints: ${rows.filter(r=>r.complaint).length}</span><span class="pill">posts: ${rows.filter(r=>r.post).length}</span>`);
+  if (!FILTERS[flt]) flt = "all";
+  setHTML($("#flt"), Object.entries(FILTERS).map(([k,[label,test]]) => `<button class="${k===flt?"on":""}" onclick="setFlt('${k}')">${label} · ${rows.filter(r => test(r, before[r.persona])).length}</button>`).join(""));
+  const by = Object.fromEntries(D.personas.map(p => [p.id, p])), shown = rows.filter(r => FILTERS[flt][1](r, before[r.persona]));
+  setHTML($("#people"), shown.map(r => { const p = by[r.persona] || {};
     return `<div class="pc" style="border-left-color:${COL[r.status]||"var(--none)"}" onclick="askOne('${esc(r.persona)}')" title="Click to ask ${esc(p.name||r.persona)} a question">
       <div class="row" style="justify-content:space-between"><b>${esc(p.name||r.persona)}</b><span class="small mute">${esc(r.persona)} · ${esc(p.group||"")}</span></div>
       <div class="row small" style="margin-top:3px"><span class="chip" style="background:${COL[r.status]}">${esc(r.status)}</span><span class="mute">book again: <b>${esc(r.would_book_again)}</b></span>${r.trust ? `<span class="mute">trust <b>${r.trust}</b>/5${before[r.persona]?.trust && before[r.persona].trust !== r.trust ? (r.trust > before[r.persona].trust ? ' <span class="ok">↑</span>' : ' <span class="bad">↓</span>') : ""}</span>` : ""}${r.complaint?`<span class="bad">complained</span>`:""}</div>
       ${(r.flights||[]).length?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]||""}${r.strike_day?" · strike day":""}${r.within_24h===false?' · <span class="bad">not resolved in 24h</span>':""}</div><details class="small mute" onclick="event.stopPropagation()"><summary>what happened</summary>${(r.flights||[]).map(esc).join("<br>")}</details>`
-        : FLIGHT[r.flight_outcome]?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]}</div>`:""}
+        : FLIGHT[r.flight_outcome]?`<div class="small mute" style="margin-top:3px">${FLIGHT[r.flight_outcome]}</div>`
+        : r.had_flight_this_week === false ? `<div class="small mute" style="margin-top:3px">no flight this week</div>` : ""}
       ${r.said?`<div class="said">“${esc(r.said)}”</div>`:""}
-      ${r.post?`<div class="post">posted: ${esc(r.post)}</div>`:""}</div>`; }).join("");
+      ${r.post?`<div class="post">posted: ${esc(r.post)}</div>`:""}</div>`; }).join("")
+    || `<div class="card mute" style="grid-column:1/-1">No persona matches “${esc(FILTERS[flt][0])}” in week ${w}.</div>`);
+}
+function setFlt(k){ flt = k; store.set("flt", k); drawWeek(); }
+function drawDecisions(w){
+  const decs = D.decisions || [], nod = D.info.type === "nodecision", full = decs.length >= 2;
+  setHTML($("#decs"), nod ? `<div class="mute small">No decisions in this ${RO?"run":"simulation"} (business as usual).</div>` :
+    decs.length ? decs.map((d,i) => `<div class="item ${d.week===w?"":"mute"}"><b>Decision ${i+1} · ${d.week > w ? `starts in week ${d.week}` : `from week ${d.week}`}</b> → ${esc(Array.isArray(d.target)?d.target.join(", "):d.target)}<br>
+      ${d.actions.map(a=>`<div class="small">${esc(a.action+(a.level!=="on"?` (${a.level})`:""))} · $${cost([a]).toFixed(2)}M<br><span class="mute">→ ${esc(effectOf(a.action))}</span></div>`).join("")}“${esc(d.message)}”
+      ${RO?"":`<div class="row" style="margin-top:4px"><button class="small" style="padding:2px 8px" onclick="delDecision(${i})">remove</button></div>`}</div>`).join("") + budgetLine(decs)
+      + (full && !RO ? `<div class="small mute" style="margin-top:4px">Two decisions saved: the hand-in takes exactly two. Remove one to change it.</div>` : "")
+    : `<div class="mute small">No decisions yet.</div>`);
+  $("#decForm").classList.toggle("hidden", RO || nod || full);
+  decCheck();
 }
 function drawGoals(){
-  const g = D.goals_by_week?.[sel]; if (!g) { $("#goals").innerHTML = ""; return; }
+  const g = D.goals_by_week?.[sel]; if (!g) { setHTML($("#goals"), ""); return; }
   const percent = (a, n) => n ? `${(100*a/n).toFixed(1)}%` : null;
   const metric = (label, value, detail) => `<div><div class="small mute">${label}</div><div style="font-size:20px;font-weight:650">${value ?? "Not measured"}</div><div class="small mute">${detail}</div></div>`;
   const flights = metric("Itineraries operated", percent(g.operated, g.scheduled) ?? "No scheduled trips",
@@ -257,17 +332,18 @@ function drawGoals(){
     `${g.book_again_yes}/${g.personas} simulated travelers · ${g.personas-g.book_again_answered} answered maybe or did not answer`);
   const history = Object.keys(D.goals_by_week).map(Number).filter(w => w <= sel).sort((a,b) => a-b).map(w => {
     const x = D.goals_by_week[w];
-    return `<span class="pill" style="margin:2px">W${w}: ${x.operated}/${x.scheduled} operated · ${x.complaints} complaint${x.complaints===1?"":"s"} · trust ${x.trust_average == null ? "not measured" : x.trust_average.toFixed(1)}/5</span>`;
+    return `<span class="pill" style="margin:2px">W${w}: ${x.operated}/${x.scheduled} operated · ${x.complaints} complaint${x.complaints===1?"":"s"} · trust ${x.trust_average == null ? "not measured" : `${x.trust_average.toFixed(1)}/5`}</span>`;
   }).join("");
-  $("#goals").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Week ${sel} · recorded simulation results</h2><span class="small mute">${g.personas} personas</span></div>
+  setHTML($("#goals"), `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Week ${sel} · recorded simulation results</h2><span class="small mute">${g.personas} personas</span></div>
     <div class="row" style="margin-top:8px;gap:14px">${flights}${solved}${complaints}${nps}${bookings}${trust}${bookAgain}</div>
     <div class="small" style="margin-top:8px">${history}</div>
-    <div class="small mute" style="margin-top:6px">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals, and actual revenue need operational data; this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`;
+    <div class="small mute" style="margin-top:6px">These values come from this week's persona records. Network-wide flight rates, monthly complaint totals, and actual revenue need operational data; this sample cannot establish those board targets. NPS uses the direct week 10 survey, when available.</div></div>`);
 }
 function trustOf(rows){ const t = rows.map(r => r.trust).filter(Boolean); return t.length ? t.reduce((a,b) => a+b, 0) / t.length : null; }
-function budgetLine(decs){
-  let cost = 0; decs.forEach(d => d.actions.forEach(a => cost += (META.menu[a.action]||{})[a.level] || 0));
-  return `<div class="small ${cost>META.budget?"bad":"mute"}" style="margin-top:6px">Budget used: $${cost.toFixed(2)}M of $${META.budget}M</div>`;
+function budgetLine(decs){  // the engine's check when the server sent it, else the menu prices
+  const [issues, checked] = D.budget || [[], null], c = checked ?? cost(decs.flatMap(d => d.actions));
+  return `<div class="small ${c>META.budget?"bad":"mute"}" style="margin-top:6px">Budget, all decisions: $${c.toFixed(2)}M of $${META.budget}M</div>`
+    + (issues.length ? `<div class="small warn" style="margin-top:4px">Still to fix for the hand-in: ${esc(issues.join("; "))}</div>` : "");
 }
 
 /* ---------- actions ---------- */
@@ -277,7 +353,8 @@ $("#del").onclick = async () => {
   try { await api("/api/session/delete", {name}); name = ""; store.set("sess", ""); load(); } catch(e){ alert(e.message); }
 };
 $("#stop").onclick = async () => { await api("/api/cancel", {name}); load(); };
-$("#sess").onchange = e => { if (e.target.value === "__new") { $("#app").classList.add("hidden"); $("#empty").classList.remove("hidden"); return; } name = e.target.value; store.set("sess", name); load(); };
+$("#sess").onchange = e => { creating = e.target.value === "__new"; if (!creating) { name = e.target.value; store.set("sess", name); } load(); };
+$("#nBack").onclick = () => { creating = false; $("#sess").value = name; load(); };
 
 async function readFile(f){ try { return (await api("/api/file?name=" + encodeURIComponent(f))).content; } catch { return []; } }
 $("#evAdd").onclick = async () => {
@@ -291,15 +368,15 @@ $("#evAdd").onclick = async () => {
     await api("/api/file", {name: file, content: list, note: `event added for week ${sel}`});
     const played = D.info.played;
     $("#evText").value = ""; $("#evReading").value = "";
-    $("#evMsg").innerHTML = `<span class="ok">Added.</span>` + (sel <= played ? ` <span class="mute">Weeks already played stay as they were; it acts from week ${Math.min(played + 1, 10)} on.</span>` : ""); load();
+    $("#evMsg").innerHTML = `<span class="ok">Added to week ${ev.week}.</span>` + (sel <= played ? ` <span class="mute">Weeks already played stay as they were; it acts from week ${Math.min(played + 1, 10)} on.</span>` : ""); load();
   } catch(e){ $("#evMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
 };
 
 async function saveEvents(list, note){ const file = D.config.surprises || "surprises.json"; list.sort((a,b) => a.week - b.week); await api("/api/file", {name: file, content: list, note}); load(); }
-async function delEvent(week, text){
-  if (!confirm("Remove this event?")) return;
-  const list = (await readFile(D.config.surprises || "surprises.json")).filter(e => !(e.week === week && e.text === text));
-  await saveEvents(list, `event removed from week ${week}`);
+async function delEvent(i){
+  const s = D.surprises[i]; if (!s || !confirm("Remove this event?")) return;
+  const list = (await readFile(D.config.surprises || "surprises.json")).filter(e => !(e.week === s.week && e.text === s.text));
+  await saveEvents(list, `event removed from week ${s.week}`);
 }
 async function addStrike(){
   const list = await readFile(D.config.surprises || "surprises.json");
@@ -308,20 +385,35 @@ async function addStrike(){
   list.push(ev); await saveEvents(list, "the dossier's strike added for week 8");
 }
 function actRow(a){ const acts = Object.keys(META.menu);
-  return `<div class="row act" style="margin-bottom:4px"><select class="aName" style="flex:1;min-width:0" onchange="this.nextElementSibling.innerHTML=levels(this.value)">${acts.map(x=>`<option ${x===a?"selected":""}>${esc(x)}</option>`).join("")}</select><select class="aLevel">${levels(a)}</select></div>`; }
+  return `<div class="row act" style="margin-bottom:4px;flex-wrap:nowrap"><select class="aName" style="flex:1;min-width:0" onchange="this.nextElementSibling.innerHTML=levels(this.value);decCheck()">${acts.map(x=>`<option ${x===a?"selected":""}>${esc(x)}</option>`).join("")}</select><select class="aLevel" onchange="decCheck()">${levels(a)}</select><button class="small" style="padding:2px 8px" title="Remove this action" onclick="this.parentElement.remove();decCheck()">×</button></div>`; }
 function levels(a){ return Object.entries(META.menu[a]).map(([l,c]) => `<option value="${esc(l)}">${esc(l)} · $${c}M</option>`).join(""); }
-$("#decActAdd").onclick = () => { if (document.querySelectorAll("#decActs .act").length < 3) $("#decActs").insertAdjacentHTML("beforeend", actRow(Object.keys(META.menu)[1])); };
+const actsNow = () => [...document.querySelectorAll("#decActs .act")].map(r => ({action: r.querySelector(".aName").value, level: r.querySelector(".aLevel").value}));
+// A decision must be locked before its week starts; in a simulation, weeks already played stay as history.
+const defaultDecWeek = () => Math.min(10, Math.max(sel, S.calendar.week + 1));
+function decCheck(){
+  if (!D || !META) return;
+  const w = +$("#decWeek").value, cw = S.calendar.week, played = D.validity?.valid_through ?? D.info.played, msgs = [];
+  if (cw >= 10) msgs.push("After 17:30 no decision can be locked on the dashboard.");
+  else if (cw >= w) msgs.push(`Week ${w} has started: on the dashboard a decision locked now takes effect in week ${cw + 1}.`);
+  if (w <= played) msgs.push(`This simulation has played week ${w}. Its actions run in weeks ${w}–${w + 1}, so ${played >= w + 1 ? `they will not act here; only the message reaches personas, from week ${played + 1}` : `they act here only in week ${w + 1}`}.`);
+  setHTML($("#decWarn"), msgs.map(m => `<div class="warn" style="margin-bottom:4px">${m}</div>`).join(""));
+  const c = cost(actsNow()), total = c + cost((D.decisions || []).flatMap(d => d.actions));
+  setHTML($("#decCost"), `this decision $${c.toFixed(2)}M · with the saved one${(D.decisions||[]).length === 1 ? "" : "s"} <span class="${total > META.budget ? "bad" : ""}">$${total.toFixed(2)}M of $${META.budget}M</span>`);
+}
+$("#decWeek").onchange = decCheck;
+$("#decActAdd").onclick = () => { if (document.querySelectorAll("#decActs .act").length < 3) $("#decActs").insertAdjacentHTML("beforeend", actRow(Object.keys(META.menu)[1])); decCheck(); };
 $("#decMsg").oninput = e => { $("#decLen").textContent = `${e.target.value.length}/600`; $("#decLen").className = e.target.value.length > 600 ? "bad" : ""; };
 $("#decSave").onclick = async () => {
-  const actions = [...document.querySelectorAll("#decActs .act")].map(r => ({action: r.querySelector(".aName").value, level: r.querySelector(".aLevel").value}));
-  const d = {week: sel, target: $("#decTarget").value, actions, message: $("#decMsg").value.trim(), channels: ["app","email","text"], why: $("#decWhy").value.trim()};
+  const actions = actsNow();
+  if (!actions.length) { $("#decMsgOut").innerHTML = `<span class="bad">Add at least one action.</span>`; return; }
+  const d = {week: +$("#decWeek").value, target: $("#decTarget").value, actions, message: $("#decMsg").value.trim(), channels: ["app","email","text"], why: $("#decWhy").value.trim()};
   if (!d.message) { $("#decMsgOut").innerHTML = `<span class="bad">Write the message.</span>`; return; }
   try { const file = D.config.decisions || `decisions_${name}.json`;
     const list = D.config.decisions ? await readFile(file) : []; list.push(d); list.sort((a,b) => a.week - b.week);
-    const r = await api("/api/file", {name: file, content: list, note: `decision added for week ${sel}`});
+    const r = await api("/api/file", {name: file, content: list, note: `decision added for week ${d.week}`});
     if (!D.config.decisions) await api("/api/session/update", {name, decisions: file});
-    $("#decMsgOut").innerHTML = r.issues?.length ? `<span class="warn">Saved. Still to fix: ${esc(r.issues.join("; "))}</span>` : `<span class="ok">Saved.</span>`;
-    $("#decMsg").value = ""; $("#decWhy").value = ""; load();
+    $("#decMsgOut").innerHTML = r.issues?.length ? `<span class="warn">Saved for week ${d.week}. Still to fix: ${esc(r.issues.join("; "))}</span>` : `<span class="ok">Saved for week ${d.week}.</span>`;
+    $("#decMsg").value = ""; $("#decWhy").value = ""; $("#decLen").textContent = "0/600"; $("#decActs").innerHTML = actRow(Object.keys(META.menu)[1]); load();
   } catch(e){ $("#decMsgOut").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
 };
 async function delDecision(i){
@@ -332,13 +424,13 @@ async function delDecision(i){
 
 function askOne(id){ $("#askWho").value = "p:" + id; $("#askQ").focus(); }
 $("#askGo").onclick = async () => {
-  const q = $("#askQ").value.trim(), who = $("#askWho").value; if (!q) return;
+  const q = $("#askQ").value.trim(), who = $("#askWho").value, source = name, model = $("#askModel").value; if (!q) return;
   const ids = who === "all" ? D.personas.map(p => p.id) : who.startsWith("g:") ? D.personas.filter(p => p.group === who.slice(2)).map(p => p.id) : [who.slice(2)];
   const week = Math.min(sel, D.validity?.valid_through ?? D.info.played);  // only weeks the personas have lived
   $("#askGo").disabled = true; $("#askInfo").textContent = `asking ${ids.length}…`;
-  try { const recs = await api("/api/interview", {source: name, personas: ids, question: q, week, model: $("#askModel").value, asker: "a Kestrel board member"});
+  try { const recs = await api("/api/interview", {source, personas: ids, question: q, week, model, asker: "a Kestrel board member"});
     $("#answers").innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">“${esc(q)}”</h2><button onclick="$('#answers').innerHTML=''" style="padding:2px 8px">close</button></div>
-      <p class="small mute">${week === 0 ? "Before week 1" : `At the end of week ${week}`} · ${recs.length} answer${recs.length>1?"s":""}</p>`
+      <p class="small mute">${week === 0 ? "Before week 1" : `At the end of week ${week}`} · ${esc(source)} · ${esc(model)} · ${recs.length} answer${recs.length===1?"":"s"}</p>`
       + recs.map(r => `<div class="ans"><b>${esc(r.name||r.persona)}</b> <span class="small mute">${esc(r.persona)} · ${esc(r.group||"")}</span><div style="margin-top:4px">${esc(r.answer||r.error).replace(/\n/g,"<br>")}</div></div>`).join("") + `</div>`;
     $("#askInfo").textContent = "";
   } catch(e){ $("#askInfo").textContent = e.message; }
@@ -346,33 +438,53 @@ $("#askGo").onclick = async () => {
 };
 
 $("#offGo").onclick = async () => {
-  if (!confirm("Start the five hand-in runs with this simulation's events, decisions, personas and model?")) return;
-  try { const r = await api("/api/official", {from: name}); $("#offInfo").textContent = "Started: " + r.join(", "); load(); } catch(e){ $("#offInfo").textContent = e.message; }
+  const model = $("#offModel").value, ne = (D.surprises || []).length, nd = (D.decisions || []).length;
+  if (!confirm(`Run the five hand-in runs now, weeks 1–10, with ${name}'s ${ne} event${ne===1?"":"s"} and ${nd} decision${nd===1?"":"s"}, model ${model}?\nWeeks already computed with the same inputs are reused.`)) return;
+  try { const r = await api("/api/official", {from: name, model});
+    $("#offMsg").innerHTML = `<span class="ok">Started: ${esc(r.runs.join(", "))}.</span>` + (r.issues.length ? ` <span class="warn">Decisions still to fix: ${esc(r.issues.join("; "))}</span>` : ""); load();
+  } catch(e){ $("#offMsg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
 };
 $("#zipGo").onclick = async () => { $("#zipOut").classList.remove("hidden"); $("#zipOut").textContent = "building…";
-  try { const r = await api("/api/submission", {team: $("#team").value}); $("#zipOut").textContent = `${r.zip}\n${r.notes.map(n=>"! "+n).join("\n")}\n\n${r.check}`; } catch(e){ $("#zipOut").textContent = e.message; } };
+  const old = S.official.filter(n => S.handin?.[n] != null).map(n => `! ${n} is outdated from week ${S.handin[n]}: start the hand-in runs again`);
+  try { const r = await api("/api/submission", {team: $("#team").value}); $("#zipOut").textContent = `${r.zip}\n${[...old, ...r.notes.map(n=>"! "+n)].join("\n")}\n\n${r.check}`; } catch(e){ $("#zipOut").textContent = e.message; } };
+function openRun(n){ creating = false; name = n; store.set("sess", n); load(); }
 function drawOfficial(){
-  const off = S.runs.filter(r => S.official.includes(r.name) && r.session);
-  $("#offInfo").innerHTML = off.length ? off.map(r => `${esc(r.name)}: ${r.played}/10 ${r.status==="done"?"✓":""}`).join(" · ") : "";
+  const by = Object.fromEntries(S.runs.map(r => [r.name, r]));
+  const state = (n, r) => {
+    if (!r) return `<span class="mute">not run</span>`;
+    if (["running","queued"].includes(r.status)) return `<span class="warn">week ${r.played}/10 · ${r.calls_done}/${r.calls_total}</span>`;
+    if (r.session) return `<span class="warn">live session, week ${r.played}</span>`;
+    if (r.status !== "done") return `<span class="bad">${esc(r.status)}${r.error ? `: ${esc(r.error)}` : ""}</span>`;
+    const o = S.handin?.[n];
+    return o == null ? `<span class="ok">✓ up to date</span>` : `<span class="bad">outdated from week ${o}</span>`;
+  };
+  const cells = r => GOALS.map(([k,,fmt,ok,target]) => { const v = r?.metrics?.[k];
+    return `<td title="${esc(target)}">${v == null ? `<span class="mute">–</span>` : `<span class="${ok(v) ? "ok" : "bad"}">${fmt(v)}</span>`}</td>`; }).join("");
+  setHTML($("#offInfo"), `<div style="overflow-x:auto"><table class="tbl"><tr><th>run</th><th>state</th>${GOALS.map(([,label,,,target]) => `<th title="${esc(target)}">${label}</th>`).join("")}</tr>`
+    + S.official.map(n => { const r = by[n];
+      return `<tr><td>${r && (r.session || r.status === "done") ? `<a href="#" onclick="openRun('${n}');return false">${n}</a>` : n}</td><td>${state(n, r)}</td>${cells(r)}</tr>`; }).join("")
+    + `</table></div><div class="mute" style="margin-top:4px">Goals as in each run's metrics.json; hover a column for the board's target.</div>`);
 }
 $("#nGo").onclick = async () => {
   try { await api("/api/session", {name: $("#nName").value.trim(), type: "plan", seed: 1, model: $("#nModel").value, probe: true,
       social: $("#nSocial").checked, auto: $("#nAuto").checked, surprises: "surprises.json"});
-    name = $("#nName").value.trim(); store.set("sess", name); sel = 1; load();
+    creating = false; name = $("#nName").value.trim(); store.set("sess", name); load();
   } catch(e){ $("#nMsg").textContent = e.message; }
 };
 
 /* ---------- boot ---------- */
 (async () => {
   META = await api("/api/meta");
-  await load();
+  S = await api("/api/state");
   const models = Object.keys(S.models).filter(m => !S.models[m].offline);
   $("#nModel").innerHTML = models.map(m => `<option ${m===S.default_model?"selected":""}>${m}</option>`).join("");
   $("#askModel").innerHTML = models.map(m => `<option ${m==="gemini-3.5-flash-lite"?"selected":""}>${m}</option>`).join("");
+  $("#offModel").innerHTML = models.map(m => `<option>${m}</option>`).join("");
+  $("#decWeek").innerHTML = DATES.map((d,k) => `<option value="${k+1}">week ${k+1} · ${d}</option>`).join("");
   $("#decActs").innerHTML = actRow(Object.keys(META.menu)[1]);
   $("#decTarget").innerHTML = `<option value="everyone">everyone</option>` + (META.targets||[]).map(t => `<option>${esc(t)}</option>`).join("") + META.groups.map(g => `<option>${esc(g)}</option>`).join("");
-
-  setInterval(load, 3000);
+  await tick();
+  setInterval(tick, 3000);
 })();
 </script>
 </body>
