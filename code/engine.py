@@ -617,9 +617,10 @@ class Run:
         and up to TRENDING_PER_WEEK posts by influencers it is not connected to."""
         if w == 1 or not self.config["social"]:
             return []
-        lines = [f'{self.by_id[c].get("name", c)}, someone you know, posted: "{self.posts[c]}"'
-                 for c in p["connections"] if self.posts.get(c)]
         me = "@" + str(p.get("name", p["id"])).lower()
+        said = lambda c: "replied to you" if me in self.posts[c].lower() else "posted"
+        lines = [f'{self.by_id[c].get("name", c)}, someone you know, {said(c)}: "{self.posts[c]}"'
+                 for c in p["connections"] if self.posts.get(c)]
         lines += [f'{q.get("name", q["id"])} replied to you: "{self.posts[q["id"]]}"' for q in self.personas
                   if q["id"] != p["id"] and q["id"] not in p["connections"] and me in self.posts.get(q["id"], "").lower()]
         trending = [q["id"] for q in self.personas if q["influencer"] and q["id"] != p["id"]
@@ -945,6 +946,7 @@ def observed_week_metrics(rows, probes=()):
 
 # Dossier baseline, November 2: 210,000 passengers and ~1,355 flights a week, 2,500 complaints a month, NPS +12
 FLIGHTS_PER_WEEK, PAX_PER_WEEK, COMPLAINTS_PER_MONTH, NPS_BASE = 1355, 210_000, 2500, 12
+METRIC_BASE_WEEKS = (1, 2)  # goal_3's base period
 FARE = {"domestic": 120, "intl": 210}
 SCOPE_SHARE = {"all": 1.0, "bases": 0.6, "intl": 0.25}  # share of Kestrel flights an event touches
 
@@ -985,13 +987,15 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
 
     # goal 3: complaints a month in December (weeks 5-9), the dossier's 2,500 scaled by the complaint rate against
     # the weeks before the first event (the same weeks in every run that shares a seed, so runs compare on one base).
-    # Weights are capped at the 75th percentile: uncapped, two or three "ordinary week" personas (120-230k trips
-    # each) carried over half of all complaint weight and a plan run could score worse than no decision.
-    cap = sorted(w.values())[int(0.75 * (len(w) - 1))] if w else 1
+    # Weights are capped at the 90th percentile (about 81k trips; the largest persona stands for 235k): uncapped, the
+    # top three personas carried over half of all complaint weight. The cap trades some trip-weighting for stability,
+    # so read goal_3 as a comparison between runs, not as a forecast of the real complaint count.
+    cap = sorted(w.values())[int(0.90 * (len(w) - 1))] if w else 1
     wc = {k: min(v, cap) for k, v in w.items()}
     rate = lambda rows: sum(wc[r["persona"]] * bool(r.get("complaint")) for r in rows) / max(sum(wc[r["persona"]] for r in rows), 1)
-    first_event = min((e["week"] for e in surprises), default=11)
-    base_rows = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] < first_event]
+    # Base: weeks 1-2, before the first announcement could land (week 3). A fixed base, so plan_nosurprises, whose
+    # surprises are filtered out, uses the same weeks as the other four runs.
+    base_rows = [r for r in (baseline_weekly if baseline_weekly is not None else weekly) if r["week"] in METRIC_BASE_WEEKS]
     base = max(rate(base_rows), 0.01)  # floor: a few quiet weeks with no complaints should not blow up the ratio
     december = [r for r in weekly if 5 <= r["week"] <= 9] or weekly
     complaints = COMPLAINTS_PER_MONTH * rate(december) / base if weekly else None
@@ -1020,9 +1024,9 @@ def board_metrics(personas, weekly, decisions, surprises, probes=(), metric_week
         "revenue_lost_usd": round(lost * scale + cap) if plan else None,
         "units": {
             "goal_1": f"% of planned Kestrel flights operated in week(s) {', '.join(map(str, metric_weeks))}, strike days left out (network, ~1,355 flights a week)",
-            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (no phone queue)"
+            "goal_2": "% of passengers on canceled or 3h+ delayed flights rebooked within 24h, or refunded through the app or website (assumption: phone and agency bookers wait in the queue)"
                       + (", weighted by represents_trips" if weighted else ", unweighted"),
-            "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against the weeks before the first event; weights capped at the 75th percentile",
+            "goal_3": "complaints a month in December (weeks 5-9): 2,500 baseline scaled by the complaint rate against weeks 1-2; weights capped at the 90th percentile; a comparison between runs, not a forecast",
             "goal_3b": "NPS: +12 plus the change in the check-in 3a NPS from start to end (plan_1 and nodecision_1 only)",
             "goal_4": "revenue weeks 5-10 as % of plan: lost trips x fare ($120 domestic, $210 intl), less a fare cap's $0.5M",
         },
