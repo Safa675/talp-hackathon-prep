@@ -14,3 +14,10 @@ code/sessions/
 code/runs/
 code/logs/
 code/settings.json
+
+# hackathon case material from Talp: not ours to publish
+talp-hackathon-participants/
+talp-hackathon-participants.zip
+yeni-case-5-sirket/
+13-kestrel-air.md
+team-*_announcements.json
